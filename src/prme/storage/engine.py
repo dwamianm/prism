@@ -3985,12 +3985,16 @@ class MemoryEngine:
             entity_id: String UUID of the entity node.
             at_time: Optional temporal filter -- only include neighbors
                 and edges valid at this time.
+            user_id: Optional owner scope. When given, the entity must
+                belong to this user and the snapshot holds only this
+                user's neighbors and edges.
 
         Returns:
             EntitySnapshot with grouped neighbors and summary text.
 
         Raises:
-            ValueError: If the entity node does not exist or is not ENTITY type.
+            ValueError: If the entity node does not exist, is not ENTITY
+                type, or belongs to another user than ``user_id``.
         """
         from prme.retrieval.snapshots import generate_entity_snapshot
 
