@@ -128,8 +128,9 @@ privacy-configured owner, and first-person questions everywhere get the user's f
 
 ## Follow-ups Raised
 
-See the pull request: (A) profiles keep their oldest sources and the default budget, (B) a profile rebuild scans the
-whole scope and the background pass can overrun its budget, (C) the full benchmark never builds profiles.
+- #422: a knowledge profile keeps a person's oldest records, so the owner's profile goes stale (adversarial 2 and 5).
+- #423: a profile rebuild scans the whole scope and can overrun the organizer's time budget (adversarial 3 and 6).
+- #424: the full benchmark and the offline gate never build profiles, so they cannot measure the option (adversarial 7).
 
 ## Resolution Status
 
@@ -139,4 +140,9 @@ whole scope and the background pass can overrun its budget, (C) the full benchma
 | F8, F9 | partly resolved, rest accepted |
 | Adversarial 1, 4 | fixed |
 | Adversarial 3, 6, 8 | fixed in part, rest follow-up or accepted |
-| Adversarial 2, 5, 7 | follow-up; default kept off |
+| Adversarial 2, 5, 7 | follow-up (#422, #424); default kept off |
+| Delta D1 | fixed |
+| Delta D2 to D4 | accepted |
+
+Adjudication tally: Fix now 5 (1, 3 in part, 4, 6 in part, 8 in part), Follow-up 5 (2, 3 rest, 5, 6 rest, 7) in three
+issues, Accept 1 (8, no backoff), Dismissed 0.
