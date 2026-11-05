@@ -9,6 +9,13 @@ walk with the hand written cue words and with the cue words derived from
 exploratory and never part of the verdict. The settings are the first
 report's; nothing is tuned between the first number and the last. The verdict
 is computed from the rule fixed in ``BLIND.md`` before the run.
+
+Two more columns run every question through the product after the gold graphs
+are written (dwamianm/prism#399): ``product`` is ``retrieve()`` with today's
+defaults over the pack with the graph, and ``product[routed]`` the same with
+``enable_relation_routing``, which reads the gold graph's typed claims through
+the engine's own router and walk. They are information only and never part of
+the verdict.
 """
 from __future__ import annotations
 
@@ -38,11 +45,12 @@ INFORMATION = ("fused@1[derived]", "fused@2[derived]", "generic[hand]")
 EXPLORATORY = ("generic[derived+I]", "fused@1[derived+I]", "fused@2[derived+I]")
 SETS = ("original", "blind", "paraphrase")
 TYPES = ("lookup", "list", "multi-hop", "temporal", "correction", "negation", "aggregation")
+PRODUCT = ("product", "product[routed]")
 STRATEGIES = ("baseline", *(f"{kind}[{name}]" for name in CONFIGS for kind in
-                            ("generic", *(f"fused@{weight:g}" for weight in WEIGHTS))))
+                            ("generic", *(f"fused@{weight:g}" for weight in WEIGHTS))), *PRODUCT)
 # Columns in the order the tables show them.
 COLUMNS = ("baseline", "generic[hand]", "generic[derived]", "fused@1[hand]", "fused@1[derived]", "fused@2[hand]",
-           "fused@2[derived]", "generic[derived+I]", "fused@1[derived+I]", "fused@2[derived+I]")
+           "fused@2[derived]", "generic[derived+I]", "fused@1[derived+I]", "fused@2[derived+I]", *PRODUCT)
 LIFT_MARGIN = 0.08
 PARAPHRASE_MARGIN = 0.05
 
@@ -101,6 +109,7 @@ async def run(out: Path, *, work: Path | None = None) -> dict:
     unchanged = 0
     items: list[Item] = []
     graphs = {}
+    reverse: dict[str, dict[str, str]] = {}
     async with MemoryEngine.open(gate_config(pack)) as engine:
         for name, gold in golds.items():
             extra = []
@@ -116,6 +125,7 @@ async def run(out: Path, *, work: Path | None = None) -> dict:
                     extra.append({"id": f"{question['id']}#p{number}", "text": text, "kind": question["type"],
                                   "answers": question["answers"], "stale": [], "group": "paraphrase"})
             node_ids, corpus_items = await build_corpus(engine, gold, False, extra)
+            reverse[name] = {node_id: memory_id for memory_id, node_id in node_ids.items()}
             items += corpus_items
             handles = await write_graph(engine, gold, gold.owner, node_ids)
             graphs[name] = await load_graph(engine, gold.owner, handles)
@@ -126,11 +136,22 @@ async def run(out: Path, *, work: Path | None = None) -> dict:
     for question in heldout:
         terms = {key: question[key] for key in ("all_of", "any_of") if question.get(key)}
         seen["store-v1"] |= {memory.id for memory in golds["store-v1"].memories if term_hits(terms, memory.text)}
+    product: dict[str, dict[tuple[str, str], list[str]]] = {}
+    for strategy, overrides in zip(PRODUCT, ({}, {"enable_relation_routing": True})):
+        product[strategy] = {}
+        async with MemoryEngine.open(gate_config(pack, overrides)) as engine:
+            for item in items:
+                gold = golds[item.corpus]
+                response = await engine.retrieve(item.text, user_id=gold.owner, reference_time=gold.reference_time)
+                memories = reverse[item.corpus]
+                product[strategy][(item.corpus, item.id)] = list(dict.fromkeys(
+                    memories[str(candidate.node.id)] for candidate in response.results
+                    if str(candidate.node.id) in memories))
     rows: list[dict] = []
     seedless = {"hand": 0, "derived": 0}
     for item in items:
         gold = golds[item.corpus]
-        lists = {"baseline": item.base}
+        lists = {"baseline": item.base, **{strategy: product[strategy][(item.corpus, item.id)] for strategy in PRODUCT}}
         for name, params in CONFIGS.items():
             result = await generic_scores(item.text, gold, MemorySource(graphs[item.corpus], params.shape), params)
             if name in seedless and item.group == "blind" and not result.seeds:

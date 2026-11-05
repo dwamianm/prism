@@ -610,6 +610,22 @@ def _seed_count_ranks(
     return _dense_ranks(keys)
 
 
+def _route_ranks(candidates: list[RetrievalCandidate]) -> list[int | None]:
+    """The route list of ``enable_relation_routing``: dense ranks by route score, then semantic similarity.
+
+    A candidate joins only when the relation walk reached it
+    (``RetrievalCandidate.route_score``): a claim of the route's last step or a
+    memory it is derived from scores higher than a claim on the way, and among
+    those a text that names more of the entities the walk reached comes first.
+    Equal route scores keep the semantic order, so the list never depends on
+    node IDs or on the order candidates arrived in.
+    """
+    return _dense_ranks([
+        (*candidate.route_score, candidate.semantic_score) if candidate.route_score is not None else None
+        for candidate in candidates
+    ])
+
+
 def _pool_relative(values: list[float], ranked: list[bool]) -> list[float]:
     """Divide by the largest value among ranked candidates, capped at 1.0.
 
@@ -661,7 +677,10 @@ def _rank_fused_scores(
     ranked list, ordered by proximity, that adds its weighted reciprocal rank.
     With ``rrf_graph_seed_count`` that list holds only records two or more of
     the question's seeds reach and the semantic channel ranks near the top,
-    ordered by how many seeds (``_seed_count_ranks``).
+    ordered by how many seeds (``_seed_count_ranks``). With
+    ``rrf_route_weight``, set only on a routed question
+    (``enable_relation_routing``), the records the relation walk reached form
+    a fourth list (``_route_ranks``).
 
     On a current-state question, ``rrf_recency_boost`` adds the weighted
     formula's current-state recency, measured from the newest stated time in
@@ -693,6 +712,9 @@ def _rank_fused_scores(
         if any(value is not None and not math.isfinite(value) for value in graph):
             raise ValueError("Rank fusion requires finite graph proximity")
         graph_ranks = _dense_ranks(graph)
+    route_ranks: list[int | None] = (
+        _route_ranks(candidates) if weights.rrf_route_weight is not None else [None] * len(candidates)
+    )
 
     epistemic = [_epistemic_weight(candidate.node, epistemic_weights) for candidate in candidates]
     node_type = [weights.node_type_boost.get(candidate.node.node_type.value, 1.0)
@@ -703,8 +725,8 @@ def _rank_fused_scores(
         affinity = [_compute_temporal_affinity(candidate, query_analysis) for candidate in candidates]
     else:
         affinity = [0.0] * len(candidates)
-    ranked = [s is not None or lex is not None or g is not None
-              for s, lex, g in zip(semantic_ranks, lexical_ranks, graph_ranks)]
+    ranked = [s is not None or lex is not None or g is not None or r is not None
+              for s, lex, g, r in zip(semantic_ranks, lexical_ranks, graph_ranks, route_ranks)]
     epistemic_factors = _pool_relative(epistemic, ranked)
     node_type_factors = _pool_relative(node_type, ranked)
     temporal_factors = _pool_relative([1.0 + weights.temporal_boost * value for value in affinity], ranked)
@@ -728,6 +750,7 @@ def _rank_fused_scores(
             semantic_rank=semantic_ranks[index],
             lexical_rank=lexical_ranks[index],
             graph_rank=graph_ranks[index],
+            route_rank=route_ranks[index],
             epistemic_factor=epistemic_factors[index],
             node_type_factor=node_type_factors[index],
             temporal_factor=temporal_factors[index],
@@ -744,7 +767,7 @@ def _rank_fused_scores(
             path_score=min(candidate.path_count / 3.0, 1.0),
             temporal_affinity=affinity[index],
             node_type_boost=node_type[index],
-            composite_score=fusion.score(weights.rrf_k, weights.rrf_graph_weight),
+            composite_score=fusion.score(weights.rrf_k, weights.rrf_graph_weight, weights.rrf_route_weight),
         ), fusion))
     return scored
 

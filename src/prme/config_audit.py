@@ -77,6 +77,12 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "scoring.rrf_graph_seed_count is on",
         lambda value: value is True,
     ),
+    # Read only for a question that enable_relation_routing routes.
+    "scoring.rrf_route_weight": (
+        "enable_relation_routing",
+        "enable_relation_routing is true (routed questions only)",
+        bool,
+    ),
     # Applied only to triggers scored by rank fusion, which a request's own
     # weights can select on a weighted engine.
     "packing.session_context_rank_fusion_score_decay": (
@@ -272,6 +278,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_owner_profile_context": (
         "enable_owner_profile_context",
         "enable_owner_profile_context is true",
+        bool,
+    ),
+    "enable_relation_routing": (
+        "enable_relation_routing",
+        "enable_relation_routing is true",
         bool,
     ),
     "novelty_high_threshold": (

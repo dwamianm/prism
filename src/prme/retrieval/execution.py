@@ -75,6 +75,8 @@ def feature_identity(
         "query_analysis",
         "scope",
         "candidates",
+        "relations",
+        "relation_walk",
         "filtering",
         "session_context",
         "episode_context",

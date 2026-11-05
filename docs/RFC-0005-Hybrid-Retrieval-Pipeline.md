@@ -640,7 +640,14 @@ score(obj) =
   then says `neighborhood_limit`, or `backend_error` when the read failed, and
   every graph candidate is kept. Only the graph search's kept candidates
   (`graph_max_candidates`) can join the list, and a first-person question has at
-  most one seed. The hop count list stays opt-in. The query-specific weight shifts for current-state,
+  most one seed. The hop count list stays opt-in. With `enable_relation_routing`
+  (off by default, dwamianm/prism#399, `docs/RELATIONS.md`) a question that asks
+  for a kind of relation is walked from its seeds over the claims of that
+  relation, and what the walk keeps is a fourth list: ranked by step, then by how
+  many reached entities a text names, then by semantic similarity, with weight
+  `rrf_route_weight` (2.0 when unset), saved as `route_rank`. The weight is
+  recorded only on a retrieval the walk acted on, and context records inherit
+  their trigger's score without the route term. The query-specific weight shifts for current-state,
   episodic and relational questions do not apply. Non-neutral ranking
   multipliers are rejected before retrieval runs (HTTP 422), weighted ranking
   profiles are reported as inapplicable (`rank_fusion_scoring`), learning skips

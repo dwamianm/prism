@@ -42,7 +42,7 @@ import logging
 import os
 import threading
 import warnings
-from collections.abc import AsyncIterator, Collection, Sequence
+from collections.abc import AsyncIterator, Collection, Mapping, Sequence
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -862,6 +862,7 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
+                relation_routing=config.enable_relation_routing,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1054,6 +1055,7 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
+                relation_routing=config.enable_relation_routing,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -2694,6 +2696,7 @@ class MemoryEngine:
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         source_access: EvidenceAccess | None = None,
         speaker: str | None = None,
+        concepts: Mapping[str, Sequence[str]] | None = None,
     ) -> RetrievalResponse:
         """Retrieve memories via the hybrid retrieval pipeline.
 
@@ -2758,6 +2761,10 @@ class MemoryEngine:
                 this name (``consolidate_knowledge()``) right after the top
                 result; without a speaker, the owner is the person a user
                 turn named (issue #398). Otherwise unused.
+            concepts: With ``enable_relation_routing``, concept words for this
+                request mapped to the relations they stand for, such as
+                ``{"dependents": ["partner_of", "kin_of:child"]}``
+                (``docs/RELATIONS.md``). They extend the built-in concepts.
 
         Returns:
             RetrievalResponse with packed MemoryBundle, scored results,
@@ -2854,6 +2861,7 @@ class MemoryEngine:
                 include_cross_scope=include_cross_scope,
                 retrieval_mode=retrieval_mode,
                 speaker=speaker,
+                concepts=concepts,
             )
 
             # Opportunistic maintenance (RFC-0015 Layer 2). Scheduled rather

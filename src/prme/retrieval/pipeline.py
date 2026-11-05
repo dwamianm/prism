@@ -25,7 +25,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Callable, Collection, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Protocol
@@ -38,6 +38,7 @@ from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
 from prme.retrieval.candidates import (
     CandidateDiagnostics,
+    _find_seed_entities,
     generate_candidates,
     merge_normalized_bm25_hits,
 )
@@ -53,6 +54,7 @@ from prme.retrieval.config import (
     DEFAULT_SCORING_WEIGHTS,
     LEGACY_PRIOR_WEIGHT_ERROR,
     RERANKER_ENVELOPE_POLICIES,
+    RRF_ROUTE_WEIGHT,
     PackingConfig,
     ScoringWeights,
     normalize_reranker_prior_weight,
@@ -90,6 +92,13 @@ from prme.retrieval.query_analysis import (
     analyze_query,
     is_current_state_question,
     is_first_person_question,
+)
+from prme.retrieval.relation_walk import MAX_SEEDS, add_route_candidates, owner_entities, walk_route
+from prme.retrieval.relations import (
+    ROUTING_VERSION,
+    normalize_concepts,
+    route_as_list,
+    route_question,
 )
 from prme.retrieval.replaced_sources import suppress_replaced_sources
 from prme.retrieval.scoring import score_and_rank
@@ -230,6 +239,7 @@ class RetrievalPipeline:
         reranker_prior_weight: float = DEFAULT_RERANKER_PRIOR_WEIGHT,
         superseded_source_suppression: bool = False,
         owner_profile_context: bool = False,
+        relation_routing: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -265,6 +275,7 @@ class RetrievalPipeline:
         self._query_intent_order = query_intent_order
         self._superseded_source_suppression = superseded_source_suppression
         self._owner_profile_context = owner_profile_context
+        self._relation_routing = relation_routing
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -355,6 +366,7 @@ class RetrievalPipeline:
         retrieval_mode: RetrievalMode = RetrievalMode.DEFAULT,
         include_cross_scope: bool = True,
         speaker: str | None = None,
+        concepts: Mapping[str, Sequence[str]] | None = None,
     ) -> RetrievalResponse:
         """Execute the full hybrid retrieval pipeline.
 
@@ -421,6 +433,11 @@ class RetrievalPipeline:
                 name right after the top result (issue #398). Without it,
                 the owner's name comes from the entity a user turn marked
                 with it. Otherwise unused.
+            concepts: With enable_relation_routing, concept words for this
+                request, each mapped to the relations it stands for
+                (``{"dependents": ["partner_of", "kin_of:child"]}``), added to
+                the built-in concepts; a word that is built in is replaced.
+                Validated whether or not routing is on.
 
         Returns:
             RetrievalResponse with bundle, results, metadata, and score traces.
@@ -430,6 +447,7 @@ class RetrievalPipeline:
         exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
+        normalized_concepts = normalize_concepts(concepts)
         execution_features = self.execution_features()
         start_time = time.monotonic()
         if reference_time is not None and reference_time.utcoffset() is None:
@@ -447,6 +465,12 @@ class RetrievalPipeline:
 
         # Resolve effective configuration.
         effective_weights = weights if weights is not None else self._scoring_weights
+        # The route list's weight is recorded only on a retrieval whose relation
+        # walk reached a candidate (enable_relation_routing), so any other
+        # retrieval keeps its settings, scores and receipt.
+        route_weight = effective_weights.rrf_route_weight
+        if route_weight is not None:
+            effective_weights = effective_weights.model_copy(update={"rrf_route_weight": None})
         effective_packing_config = self._packing_config
 
         if token_budget is not None or min_fidelity is not None:
@@ -759,6 +783,60 @@ class RetrievalPipeline:
             )
             if reform_added:
                 candidate_counts["REFORMULATION"] = reform_added
+
+        # --- Stage 2.7: Relation routing (enable_relation_routing, #399) ---
+        # A question that asks for a kind of relation is walked from its seed
+        # entities over the claims of those relations; what the walk reaches
+        # forms the route list of rank fusion. A question no word routes, or
+        # whose walk reaches nothing, is left exactly as it was.
+        if (
+            self._relation_routing
+            and effective_weights.fusion == "rrf"
+            and getattr(self, "_privacy_context", None) is None
+        ):
+            route = route_question(query, concepts)
+            if route is not None:
+                try:
+                    # The owner's entities first, then the entities the question names, so the cap
+                    # (MAX_SEEDS) never drops the anchor of a first-person question.
+                    seeds = await owner_entities(
+                        self._graph_store, user_id=user_id, scopes=normalized_scope, speaker=speaker,
+                    ) if is_first_person_question(query) else []
+                    seeds.extend(str(node.id) for node in await _find_seed_entities(
+                        analysis, self._graph_store, user_id, normalized_scope,
+                        candidate_config.graph_seed_words,
+                    ))
+                    seeds = sorted(list(dict.fromkeys(seeds))[:MAX_SEEDS])
+                    walk = await walk_route(
+                        self._graph_store, route, user_id=user_id, seed_ids=seeds, scopes=normalized_scope,
+                    ) if seeds else None
+                except PrivacyDenied:
+                    raise
+                except Exception:
+                    walk = None
+                    candidate_diagnostics.backend_failures["ROUTE"] = "backend_error"
+                    logger.warning(
+                        "Relation walk failed; continuing without the route list",
+                        exc_info=not bool(getattr(self, "_privacy_context", None)),
+                    )
+                if walk is not None and walk.scores:
+                    added = add_route_candidates(candidates, walk)
+                    if added:
+                        candidate_counts["ROUTE"] = added
+                    effective_weights = effective_weights.model_copy(
+                        update={"rrf_route_weight": route_weight if route_weight is not None else RRF_ROUTE_WEIGHT}
+                    )
+                    execution_features = {**execution_features, "relation_routing": {
+                        "version": ROUTING_VERSION,
+                        "route": route_as_list(route),
+                        **({"concepts": normalized_concepts} if normalized_concepts else {}),
+                        "seeds": seeds,
+                        "claims": walk.claims,
+                        "candidates": [
+                            {"node_id": node_id, "step": score[0], "names": score[1]}
+                            for node_id, score in walk.scores.items()
+                        ],
+                    }}
 
         embedding_mismatch = candidate_diagnostics.embedding_mismatch
 

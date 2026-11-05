@@ -28,7 +28,8 @@ from prme.types import RepresentationLevel
 DEFAULT_RRF_K = 60
 # Rank fusion terms that ScoringWeights() leaves unset and PRMEConfig sets by
 # default, recorded only in version 19 receipts (issue #168).
-RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight", "rrf_graph_seed_count")
+RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight", "rrf_graph_seed_count",
+                       "rrf_route_weight")
 # The graph list's weight when rrf_graph_seed_count is on and rrf_graph_weight
 # is unset (prism-monorepo issue 276). The validator writes it into the
 # settings, so receipts record the weight their scores used.
@@ -37,6 +38,11 @@ RRF_GRAPH_SEED_COUNT_WEIGHT = 0.5
 # list, so the list reorders records that already match the question. Receipts
 # replay from the saved graph ranks, which already reflect it.
 RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP = 10
+# The route list's weight when enable_relation_routing routes a question and
+# rrf_route_weight is unset (dwamianm/prism#399). The pipeline writes it into
+# the settings of a routed retrieval, so receipts record the weight its scores
+# used; a retrieval that is not routed records none.
+RRF_ROUTE_WEIGHT = 2.0
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 # Rank fusion opt-ins that are on or off; off, they are not set.
@@ -364,6 +370,29 @@ class ScoringWeights(BaseModel):
             "warning."
         ),
     )
+    rrf_route_weight: float | None = Field(
+        default=None,
+        gt=0,
+        le=4,
+        exclude_if=lambda value: value is None,
+        description=(
+            "[HYPOTHESIS] fusion='rrf' only; unset by default. The weight of "
+            "the route list of enable_relation_routing (dwamianm/prism#399): a "
+            "question that asks for a kind of relation (dependents, where "
+            "someone lives) is walked from its seed entities over the claims "
+            "of those relations, and the claims the walk keeps (and memories a "
+            "claim is derived from by a DERIVED_FROM link) form a fourth "
+            "ranked list, ordered by step, then by how many of "
+            "the entities the walk reached their text names, then by semantic "
+            "similarity. Each adds rrf_route_weight / (rrf_k + its rank) "
+            "before the scale that gives first place on the semantic and "
+            "lexical lists 1.0. Unset, a routed retrieval uses "
+            "RRF_ROUTE_WEIGHT (2.0). The pipeline records the weight only on a "
+            "retrieval whose walk added a candidate, and drops it from any "
+            "other, so an unrouted retrieval keeps its settings and receipt. "
+            "Weighted fusion ignores a supplied value with a warning."
+        ),
+    )
     # Omitted when unset, so configurations, receipts and version ids that do
     # not use it keep the bytes they had before it existed (issue #83).
     recency_time: Literal["event_time"] | None = Field(
@@ -502,6 +531,11 @@ class ScoringWeights(BaseModel):
                 # count rule must change this label, so that scores it gives
                 # never share a version with scores the old rule gave.
                 payload += f":graph_rule=seed_count:top={RRF_GRAPH_SEED_COUNT_SEMANTIC_TOP}"
+            if self.rrf_route_weight is not None:
+                # The route list's rule is versioned with the routing rule.
+                from prme.retrieval.relations import ROUTING_VERSION
+
+                payload += f":route={self.rrf_route_weight}:route_rule={ROUTING_VERSION}"
         elif self.recency_time is not None:
             # Weighted configurations without it keep their version.
             payload += f":recency_time={self.recency_time}"
