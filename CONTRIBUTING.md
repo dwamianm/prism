@@ -33,7 +33,14 @@ pytest tests/test_retrieval_scoring.py
 
 # With verbose output
 pytest -v
+
+# On every core, as CI runs it (pytest-xdist)
+pytest -n auto --dist worksteal
 ```
+
+With `-n`, each worker uses its own PostgreSQL database, named after the one in
+`PRME_TEST_DATABASE_URL` with the worker's name added (`prme_test_gw0`), and
+drops and recreates it when the run starts (`tests/conftest.py`).
 
 The PostgreSQL variants skip unless `PRME_TEST_DATABASE_URL` points at a live
 database. The repository's `docker-compose.yml` starts one for local testing,

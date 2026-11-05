@@ -15,14 +15,49 @@ Key design decisions:
 from __future__ import annotations
 
 import asyncio
+import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import duckdb
 import pytest
 
 from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.schema import initialize_database
+
+
+def pytest_configure(config):
+    """Give each pytest-xdist worker its own PostgreSQL database.
+
+    CI runs the suite on several workers (``pytest -n``). Tests that use
+    ``PRME_TEST_DATABASE_URL`` set up PRME's tables in that database, and two
+    workers doing so at the same moment collide in PostgreSQL's catalog
+    (``CREATE TABLE IF NOT EXISTS`` is not safe against a concurrent twin).
+    So a worker drops and recreates ``<database>_<worker>`` on the same server
+    and points the variable at it before any test is collected. Databases the
+    tests derive from that name, such as the restore target, follow it. A run
+    without workers, or without the variable, is unchanged.
+    """
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    url = os.environ.get("PRME_TEST_DATABASE_URL")
+    if not worker or not url:
+        return
+    import asyncpg
+
+    parts = urlsplit(url)
+    database = f"{parts.path.lstrip('/')}_{worker}"
+
+    async def recreate() -> None:
+        admin = await asyncpg.connect(url)
+        try:
+            await admin.execute(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)')
+            await admin.execute(f'CREATE DATABASE "{database}"')
+        finally:
+            await admin.close()
+
+    asyncio.run(recreate())
+    os.environ["PRME_TEST_DATABASE_URL"] = urlunsplit(parts._replace(path=f"/{database}"))
 
 
 @pytest.fixture(autouse=True)

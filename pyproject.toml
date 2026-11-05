@@ -98,6 +98,7 @@ dev = [
     "ruff",
     "mypy",
     "scipy==1.17.1",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.pytest.ini_options]
