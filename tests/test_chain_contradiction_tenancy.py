@@ -187,10 +187,10 @@ async def test_contradiction_annotation_leaves_out_another_users_counterpart(con
         assert results[str(south.id)].contradicts_id is None
         assert str(foreign.id) not in response.model_dump_json()
 
-        # Once the other user's node is gone, the crossing edges dangle, and
-        # the id still does not come back.
+        # Once the other user's node is gone, the id still does not come back.
+        # DuckDB keeps the crossing edges dangling; PostgreSQL drops them with
+        # the node (its edges cascade), so neither case is asserted on.
         await graph.delete_node(str(foreign.id))
-        assert await graph.get_edges(node_ids=[str(south.id)], edge_type=EdgeType.CONTRADICTS)
         response = await engine.retrieve("deployment region", user_id=user)
         results = {str(c.node.id): c for c in response.results}
         assert results[str(east.id)].contradicts_id == west.id
