@@ -18,8 +18,16 @@ concurrency:
 # worker gets its own PostgreSQL database (tests/conftest.py). The 25
 # slowest tests are listed at the end of each run, so a new slow test shows
 # up in the log.
+#
+# tests/test_lexical_shutdown.py runs on its own, on one core, right after
+# the parallel run (SERIAL_TESTS). It deletes an index directory right
+# after closing it, and tantivy-py can write one lock file a moment after an
+# index opens, from a reader it builds inside Index() (#417). Under the load
+# of four workers that late write made the delete fail on main. On one core,
+# as before the suite went parallel, it passes.
 env:
-  PYTEST_PARALLEL: -n auto --dist worksteal --durations=25
+  SERIAL_TESTS: tests/test_lexical_shutdown.py
+  PYTEST_PARALLEL: -n auto --dist worksteal --durations=25 --ignore=tests/test_lexical_shutdown.py
 
 # Dependabot's pull requests test one Python version instead of every version
 # in the matrix, and skip the simulations job, to save Actions minutes on
@@ -52,6 +60,9 @@ jobs:
       - name: Run tests (DuckDB)
         run: uv run --no-sync python -m pytest tests/ -q $PYTEST_PARALLEL
 
+      - name: Run tests that need one core (DuckDB)
+        run: uv run --no-sync python -m pytest $SERIAL_TESTS -q
+
       - name: Check public client types
         run: uv run --no-sync mypy --follow-imports=silent --ignore-missing-imports --strict tests/typing/public_api.py
 
@@ -83,6 +94,11 @@ jobs:
         env:
           PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
         run: uv run --no-sync python -m pytest tests/ -q $PYTEST_PARALLEL
+
+      - name: Run tests that need one core (PostgreSQL)
+        env:
+          PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
+        run: uv run --no-sync python -m pytest $SERIAL_TESTS -q
 
       - name: Stop PostgreSQL
         if: always()
@@ -125,6 +141,11 @@ jobs:
         env:
           PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
         run: uv run --no-sync python -m pytest tests/ -q $PYTEST_PARALLEL
+
+      - name: Run tests that need one core (DuckDB and PostgreSQL)
+        env:
+          PRME_TEST_DATABASE_URL: postgresql://prme_test:prme_test@127.0.0.1:5432/prme_test
+        run: uv run --no-sync python -m pytest $SERIAL_TESTS -q
 
       - name: Stop PostgreSQL
         if: always()
