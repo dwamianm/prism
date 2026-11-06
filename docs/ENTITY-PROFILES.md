@@ -1,9 +1,16 @@
 # Entity profiles
 
 `consolidate_knowledge()` creates a searchable summary from source nodes that
-mention an entity. It preserves whole source excerpts, dates and provenance
-within a token budget. The entity association is marked as inferred: a profile
-quotes what was recorded, including uncertainty and conditions.
+mention an entity, and, for a named person, from the claims the graph binds to
+that person's entity: the claims their entity is the subject of, and the
+claims taken from the turns they spoke (issue #448). A first-person claim
+("I am pregnant") is stored under the speaker's entity without their name, and
+a claim from their turn may name someone else ("My husband is Theo and my
+child is Nico"), so name matching alone cannot see either. The profile
+metadata records how many sources each path supplied (`source_paths`). It
+preserves whole source excerpts, dates and provenance within a token budget.
+The entity association is marked as inferred: a profile quotes what was
+recorded, including uncertainty and conditions.
 
 ```python
 from prme import MemoryClient, Scope, StaleProfileError

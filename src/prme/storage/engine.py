@@ -173,6 +173,11 @@ logger = ScopedLogger(logger)
 # as promotion's.
 OWNER_PROFILE_REFRESH_BUDGET_S = 1.0
 
+# The claim types a named person's profile may take from the graph: a claim
+# bound to their entity or taken from their turn, not a raw note or summary
+# (issue #448).
+PROFILE_CLAIM_TYPES = (NodeType.FACT, NodeType.DECISION, NodeType.PREFERENCE, NodeType.TASK)
+
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
 # Each node gets a vector; the last column says whether it also gets a
@@ -4553,7 +4558,8 @@ class MemoryEngine:
         entity-centric facts directly searchable.
 
         This works without LLM extraction — it uses simple name matching
-        to detect entity mentions in node content.
+        to detect entity mentions in node content, and the graph's claim
+        edges for a named person.
 
         Args:
             user_id: User whose knowledge to consolidate.
@@ -4562,10 +4568,12 @@ class MemoryEngine:
                 If None, auto-detects names from content (proper nouns).
             max_profile_tokens: Maximum complete profile tokens, including source
                 metadata, using the configured packing tokenizer.
-            include_speaker_turns: Also take the records stored with the
+            include_speaker_turns: Also take every record stored with the
                 person as their ``speaker``, since an owner says "my
                 husband", not their own name. The profile refresh of
-                ``enable_owner_profile_context`` sets it (issue #398).
+                ``enable_owner_profile_context`` sets it (issue #398). A
+                named person's claims are taken from the graph whether or
+                not it is set (issue #448).
 
         Returns:
             Number of entity profiles published. Each replacement is atomic;
@@ -4633,11 +4641,22 @@ class MemoryEngine:
                 or (speakers and (metadata_speaker(node.metadata) or "").casefold() in speakers)
             ]
 
+        def naming(nodes: list[MemoryNode], name: str) -> list[MemoryNode]:
+            return [node for node in nodes if mentions_entity(node.content, name)]
+
+        def said_by(nodes: list[MemoryNode], name: str) -> list[MemoryNode]:
+            wanted = name.casefold()
+            return [node for node in nodes if (metadata_speaker(node.metadata) or "").casefold() == wanted]
+
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
         # from a rebuild and cause a still-supported profile to be retired.
         all_nodes: list[MemoryNode] = []
         existing_profiles: dict[str, list[MemoryNode]] = {}
+        # A person's claims do not name them, so a profile of a named person
+        # also reads the claims the graph binds to their entity (issue #448).
+        claim_nodes: list[MemoryNode] = []
+        entity_nodes: dict[str, list[tuple[str, str | None]]] = {}
         after_id: str | None = None
         while True:
             page = await graph.scan_nodes(
@@ -4661,6 +4680,12 @@ class MemoryEngine:
                             existing_profiles.setdefault(name, []).append(node)
                 else:
                     sources.append(node)
+                    if node.node_type in PROFILE_CLAIM_TYPES:
+                        claim_nodes.append(node)
+                    if node.node_type == NodeType.ENTITY and node.content.strip():
+                        entity_type = meta.get("entity_type")
+                        entity_nodes.setdefault(node.content.strip().casefold(), []).append(
+                            (str(node.id), entity_type if isinstance(entity_type, str) else None))
             # Explicit names need retain only relevant source nodes,
             # rather than every unrelated node in a large namespace.
             if entity_names is not None and sources:
@@ -4709,6 +4734,21 @@ class MemoryEngine:
         if not entity_names:
             return 0
 
+        # A claim keeps no speaker key of its own when the turn wrote the
+        # name into the claim, so the event it cites decides. Each event is
+        # read at most once across the build, and only this owner's event in
+        # this scope may speak for the node.
+        event_speakers: dict[str, str | None] = {}
+
+        async def event_speaker(event_id: str) -> str | None:
+            if event_id not in event_speakers:
+                event = await self._event_store.get(event_id)
+                event_speakers[event_id] = (
+                    metadata_speaker(event.metadata)
+                    if event is not None and event.user_id == user_id and event.scope == scope else None
+                )
+            return event_speakers[event_id]
+
         profiles_created = 0
         for entity_name in entity_names:
             # Let other requests on this loop run between entity names.
@@ -4724,8 +4764,60 @@ class MemoryEngine:
             else:
                 key = profile_key(user_id, scope, entity_name)
             generation = await self._graph_store.profile_generation(key)
-            # Find all nodes mentioning this entity
-            related = await run_profile_work(mentioning, all_nodes, [entity_name])
+            # Records whose own text names the person, and, on request, the
+            # turns stored with the person as their speaker.
+            named = await run_profile_work(naming, all_nodes, entity_name)
+            said = (await run_profile_work(said_by, all_nodes, entity_name) if own_turns else [])
+            # Claims bound to the person's entity: the claims it is the
+            # subject of, and the claims taken from the turns they spoke. A
+            # first-person claim ("I am pregnant") is stored under the
+            # speaker's entity without their name, and a claim from their
+            # turn may name someone else ("My husband is Theo and my child is
+            # Nico"), so name matching alone never sees either (issue #448).
+            subject_claims: list[MemoryNode] = []
+            spoken_claims: list[MemoryNode] = []
+            # A name can belong to a person and, in the conservative merger's
+            # terms, to an organisation of the same text. The person's entity
+            # is the one whose claims a person profile takes.
+            candidates = entity_nodes.get(entity_name.casefold(), ())
+            people = [
+                identifier for identifier, kind in candidates
+                if (kind or "").strip().casefold() == "person"
+            ]
+            entity_ids = people or [identifier for identifier, _ in candidates]
+            if entity_ids and claim_nodes:
+                subjects: set[str] = set()
+                for entity_id in entity_ids:
+                    edges = await graph.get_edges(source_id=entity_id, edge_type=EdgeType.HAS_FACT)
+                    # The graph read is owner-scoped here as the engine's own
+                    # edge read is; the claim scan already limits the targets.
+                    subjects.update(str(edge.target_id) for edge in edges if edge.user_id == user_id)
+                subject_claims = [node for node in claim_nodes if str(node.id) in subjects]
+                bound = {str(node.id) for node in subject_claims}
+                wanted = entity_name.casefold()
+                for node in claim_nodes:
+                    if str(node.id) in bound:
+                        continue
+                    reference = (node.metadata or {}).get("speaker_reference")
+                    speaker = reference.get("speaker") if isinstance(reference, dict) else None
+                    if isinstance(speaker, str) and speaker:
+                        # The stored binding is authoritative, and a claim
+                        # bound to someone else is not this person's.
+                        if speaker.casefold() == wanted:
+                            spoken_claims.append(node)
+                        continue
+                    # A claim keeps no speaker key of its own when the turn
+                    # gave the name, so the turn it was extracted from
+                    # decides. A merged claim keeps its copies' evidence
+                    # first, so the statement's own turn is the last one. A
+                    # protected read keeps to the admitted node.
+                    if context.protected or not node.evidence_refs:
+                        continue
+                    reference_id = node.evidence_refs[-1]
+                    if (await event_speaker(str(reference_id)) or "").casefold() == wanted:
+                        spoken_claims.append(node)
+            # Find all nodes the profile may draw on
+            related = list({str(node.id): node for node in (*named, *said, *subject_claims, *spoken_claims)}.values())
 
             if len(related) < 2:
                 # An old profile cannot supply its own missing evidence.
@@ -4743,6 +4835,19 @@ class MemoryEngine:
                 self._confidence_matrix.lookup_with_fallback(EpistemicType.INFERRED, SourceType.SYSTEM_INFERRED),
                 *(node.confidence for node in selected_sources),
             )
+            # Why each source is here, so a reader can tell a claim that
+            # names the person from one the graph bound to them. A record can
+            # qualify on more than one path, so the counts are per path, not a
+            # partition of the source list. A protected publication's journal
+            # projection keeps the source counts only and leaves this out.
+            included = {str(node.id) for node in selected_sources}
+            source_paths = {
+                path: {"available": len(nodes), "included": sum(str(node.id) in included for node in nodes)}
+                for path, nodes in (
+                    ("text", named), ("speaker", said),
+                    ("subject", subject_claims), ("spoken", spoken_claims),
+                )
+            }
 
             # Store as SUMMARY node
             profile_node = MemoryNode(
@@ -4754,6 +4859,7 @@ class MemoryEngine:
                     "entity_profile": True, "entity_name": entity_name,
                     "source_node_ids": [str(node.id) for node in selected_sources],
                     "source_count_available": len(related), "source_count_included": len(selected_sources),
+                    "source_paths": source_paths,
                     "profile_format_version": 2, "tokens_used": profile_tokens,
                     "tokenizer": self._config.packing.tokenizer,
                 },

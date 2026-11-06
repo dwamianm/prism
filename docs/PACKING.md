@@ -479,8 +479,13 @@ with `current_observation`.
 The option also keeps profiles fresh. Its rebuilds call
 `consolidate_knowledge(include_speaker_turns=True)`, which takes, besides the
 records that mention the person's name, the records stored with that person
-as their `speaker`, since an owner says "my husband", not their own name; an
-explicit `consolidate_knowledge()` call without the keyword is unchanged.
+as their `speaker`, since an owner says "my husband", not their own name.
+Every named profile build, with or without the keyword, also takes the claims
+the graph binds to the person's entity: the claims the entity is the subject
+of, and the claims taken from the turns that person spoke (issue #448). Name
+matching alone cannot see those, because a first-person claim keeps no name
+and a claim from their turn may name someone else. The profile metadata
+records how many sources each path supplied under `source_paths`.
 
 - `end_session()` builds the profile of each scope's named owner when there
   is none and two records mention them or were said by them, and rebuilds it
