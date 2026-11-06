@@ -2,7 +2,11 @@
 
 ## Review Scope
 
-- Base commit: 57ec400f5f83488439c30dd84a93fb0e1c822322 (`main`).
+- Base commit: 57ec400f5f83488439c30dd84a93fb0e1c822322 at review time. The branch was rebased onto
+  origin/main c8b817ee before the PR, which brought the named person's profile change (#448) behind
+  `enable_owner_profile_context`, a switch this profile leaves off. The reviewed source is identical after the
+  rebase, and `tests/test_hosted_profile.py` and `tests/test_profile_graph_sources.py` were rerun on the rebased
+  tree (22 passed, 9 skipped).
 - Branch: `issue-454-halve-retrieve-cpu`.
 - Final reviewed snapshot: 6f8b379649445253277433691e2209e375169507187679922fd46a32c93646c2.
 - Earlier reviewed snapshots: d0ebceb58a453db14a777f507dd0f885390c61d3baf2052da897ce10a510617c (after the first fix round) and fb832f746349847d24d5e50d12df97ab6f9d1ddd34a78a7d95d176600380e918 (the first reports).
