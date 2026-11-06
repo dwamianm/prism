@@ -1,0 +1,642 @@
+{
+ "kind": "prme-hosted-request-profile",
+ "schema_version": 1,
+ "engine_version": "0.17.0a2",
+ "backend": "postgres",
+ "nodes": 10000,
+ "requests_per_shape": 50,
+ "batch_size": 10,
+ "hosted_settings": {
+  "backend": "postgres",
+  "embedding": {
+   "provider": "fastembed",
+   "model_name": "BAAI/bge-small-en-v1.5",
+   "dimension": 384,
+   "threads": 1
+  },
+  "organizer": {
+   "opportunistic_enabled": true,
+   "opportunistic_cooldown": 3600,
+   "opportunistic_budget_ms": 200
+  },
+  "switches": {
+   "enable_query_reformulation": false,
+   "enable_store_extraction": false,
+   "enable_reingest": false,
+   "enable_pronoun_repair": false,
+   "enable_extraction_corrections": false,
+   "enable_multi_model_embeddings": false,
+   "enable_superseded_source_suppression": false,
+   "enable_speaker_references": true,
+   "enable_speaker_grounding": true,
+   "enable_relation_routing": true,
+   "enable_mention_links": true,
+   "enable_owner_name_carry": true,
+   "enable_owner_group_links": true,
+   "enable_claim_sentence_text": true,
+   "enable_ingest_claim_fixes": true,
+   "lexical_term_weights": true,
+   "enable_windowed_extraction": false,
+   "enable_owner_window_extraction": false,
+   "enable_fact_text_resolution": false,
+   "enable_reranker": false,
+   "encryption_enabled": false
+  },
+  "scoring": {
+   "fusion": "rrf",
+   "rrf_graph_seed_count": true,
+   "rrf_graph_weight": 0.5
+  },
+  "packing": {
+   "context_format": "reader",
+   "token_budget": 4096,
+   "graph_seed_words": true,
+   "folded_records_keep_rank": true,
+   "session_context_skip_entities": true
+  }
+ },
+ "corpus": {
+  "source": "benchmarks.graph_oracle.scale.conversation_pad",
+  "texts": 10501,
+  "sha256": "a7911e4e9cbadc6552d016e61e3b3d5085f475e7c172de4687aaa0daa9d36b57"
+ },
+ "machine": {
+  "platform": "macOS-26.6.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "Apple M5 Pro",
+  "cpu_count": 18,
+  "python": "3.11.6"
+ },
+ "libraries": {
+  "fastembed": "0.7.4",
+  "onnxruntime": "1.24.2",
+  "usearch": "2.26.2",
+  "tantivy": "0.25.1",
+  "asyncpg": "0.31.0",
+  "pgvector": "0.4.2"
+ },
+ "embedding_identity": {
+  "model_name": "BAAI/bge-small-en-v1.5",
+  "model_version": "fastembed-0.7.4",
+  "dimension": 384
+ },
+ "storage_identity": {
+  "postgres": "16.15 (Debian 16.15-1.pgdg12+2)",
+  "pgvector": "0.8.7"
+ },
+ "build": {
+  "nodes": 10000,
+  "seconds": 130.8,
+  "analyzed": true
+ },
+ "shapes": {
+  "retrieve": {
+   "requests": 50,
+   "wall_ms": {
+    "p50": 101.21,
+    "p95": 268.64,
+    "max": 292.42,
+    "mean": 123.21
+   },
+   "cpu_ms": {
+    "p50": 52.65,
+    "p95": 176.29,
+    "max": 198.74,
+    "mean": 75.75
+   },
+   "stages": {
+    "query_analysis": {
+     "wall_ms": {
+      "p50": 0.12,
+      "p95": 0.86,
+      "max": 0.91,
+      "mean": 0.2
+     },
+     "cpu_ms": {
+      "p50": 0.11,
+      "p95": 0.86,
+      "max": 0.91,
+      "mean": 0.2
+     },
+     "calls_per_request": 1.0
+    },
+    "graph_expansion": {
+     "wall_ms": {
+      "p50": 4.12,
+      "p95": 5.81,
+      "max": 8.76,
+      "mean": 4.21
+     },
+     "cpu_ms": {
+      "p50": 3.34,
+      "p95": 4.09,
+      "max": 5.25,
+      "mean": 3.4
+     },
+     "calls_per_request": 1.0
+    },
+    "vector_search": {
+     "wall_ms": {
+      "p50": 24.98,
+      "p95": 26.75,
+      "max": 26.95,
+      "mean": 25.21
+     },
+     "cpu_ms": {
+      "p50": 3.88,
+      "p95": 4.74,
+      "max": 5.92,
+      "mean": 4.0
+     },
+     "calls_per_request": 1.0
+    },
+    "lexical_search": {
+     "wall_ms": {
+      "p50": 20.6,
+      "p95": 34.64,
+      "max": 38.06,
+      "mean": 23.13
+     },
+     "cpu_ms": {
+      "p50": 3.57,
+      "p95": 4.8,
+      "max": 5.33,
+      "mean": 3.7
+     },
+     "calls_per_request": 1.0
+    },
+    "pinned_candidates": {
+     "wall_ms": {
+      "p50": 4.02,
+      "p95": 4.75,
+      "max": 5.71,
+      "mean": 3.98
+     },
+     "cpu_ms": {
+      "p50": 3.22,
+      "p95": 3.8,
+      "max": 5.11,
+      "mean": 3.27
+     },
+     "calls_per_request": 1.0
+    },
+    "candidate_merge": {
+     "wall_ms": {
+      "p50": 0.88,
+      "p95": 2.89,
+      "max": 28.96,
+      "mean": 1.79
+     },
+     "cpu_ms": {
+      "p50": 0.88,
+      "p95": 2.89,
+      "max": 28.95,
+      "mean": 1.79
+     },
+     "calls_per_request": 1.0
+    },
+    "filtering": {
+     "wall_ms": {
+      "p50": 0.18,
+      "p95": 0.33,
+      "max": 0.62,
+      "mean": 0.19
+     },
+     "cpu_ms": {
+      "p50": 0.18,
+      "p95": 0.33,
+      "max": 0.62,
+      "mean": 0.19
+     },
+     "calls_per_request": 1.04
+    },
+    "embedding": {
+     "wall_ms": {
+      "p50": 2.61,
+      "p95": 3.0,
+      "max": 4.32,
+      "mean": 2.6
+     },
+     "cpu_ms": {
+      "p50": 2.84,
+      "p95": 3.31,
+      "max": 4.57,
+      "mean": 2.87
+     },
+     "calls_per_request": 1.0
+    },
+    "scoring": {
+     "wall_ms": {
+      "p50": 10.3,
+      "p95": 45.08,
+      "max": 62.97,
+      "mean": 16.6
+     },
+     "cpu_ms": {
+      "p50": 10.3,
+      "p95": 45.05,
+      "max": 62.94,
+      "mean": 16.59
+     },
+     "calls_per_request": 1.0
+    },
+    "packing": {
+     "wall_ms": {
+      "p50": 10.36,
+      "p95": 28.0,
+      "max": 29.33,
+      "mean": 13.05
+     },
+     "cpu_ms": {
+      "p50": 10.35,
+      "p95": 27.99,
+      "max": 29.31,
+      "mean": 13.05
+     },
+     "calls_per_request": 1.0
+    },
+    "token_counting": {
+     "wall_ms": {
+      "p50": 4.63,
+      "p95": 12.99,
+      "max": 13.29,
+      "mean": 5.81
+     },
+     "cpu_ms": {
+      "p50": 4.64,
+      "p95": 12.96,
+      "max": 13.28,
+      "mean": 5.82
+     },
+     "calls_per_request": 772.56
+    },
+    "receipts": {
+     "wall_ms": {
+      "p50": 6.74,
+      "p95": 21.29,
+      "max": 35.05,
+      "mean": 9.61
+     },
+     "cpu_ms": {
+      "p50": 6.74,
+      "p95": 21.28,
+      "max": 35.02,
+      "mean": 9.61
+     },
+     "calls_per_request": 1.0
+    }
+   }
+  },
+  "store": {
+   "requests": 50,
+   "wall_ms": {
+    "p50": 28.39,
+    "p95": 33.21,
+    "max": 44.31,
+    "mean": 29.22
+   },
+   "cpu_ms": {
+    "p50": 10.68,
+    "p95": 15.27,
+    "max": 26.19,
+    "mean": 11.46
+   },
+   "stages": {
+    "event_append": {
+     "wall_ms": {
+      "p50": 1.34,
+      "p95": 1.59,
+      "max": 1.77,
+      "mean": 1.36
+     },
+     "cpu_ms": {
+      "p50": 0.31,
+      "p95": 0.46,
+      "max": 0.51,
+      "mean": 0.33
+     },
+     "calls_per_request": 1.0
+    },
+    "embedding": {
+     "wall_ms": {
+      "p50": 6.13,
+      "p95": 10.95,
+      "max": 21.5,
+      "mean": 6.89
+     },
+     "cpu_ms": {
+      "p50": 6.13,
+      "p95": 10.94,
+      "max": 21.48,
+      "mean": 6.89
+     },
+     "calls_per_request": 1.0
+    },
+    "graph_write": {
+     "wall_ms": {
+      "p50": 0.58,
+      "p95": 0.69,
+      "max": 0.73,
+      "mean": 0.6
+     },
+     "cpu_ms": {
+      "p50": 0.1,
+      "p95": 0.11,
+      "max": 0.12,
+      "mean": 0.1
+     },
+     "calls_per_request": 1.0
+    },
+    "vector_index": {
+     "wall_ms": {
+      "p50": 7.93,
+      "p95": 12.89,
+      "max": 23.53,
+      "mean": 8.79
+     },
+     "cpu_ms": {
+      "p50": 6.51,
+      "p95": 11.29,
+      "max": 21.85,
+      "mean": 7.26
+     },
+     "calls_per_request": 1.0
+    },
+    "lexical_index": {
+     "wall_ms": {
+      "p50": 0.34,
+      "p95": 0.43,
+      "max": 0.44,
+      "mean": 0.35
+     },
+     "cpu_ms": {
+      "p50": 0.07,
+      "p95": 0.09,
+      "max": 0.12,
+      "mean": 0.08
+     },
+     "calls_per_request": 1.0
+    },
+    "materialization": {
+     "wall_ms": {
+      "p50": 10.39,
+      "p95": 15.32,
+      "max": 26.07,
+      "mean": 11.24
+     },
+     "cpu_ms": {
+      "p50": 7.08,
+      "p95": 11.86,
+      "max": 22.47,
+      "mean": 7.84
+     },
+     "calls_per_request": 1.0
+    }
+   }
+  },
+  "ingest_fast": {
+   "requests": 50,
+   "wall_ms": {
+    "p50": 125.04,
+    "p95": 136.64,
+    "max": 175.54,
+    "mean": 126.21
+   },
+   "cpu_ms": {
+    "p50": 78.03,
+    "p95": 96.25,
+    "max": 129.1,
+    "mean": 79.23
+   },
+   "stages": {
+    "event_append": {
+     "wall_ms": {
+      "p50": 1.47,
+      "p95": 1.81,
+      "max": 14.68,
+      "mean": 1.76
+     },
+     "cpu_ms": {
+      "p50": 0.32,
+      "p95": 0.5,
+      "max": 0.54,
+      "mean": 0.34
+     },
+     "calls_per_request": 1.0
+    },
+    "embedding": {
+     "wall_ms": {
+      "p50": 66.04,
+      "p95": 84.85,
+      "max": 116.96,
+      "mean": 66.95
+     },
+     "cpu_ms": {
+      "p50": 66.01,
+      "p95": 84.79,
+      "max": 116.89,
+      "mean": 66.91
+     },
+     "calls_per_request": 10.0
+    },
+    "graph_write": {
+     "wall_ms": {
+      "p50": 6.33,
+      "p95": 7.36,
+      "max": 12.05,
+      "mean": 6.48
+     },
+     "cpu_ms": {
+      "p50": 1.11,
+      "p95": 1.27,
+      "max": 1.29,
+      "mean": 1.12
+     },
+     "calls_per_request": 10.0
+    },
+    "vector_index": {
+     "wall_ms": {
+      "p50": 86.06,
+      "p95": 104.41,
+      "max": 137.83,
+      "mean": 86.99
+     },
+     "cpu_ms": {
+      "p50": 69.71,
+      "p95": 88.62,
+      "max": 120.68,
+      "mean": 70.66
+     },
+     "calls_per_request": 10.0
+    },
+    "lexical_index": {
+     "wall_ms": {
+      "p50": 4.15,
+      "p95": 4.36,
+      "max": 4.38,
+      "mean": 4.1
+     },
+     "cpu_ms": {
+      "p50": 0.9,
+      "p95": 0.99,
+      "max": 1.03,
+      "mean": 0.9
+     },
+     "calls_per_request": 10.0
+    },
+    "materialization": {
+     "wall_ms": {
+      "p50": 114.41,
+      "p95": 127.09,
+      "max": 165.37,
+      "mean": 115.45
+     },
+     "cpu_ms": {
+      "p50": 76.15,
+      "p95": 94.51,
+      "max": 127.18,
+      "mean": 77.31
+     },
+     "calls_per_request": 10.0
+    }
+   },
+   "items_per_request": 10,
+   "admission_wall_ms": {
+    "p50": 1.63,
+    "p95": 2.07,
+    "max": 14.84,
+    "mean": 1.92
+   },
+   "materialization_wall_ms": {
+    "p50": 123.04,
+    "p95": 135.02,
+    "max": 173.95,
+    "mean": 124.29
+   }
+  }
+ },
+ "profile_top": [
+  {
+   "function": "engine.py:2674(retrieve)",
+   "calls": 26,
+   "tottime_ms": 0.223,
+   "cumtime_ms": 63.241
+  },
+  {
+   "function": "pipeline.py:343(retrieve)",
+   "calls": 14,
+   "tottime_ms": 0.263,
+   "cumtime_ms": 62.509
+  },
+  {
+   "function": "scoring.py:887(score_and_rank)",
+   "calls": 1,
+   "tottime_ms": 0.751,
+   "cumtime_ms": 20.385
+  },
+  {
+   "function": "models.py:280(validate_components)",
+   "calls": 1002,
+   "tottime_ms": 1.969,
+   "cumtime_ms": 18.173
+  },
+  {
+   "function": "relevance.py:617(make_receipt)",
+   "calls": 1,
+   "tottime_ms": 0.922,
+   "cumtime_ms": 17.149
+  },
+  {
+   "function": "candidates.py:626(generate_candidates)",
+   "calls": 4,
+   "tottime_ms": 0.208,
+   "cumtime_ms": 8.864
+  },
+  {
+   "function": "models.py:303(<genexpr>)",
+   "calls": 17034,
+   "tottime_ms": 3.519,
+   "cumtime_ms": 7.493
+  },
+  {
+   "function": "graph_store.py:210(get_nodes)",
+   "calls": 3,
+   "tottime_ms": 0.011,
+   "cumtime_ms": 6.828
+  },
+  {
+   "function": "graph_store.py:239(<listcomp>)",
+   "calls": 1,
+   "tottime_ms": 0.082,
+   "cumtime_ms": 6.528
+  },
+  {
+   "function": "graph_rows.py:37(record_to_node)",
+   "calls": 501,
+   "tottime_ms": 2.442,
+   "cumtime_ms": 6.446
+  },
+  {
+   "function": "relevance.py:260(serialize_version)",
+   "calls": 2,
+   "tottime_ms": 5.486,
+   "cumtime_ms": 6.389
+  },
+  {
+   "function": "relevance.py:555(checksum)",
+   "calls": 1,
+   "tottime_ms": 0.003,
+   "cumtime_ms": 4.918
+  },
+  {
+   "function": "scoring.py:662(_rank_fused_scores)",
+   "calls": 1,
+   "tottime_ms": 0.753,
+   "cumtime_ms": 4.166
+  },
+  {
+   "function": "models.py:308(<genexpr>)",
+   "calls": 33066,
+   "tottime_ms": 2.757,
+   "cumtime_ms": 3.635
+  },
+  {
+   "function": "models.py:314(replay_base_score)",
+   "calls": 2505,
+   "tottime_ms": 0.875,
+   "cumtime_ms": 3.546
+  },
+  {
+   "function": "scoring.py:948(<genexpr>)",
+   "calls": 286,
+   "tottime_ms": 0.063,
+   "cumtime_ms": 3.322
+  },
+  {
+   "function": "models.py:230(score)",
+   "calls": 3006,
+   "tottime_ms": 1.696,
+   "cumtime_ms": 3.293
+  },
+  {
+   "function": "scoring.py:221(_has_update_language)",
+   "calls": 285,
+   "tottime_ms": 0.031,
+   "cumtime_ms": 3.259
+  },
+  {
+   "function": "relevance.py:37(valid_trace_and_exposure)",
+   "calls": 1002,
+   "tottime_ms": 0.539,
+   "cumtime_ms": 3.149
+  },
+  {
+   "function": "models.py:304(<genexpr>)",
+   "calls": 22044,
+   "tottime_ms": 2.168,
+   "cumtime_ms": 3.085
+  }
+ ],
+ "owner": "hosted-profile-3f4ae578",
+ "limits": "One process, one owner, raw conversation turns stored with extract=False. Wall time and process CPU time are per request on this machine; candidate backends run concurrently, so their stage wall times overlap and a stage's CPU delta can cover its siblings' work. Each measured query's and text's cached vector is dropped first. Build time, model load and the first maintenance pass are outside the samples. No answer quality or cross-machine speed claim."
+}

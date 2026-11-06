@@ -4944,6 +4944,120 @@ rest is storing the vector and its index entry). The job is the extra CPU of one
 `pause_ms` it leaves time to the rest of the process. Storage after the job is the sum of both models', as the
 experiment measured for each, until the old model is dropped. One run per row, on a shared machine.
 
+## Hosted request profile at 10,000 nodes (dwamianm/prism#454)
+
+Part of the hosted scale epic (dwamianm/prism-monorepo#510). The hosted service's limit is the engine's CPU per
+request: on the 2026-10-18 dev measurement (prism-monorepo#140) one 1 vCPU task served 2.3 requests a second at
+96.8 percent CPU with ten clients at 10,000 nodes, about 0.42 vCPU-seconds per request. This harness measures that
+cost in process, so a change can be judged before a deployment is measured.
+
+```sh
+uv run --extra postgres python -m benchmarks.diagnostics.hosted_profile run \
+  --database-url <a scratch PostgreSQL database> --nodes 10000 --requests 50 --batch-size 10 \
+  --out benchmarks/results/research/2026-11-05/hosted-profile
+```
+
+The run stores 10,000 ordinary conversation turns for one owner through `store(extract=False)`, then times the
+three request shapes the service serves under the engine settings pinned in
+`apps/api/src/prism_api/app.py` (relation routing, speaker grounding and references, rank fusion with the graph
+seed count at weight 0.5, the reader format, graph seed words, folded records keeping rank, session context
+entity skip), with the local `bge-small` model at one ONNX thread as the service runs it, and opportunistic
+maintenance left on as the service leaves it. The store's tables are analyzed first, as autovacuum would have
+seen a table of this size. The 10,000 stores took 130.8 s. The retrieve shape's requests run after a pass over
+every fixed question, so no request pays a first-call import; the write shapes warm one item each. Each measured
+query's and text's cached vector is dropped first, so its embedding is paid on every sample. The store shape
+calls `store_with_receipt`, as the service's route does, so the route's post-store reads are included. The
+retrieve stages are measured by wrapping the pipeline's own stage functions for the run; the four candidate
+backends run concurrently, so their wall times overlap and a stage's CPU delta can cover its siblings' work. The
+per-request total is process CPU time; the split is an attribution. The benchmark data under `data/benchmarks`
+must be downloaded first, and the first run downloads the embedding model if it is not cached.
+
+Engine 0.17.0a2, PostgreSQL 16.15 with pgvector 0.8.7, fastembed 0.7.4, onnxruntime 1.24.2, macOS 26.6.1,
+Apple M5 Pro (18 logical CPUs), one process, one run. Milliseconds per request, median and 95th percentile over
+50 requests:
+
+| Shape | Wall p50 / p95 | CPU p50 / p95 |
+|---|---:|---:|
+| `retrieve` | 101.21 / 268.64 | 52.65 / 176.29 |
+| `store_with_receipt(extract=False)` | 28.39 / 33.21 | 10.68 / 15.27 |
+| `ingest_fast_many` (10 items) plus materialization | 125.04 / 136.64 | 78.03 / 96.25 |
+
+`ingest_fast_many` itself took 1.63 / 2.07 ms wall and the materialization call 123.04 / 135.02 ms.
+
+Retrieve stages:
+
+| Stage | Wall p50 / p95 | CPU p50 / p95 | Calls per request |
+|---|---:|---:|---:|
+| Query analysis | 0.12 / 0.86 | 0.11 / 0.86 | 1.0 |
+| Query embedding | 2.61 / 3.00 | 2.84 / 3.31 | 1.0 |
+| Graph expansion | 4.12 / 5.81 | 3.34 / 4.09 | 1.0 |
+| Vector search (includes the embedding) | 24.98 / 26.75 | 3.88 / 4.74 | 1.0 |
+| Lexical search | 20.60 / 34.64 | 3.57 / 4.80 | 1.0 |
+| Pinned candidates | 4.02 / 4.75 | 3.22 / 3.80 | 1.0 |
+| Candidate merge | 0.88 / 2.89 | 0.88 / 2.89 | 1.0 |
+| Epistemic filtering | 0.18 / 0.33 | 0.18 / 0.33 | 1.04 |
+| Scoring | 10.30 / 45.08 | 10.30 / 45.05 | 1.0 |
+| Packing | 10.36 / 28.00 | 10.35 / 27.99 | 1.0 |
+| Token counting (inside packing) | 4.63 / 12.99 | 4.64 / 12.96 | 772.6 |
+| Receipts | 6.74 / 21.29 | 6.74 / 21.28 | 1.0 |
+
+Store stages. The write stages nest: materialization contains the embedding, the graph node write and both index
+writes.
+
+| Stage | Wall p50 / p95 | CPU p50 / p95 | Calls per request |
+|---|---:|---:|---:|
+| Event append | 1.34 / 1.59 | 0.31 / 0.46 | 1.0 |
+| Embedding | 6.13 / 10.95 | 6.13 / 10.94 | 1.0 |
+| Graph node write | 0.58 / 0.69 | 0.10 / 0.11 | 1.0 |
+| Vector index (includes the embedding) | 7.93 / 12.89 | 6.51 / 11.29 | 1.0 |
+| Lexical index | 0.34 / 0.43 | 0.07 / 0.09 | 1.0 |
+| Materialization (around them) | 10.39 / 15.32 | 7.08 / 11.86 | 1.0 |
+
+`ingest_fast_many` materialization stages, one batch of 10 items. The stages nest the same way.
+
+| Stage | Wall p50 / p95 | CPU p50 / p95 | Calls per request |
+|---|---:|---:|---:|
+| Event append | 1.47 / 1.81 | 0.32 / 0.50 | 1.0 |
+| Embedding | 66.04 / 84.85 | 66.01 / 84.79 | 10.0 |
+| Graph node write | 6.33 / 7.36 | 1.11 / 1.27 | 10.0 |
+| Vector index (includes the embedding) | 86.06 / 104.41 | 69.71 / 88.62 | 10.0 |
+| Lexical index | 4.15 / 4.36 | 0.90 / 0.99 | 10.0 |
+| Materialization (around them) | 114.41 / 127.09 | 76.15 / 94.51 | 10.0 |
+
+What the numbers say:
+
+- **A retrieve costs 52.7 ms of CPU at the median and 176.3 ms at the 95th percentile.** Scoring (10.3 ms) and
+  packing (10.4 ms, of which token counting is 4.6 ms) are the largest stages, together about 39 percent of the
+  median. Receipt construction is 6.7 ms. The four candidate backends cost 3.2 to 3.9 ms of CPU each, and their
+  wall times are much larger than their CPU (vector search 25.0 ms wall against 3.9 ms CPU, lexical search 20.6
+  against 3.6), so they are mostly waiting on PostgreSQL.
+- **The function-level view is a hot-spot pointer, not CPU accounting.** It is `cProfile` elapsed time on the
+  calling thread, inflated by the profiler's own overhead and including time spent waiting, so its figures are
+  not comparable to the stage cells. In the profiled request `make_receipt`, `score_and_rank` and
+  `validate_components` were on the hottest call path. Functions the pipeline offloads to worker threads
+  (packing, token counting and embedding) have no row of their own.
+- **The heaviest question shapes set the p95.** Scoring and packing reach 45.1 and 28.0 ms of CPU at the 95th
+  percentile. The fixed question set includes count questions, which widen the candidate pool through the
+  aggregation multiplier. At 50 samples the 95th percentile is the 48th sorted value, and the slowest single
+  sample was heavier still (198.7 ms of CPU), so the tail is a small set of heavier questions rather than one
+  slow call.
+- **A store costs 10.7 ms of CPU, and its materialization pass is 7.1 ms of that.** The materialization figure
+  includes the 6.1 ms embedding and the 6.5 ms vector index write. The store shape calls `store_with_receipt`, so
+  the 10.7 ms also carries the route's post-store reads, which the write stages do not attribute.
+- **A 10 item `ingest_fast_many` batch costs 78.0 ms of CPU, about 7.8 ms an item.** Admission is 1.6 ms; the
+  materialization pass is 76.2 ms, of which the embedding is 66.0 ms and the vector index 69.7 ms. The ingest
+  route does not read the stored node back, so its per-item cost includes no receipt read.
+- **The per-stage split moves a few milliseconds between runs because the concurrent backends share one
+  thread.** Compare totals, not single stage cells, when judging a change. The total also follows the machine
+  load, so compare runs made under the same conditions and on the same machine.
+
+Limits: one run on a shared machine, raw conversation turns stored with `extract=False`, and one fixed question
+set. The same command on the same machine is the before and after comparison. The benchmark data must be
+downloaded first, and the first run downloads the embedding model if it is not cached. The Fargate figure above
+is a different machine, a different corpus and the full service path, so the two are not compared directly. The
+HTTP layer, the per-project workspace and lease, and model load are outside the samples. No answer quality claim
+is made here; the fast gate, fast cycle and member probe judge that.
+
 ## Baselines for the GPT-5.4 comparison
 
 The 2026-09-23 comparison has no reference points, so it cannot show how much of
