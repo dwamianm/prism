@@ -1081,6 +1081,147 @@ warm replay of the cache it built, which is the baseline to commit: copy its
 request. `compare` warns when either side made live calls, reused packs, ran on
 a changed working tree or used another server version or model.
 
+### Relation routing, mid tier (#446)
+
+Relation routing (`enable_relation_routing`, dwamianm/prism#399) went into 0.17.0a2 on the fast tiers alone. This
+is its first measurement at benchmark scale: the mid tier above with the defaults (routing off) and with the option
+on, on 2026-11-05. Nothing here changes code or a default. The reports are in
+`benchmarks/results/research/2026-11-05/mid-tier/`.
+
+```sh
+uv run python -m benchmarks.mid_tier run --label main-41005d66 --out <main dir>
+uv run python -m benchmarks.mid_tier run --label routing-41005d66 --set enable_relation_routing=true --out <routing dir>
+uv run python -m benchmarks.mid_tier run --label defaults-on-routing-packs --reuse-build routing-41005d66 --out <same dir>
+uv run python -m benchmarks.mid_tier compare <same dir> <routing dir> --output <same-packs comparison.json>
+uv run python -m benchmarks.mid_tier compare <main dir> <routing dir> --output <cross-build comparison.json>
+```
+
+**What ran.** Every run used `main` at `41005d66`, which is 0.17.0a2 (`091fef19`) plus three fixes, with engine
+source tree `28ca0c24`. Since the tag, `src/` changed in four files, all to keep another user's nodes out of graph
+expansion, the neighborhood route, contradiction counterparts and supersedence chains (#433, #437). None of them
+touches the routing code (`prme.retrieval.relations`, `prme.retrieval.relation_walk` and the route list in
+`prme.retrieval.scoring`), and every mid tier pack holds one user, so for this option the retrieval path measured
+here is the one 0.17.0a2 ships. Extraction used `deepseek-v4.1-flash:cloud` through the local Ollama server, model
+digest `e04da138`, server version 0.40.14 when each run started and ended. Both builds replayed the shared
+extraction cache: 0 live model calls and 1,186 cache hits each, with 1,188 entries in the cache before and after. No
+reader or judge ran, so this measures evidence coverage, not answers.
+
+**Two pairs.** Relation routing acts only at retrieval (the engine passes the option to the retrieval pipeline and
+nowhere else), so the routing side should have gated the defaults side's packs with `--reuse-build main-41005d66`.
+The harness refused: `check_reusable` in `benchmarks/mid_tier.py` accepts only `packing`, `scoring` and the reranker
+settings and treats every other top-level option as one that may act when memories are stored (#456). The routing
+side therefore built its own packs from the same cache (`routing-41005d66`). Then the defaults were gated over those same
+packs (`defaults-on-routing-packs`, a `--reuse-build` run with no setting, which the harness allows; it ran with this
+record's files uncommitted, so its report says the working tree changed, but the engine source tree is the same).
+That gives two comparisons:
+
+- **Same packs** (`routing-same-packs`): the defaults and routing over identical packs. This is the routing effect
+  and the result below. On it, none of the 1,135 LoCoMo questions and 8 LongMemEval-S questions the router does not
+  route changes at all (same context, same evidence ranks), which confirms that the option leaves an unrouted
+  question alone.
+- **Different builds** (`routing-cross-build`): the defaults over their own build against routing over its build.
+  The two builds hold the same number of claims in every pack but are not byte-identical (all 22 pack digests
+  differ). Over the 1,135 unrouted LoCoMo questions, 138 contexts differ between the builds; all evidence packed
+  (955 of 1,133), evidence turns packed (1,434 of 1,734) and projected accuracy are identical, and evidence turns in
+  the first 25 candidates differ by two (1,026 against 1,024). Unlike the replay of 2026-10-19 above, which matched
+  on every measure, these two replays of one cache differ slightly; I did not look into why. The cross-build pair
+  reads the same as the same-pack pair on every measure but evidence in the top 25 (-0.3 points, 2 questions won and
+  8 lost, against -0.2, 0 won and 4 lost); the difference is that drift.
+
+**Which questions route.** The router reads only the question's words. On this sample it routes 405 of the 1,540
+LoCoMo questions (262 of 841 single-hop, 79 of 282 multi-hop, 40 of 96 open-domain, 24 of 321 temporal) and 4 of the
+12 LongMemEval-S questions. On the same packs, routing changed the context of 263 of the 405 routed LoCoMo questions
+and 1 of the 4 routed LongMemEval-S questions.
+
+**What this sample does not test.** The hosted service's traffic is first-person chat, where a routed question is also
+walked from the owner's entity. None of the 1,540 LoCoMo questions is in the first person, so that path never ran on
+LoCoMo. All 12 LongMemEval-S questions are, but only 4 route, 1 context changed, and the sample packs all evidence on
+both sides, so it could not show a loss. Of the 405 routed LoCoMo questions, 106 contain a people word (husband,
+child, friend and the like); the rest routed on a cue word, for example "work" in "How does Andrew feel about his
+current work?". The walk also had little to walk on: over the 10 LoCoMo packs, the normalizer maps 609 of 3,912
+active claims (15.6%) to a relation (`python -m benchmarks.diagnostics.relation_coverage`), with only 9 `kin_of`
+and 15 `partner_of` claims, although those are among the relations routed most often. The first-person evidence is
+still only the fast tiers' chats (#457).
+
+**Wall time.** This machine (18 cores) was busy with other jobs: the one-minute load average, sampled during the
+runs, rose from about 4 to above 30 during the defaults build and was near 30 during the routing build.
+
+| Stage | Defaults (`main-41005d66`) | Routing on (`routing-41005d66`) | Defaults on the routing packs |
+|---|---:|---:|---:|
+| Build LoCoMo (cache replay) | 48 min 20 s | 41 min 00 s | none (reused) |
+| Build LongMemEval-S (cache replay) | 102 min 37 s | 91 min 15 s | none (reused) |
+| Gate LoCoMo | 8 min 08 s | 7 min 52 s | 8 min 18 s |
+| Gate LongMemEval-S | 13 s | 13 s | 39 s |
+| Whole run | 102 min 50 s | 91 min 28 s | 8 min 18 s |
+
+The routing report prints its LoCoMo build as "40 min 60 s" (2,459.7 s). The warm runs of 2026-10-19 took 11 to 12
+minutes; I did not look into why these replays took roughly eight to nine times as long. The builds did the same work under
+similar load, so their times compare with each other and not with the table further up.
+
+**Result.** Routing on against the defaults over the same packs, paired question by question
+(`routing-same-packs.md`):
+
+| Measure | Defaults | Routing on | Change (points) | 95% questions | 95% conversations | Wins / losses | Clear of zero |
+|---|---:|---:|---:|---:|---:|---:|---|
+| LoCoMo all evidence packed (1,536) | 83.6% | 83.8% | +0.2 | +0.0 to +0.5 | +0.0 to +0.5 | 3 / 0 | no |
+| LoCoMo evidence recall | 89.2% | 89.3% | +0.1 | +0.0 to +0.3 | +0.0 to +0.3 | 5 / 0 | no |
+| LoCoMo evidence in top 25 | 70.1% | 69.9% | -0.2 | -0.4 to -0.0 | -0.4 to +0.0 | 0 / 4 | no |
+| LoCoMo all evidence among the candidates | 98.0% | 98.0% | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 | no |
+| LoCoMo projected accuracy (1,540) | 77.4% | 77.5% | +0.1 | +0.0 to +0.3 | +0.0 to +0.3 | 3 / 0 | no |
+| LongMemEval-S, every measure (12) | 100.0% packed | 100.0% packed | +0.0 | +0.0 to +0.0 | | 0 / 0 | no |
+
+By LoCoMo category, all evidence packed moves only in multi-hop (+0.7 points, 2 questions gained) and temporal
+(+0.3, 1 gained); single-hop and open-domain do not move. Evidence in the top 25 leans down: its question-level
+interval ends at zero.
+
+**The questions whose rank moved.** On the same packs, evidence turn ranks changed on 248 routed LoCoMo questions
+and on no unrouted one. An evidence turn ranked lower 325 times (315 of them by one to eight places) and higher 45
+times. On LongMemEval-S, one evidence turn of one routed question ranked one place lower. The loss is largest at the
+top of the ranking. Routed LoCoMo questions (403 with evidence) with at least one evidence turn among the first k
+candidates:
+
+| First k candidates | Defaults | Routing on | Gained | Lost |
+|---:|---:|---:|---:|---:|
+| 1 | 10 | 2 | 0 | 8 |
+| 3 | 83 | 34 | 0 | 49 |
+| 5 | 143 | 91 | 0 | 52 |
+| 10 | 225 | 189 | 0 | 36 |
+| 25 | 303 | 300 | 0 | 3 |
+
+The unrouted questions do not move at any k. These ranks count only stored source turns
+(`_first_ranks` in `benchmarks/diagnostics/product_packing.py`), while packed evidence also credits an extracted
+record through the turns it cites. The route list puts the claims the walk reaches into the fused ranking, so the
+claims ahead of a source turn may carry the same evidence, and these numbers cannot show whether they do. A caller
+that reads only the first few results, rather than the packed context, may lose the source turn on these questions.
+
+These are the 9 LoCoMo questions whose packed evidence or evidence in the first 25 candidates changed:
+
+| Question | Category | Evidence packed | Evidence in top 25 | Evidence turn ranks |
+|---|---|---|---|---|
+| What are the names of John's children? (conv-41-q0040) | multi-hop | 1 to 2 of 2 | 1 to 1 | 592, 9 to 590, 10 |
+| What kind of indoor activities has Andrew pursued with his girlfriend? (conv-44-q0002) | multi-hop | 3 to 4 of 4 | 0 to 0 | 378, 137, 61, 222 to 374, 137, 61, 219 |
+| How does Andrew feel about his current work? (conv-44-q0027) | multi-hop | 2 to 3 of 4 | 2 to 2 | 604, 4, 145, 22 to 605, 6, 147, 24 |
+| How many months passed between Andrew adopting Buddy and Scout (conv-44-q0047) | temporal | 1 to 2 of 2 | 0 to 0 | 98, 43 to 101, 46 |
+| Which country do Calvin and Dave want to meet in? (conv-50-q0004) | open-domain | 0 to 1 of 2 | 0 to 0 | 379, 96 to 377, 98 |
+| What is Caroline excited about in the adoption process? (conv-26-q0088) | single-hop | 1 to 1 of 1 | 1 to 0 | 25 to 26 |
+| Why did Audrey sign up for a workshop about bonding with pets? (conv-44-q0068) | single-hop | 1 to 1 of 1 | 1 to 0 | 19 to 26 |
+| How many roadtrips did Evan take in May 2023? (conv-49-q0006) | multi-hop | 2 to 2 of 2 | 1 to 0 | 93, 25 to 95, 28 |
+| What new diet and lifestyle change did Sam adopt over time? (conv-49-q0048) | multi-hop | 3 to 3 of 4 | 3 to 2 | 212, 16, 23, 7 to 212, 22, 29, 13 |
+
+All 9 are routed. In the cross-build pair, build drift adds seven questions to this list and drops one. The walk
+breaks ties by node id, and node ids differ between builds, so the routed effects carry this build's tie-breaks.
+
+**Verdict.** On the evidence packed into the 4K context, routing changed almost nothing at this scale: it packed one
+more evidence turn for five routed LoCoMo questions (three of them now pack all their evidence) and lost packed
+evidence on none. No mid tier measure is clear of zero in either direction on either benchmark, and LongMemEval-S
+does not move. Routing did not lose by the tier's rule, so I did not open an issue to turn it off in the hosted
+configuration. It does move source turns down at the top of the ranking on routed questions (52 fewer questions with
+an evidence turn in the first 5 candidates, none more), which the tier does not judge and which may or may not cost
+an answer, and the first-person shape the hosted service uses was barely exercised (#457).
+
+**What did not run.** No answer track (reader and judge), no full benchmark, no second build of either side, no rank
+measure that counts the claims a walk adds, and no first-person sample beyond the 12 LongMemEval-S questions.
+
 ### Scheduled full benchmark: twice a week on the Mac mini (#272)
 
 The fast tiers above gate daily work. The full benchmark runs on a schedule, on
