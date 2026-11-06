@@ -885,6 +885,40 @@ async def cmd_stats(args: argparse.Namespace) -> None:
         await engine.close()
 
 
+async def cmd_cross_user_links(args: argparse.Namespace) -> None:
+    """Count and list the links that cross users, so an old store can be repaired."""
+    engine = await _create_engine(args.db_path)
+    try:
+        links = await engine.find_cross_user_links(limit=args.limit)
+        if args.format == "json":
+            print(json.dumps(links.to_dict(), indent=2))
+            return
+        print(f"Edges that cross users:    {links.edge_count}")
+        print(f"Pointers that cross users: {links.pointer_count}")
+        if links.edges:
+            print("\nEdges (edge owner; source owner; target owner):")
+            rows = [
+                [edge.edge_id, edge.edge_type, edge.owner,
+                 f"{edge.source_id} ({edge.source_owner})",
+                 f"{edge.target_id} ({edge.target_owner})"]
+                for edge in links.edges
+            ]
+            print(_format_table(["ID", "TYPE", "OWNER", "SOURCE", "TARGET"], rows))
+        if links.pointers:
+            print("\nsuperseded_by pointers:")
+            rows = [
+                [f"{pointer.node_id} ({pointer.owner})",
+                 f"{pointer.superseded_by} ({pointer.successor_owner})"]
+                for pointer in links.pointers
+            ]
+            print(_format_table(["NODE", "SUPERSEDED BY"], rows))
+        shown = len(links.edges) + len(links.pointers)
+        if shown < links.total:
+            print(f"\nListed {shown} of {links.total}; raise --limit to list more.")
+    finally:
+        await engine.close()
+
+
 async def cmd_export(args: argparse.Namespace) -> None:
     """Export the entire memory pack as JSON."""
     engine = await _create_engine(args.db_path)
@@ -1680,6 +1714,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_stats = subparsers.add_parser("stats", help="Show memory statistics")
     add_common(p_stats)
     p_stats.set_defaults(func=cmd_stats)
+
+    # cross-user-links
+    p_cross = subparsers.add_parser(
+        "cross-user-links",
+        help="Count and list edges and superseded_by pointers that cross users",
+    )
+    add_common(p_cross)
+    p_cross.add_argument(
+        "--limit",
+        type=work_limit,
+        default=100,
+        help="Most edges and most pointers to list (1 to 1000, default: 100); counts are always complete",
+    )
+    p_cross.set_defaults(func=cmd_cross_user_links)
 
     # export
     p_export = subparsers.add_parser("export", help="Export memory pack as JSON")

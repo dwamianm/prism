@@ -1405,7 +1405,7 @@ class MemoryEngine:
 
             # Step 5: Oscillation detection (runs after supersedence)
             try:
-                await self._check_oscillation(str(node.id))
+                await self._check_oscillation(str(node.id), user_id)
             except Exception:
                 logger.warning(
                     "Oscillation check failed for node %s. "
@@ -1768,19 +1768,20 @@ class MemoryEngine:
         )
         return await scorer.score(content, user_id, self._vector_index)
 
-    async def _check_oscillation(self, new_node_id: str) -> None:
+    async def _check_oscillation(self, new_node_id: str, user_id: str) -> None:
         """Check if a new node is part of a flip-flop oscillation pattern.
 
-        Traverses the supersedence chain backward and checks for content
-        similarity loops. If oscillation is detected, reduces confidence_base
-        on the new node. Non-fatal: any error is caught by the caller so
-        store() never fails due to this check.
+        Traverses the user's own supersedence chain backward and checks for
+        content similarity loops, so another user's node never counts
+        (#444). If oscillation is detected, reduces confidence_base on the
+        new node. Non-fatal: any error is caught by the caller so store()
+        never fails due to this check.
         """
         from prme.organizer.oscillation import OscillationDetector
 
         detector = OscillationDetector()
         results = await detector.detect_oscillations(
-            self._graph_store, new_node_id
+            self._graph_store, new_node_id, user_id=user_id
         )
 
         if not results:
@@ -2945,6 +2946,12 @@ class MemoryEngine:
                 user_id,
             )
             return None
+        if user_id is not None and node.superseded_by is not None:
+            # The owner-scoped read never names another user's node in
+            # superseded_by (#443).
+            node = await self._graph_store.get_node(
+                node_id, include_superseded=include_superseded, user_id=user_id
+            )
         return node
 
     async def _require_owned(self, node_id: str, user_id: str) -> MemoryNode:
@@ -3156,39 +3163,45 @@ class MemoryEngine:
     async def get_nodes(self, node_ids: list[str], *, user_id: str,
                         include_superseded: bool = False) -> list[MemoryNode]:
         graph = await self._ordinary_graph(user_id)
-        return [node for node in await graph.get_nodes(node_ids, include_superseded=include_superseded)
-                if node.user_id == user_id]
+        return [node for node in await graph.get_nodes(
+            node_ids, include_superseded=include_superseded, user_id=user_id,
+        ) if node.user_id == user_id]
 
     async def get_neighborhood(self, node_id: str, *, user_id: str, **kwargs) -> list[MemoryNode]:
+        """The user's nodes near one of the user's nodes; the walk never
+        passes through another user's node (#438)."""
         graph = await self._ordinary_graph(user_id)
         if await self.get_node(node_id, user_id=user_id, include_superseded=kwargs.get("include_superseded", False)) is None:
             return []
-        return [node for node in await graph.get_neighborhood(node_id, **kwargs) if node.user_id == user_id]
+        return [node for node in await graph.get_neighborhood(node_id, user_id=user_id, **kwargs)
+                if node.user_id == user_id]
 
     async def get_supersedence_chain(self, node_id: str, *, user_id: str | None = None,
                                     direction: str = "forward") -> list[MemoryNode]:
         """Follow SUPERSEDES links from a node, in chain order.
 
-        With ``user_id``, the starting node must be the user's, and the
-        chain ends before the first node another user owns, as the admitted
-        view of a protected store does, so a link that crosses users never
-        returns or walks through another user's node (#437). Without it, the
-        chain is the unscoped operator read.
+        With ``user_id`` the chain is the user's own: a starting node the user
+        does not own has none, a fork follows the user's branch, the chain
+        ends where only another user's node is left, and no node or retired
+        ``superseded_by`` of another user's is returned (#437, #444). Without
+        it, the chain is the unscoped operator read.
         """
         graph = await self._ordinary_graph(user_id)
         if user_id is not None and await self.get_node(
             node_id, include_superseded=True, user_id=user_id,
         ) is None:
             return []
-        chain = await graph.get_supersedence_chain(node_id, direction=direction)
-        if user_id is None:
-            return chain
-        owned = []
-        for node in chain:
-            if node.user_id != user_id:
-                break
-            owned.append(node)
-        return owned
+        return await graph.get_supersedence_chain(node_id, direction=direction, user_id=user_id)
+
+    async def find_cross_user_links(self, *, limit: int = 100):
+        """Count and list the links that cross users, for an operator (#438).
+
+        An edge whose nodes, or whose own owner, are not all one user's, and
+        a node whose ``superseded_by`` names another user's node. Owner-scoped
+        reads already skip them; this is how an old store finds them to
+        repair. Returns ``prme.storage.owner_reads.CrossUserLinks``.
+        """
+        return await self._graph_store.find_cross_user_links(limit=limit)
 
     @privacy_disclosure
     async def count_nodes(self, **kwargs) -> int:
@@ -3550,7 +3563,7 @@ class MemoryEngine:
         response. Optional evidence must be an event in the claim's owner/scope.
         PRME records the supplied evaluation; it does not infer condition truth.
         """
-        return await self._graph_store.evaluate_condition(
+        node = await self._graph_store.evaluate_condition(
             node_id,
             state,
             user_id=user_id,
@@ -3561,6 +3574,13 @@ class MemoryEngine:
             actor_id=actor_id,
             evaluated_at=evaluated_at,
         )
+        if user_id is not None and node.superseded_by is not None:
+            # The owner-scoped read never names another user's node in
+            # superseded_by (#443).
+            node = await self._graph_store.get_node(
+                str(node.id), include_superseded=True, user_id=user_id
+            ) or node.model_copy(update={"superseded_by": None})
+        return node
 
     @privacy_disclosure
     async def supersede(
@@ -3632,7 +3652,8 @@ class MemoryEngine:
             actor_id=actor or user_id or "system",
         )
         nodes = await self._graph_store.get_nodes(
-            [str(UUID(node_a_id)), str(UUID(node_b_id))], include_superseded=True
+            [str(UUID(node_a_id)), str(UUID(node_b_id))], include_superseded=True,
+            user_id=user_id,
         )
         by_id = {str(node.id): node for node in nodes}
         return by_id[str(UUID(node_a_id))], by_id[str(UUID(node_b_id))]
@@ -3667,7 +3688,8 @@ class MemoryEngine:
         )
         await self._evict_from_indexes(str(UUID(loser_id)))
         nodes = await self._graph_store.get_nodes(
-            [str(UUID(winner_id)), str(UUID(loser_id))], include_superseded=True
+            [str(UUID(winner_id)), str(UUID(loser_id))], include_superseded=True,
+            user_id=user_id,
         )
         by_id = {str(node.id): node for node in nodes}
         return by_id[str(UUID(winner_id))], by_id[str(UUID(loser_id))]

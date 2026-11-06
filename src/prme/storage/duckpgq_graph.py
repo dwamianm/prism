@@ -25,6 +25,15 @@ from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
+from prme.storage.owner_reads import (
+    CROSS_USER_EDGE_WHERE,
+    CROSS_USER_POINTER_WHERE,
+    CrossUserEdge,
+    CrossUserLinks,
+    CrossUserPointer,
+    hide_foreign_successors,
+    named_successors,
+)
 from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
@@ -135,6 +144,7 @@ class DuckPGQGraphStore:
         node_id: str,
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> MemoryNode | None:
         """Retrieve a node by ID.
 
@@ -142,20 +152,30 @@ class DuckPGQGraphStore:
             node_id: String UUID of the node.
             include_superseded: If False, returns None for
                 superseded/archived nodes.
+            user_id: When given, another user's node reads as not found,
+                and a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             The MemoryNode if found and visible, None otherwise.
         """
+        def read() -> MemoryNode | None:
+            node = self._get_node_sync(node_id, include_superseded)
+            if node is None or user_id is None:
+                return node
+            if node.user_id != user_id:
+                return None
+            return self._owned_view_sync([node], user_id)[0]
+
         async with self._conn_lock:
-            return await run_to_completion(
-                self._get_node_sync, node_id, include_superseded
-            )
+            return await run_to_completion(read)
 
     async def get_nodes(
         self,
         node_ids: list[str],
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Retrieve multiple nodes by ID in a single round trip.
 
@@ -166,16 +186,26 @@ class DuckPGQGraphStore:
             node_ids: String UUIDs of the nodes to fetch.
             include_superseded: If False, superseded/archived nodes
                 are omitted.
+            user_id: When given, another user's nodes are omitted, and
+                a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             List of found, visible MemoryNodes.
         """
         if not node_ids:
             return []
-        async with self._conn_lock:
-            return await run_to_completion(
-                self._get_nodes_sync, node_ids, include_superseded
+
+        def read() -> list[MemoryNode]:
+            nodes = self._get_nodes_sync(node_ids, include_superseded)
+            if user_id is None:
+                return nodes
+            return self._owned_view_sync(
+                [node for node in nodes if node.user_id == user_id], user_id
             )
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
 
     async def get_event_nodes(self, event_id: str, *, user_id: str) -> list[MemoryNode]:
         """Resolve provenance directly, independent of creation order and ranking."""
@@ -187,7 +217,8 @@ class DuckPGQGraphStore:
                 "SELECT * FROM nodes WHERE user_id = ? AND json_contains(evidence_refs, ?::JSON) ORDER BY id",
                 [user_id, evidence],
             ).fetchall())
-        return [self._row_to_node(row) for row in rows]
+            nodes = [self._row_to_node(row) for row in rows]
+            return await run_to_completion(self._owned_view_sync, nodes, user_id)
 
     async def get_session_neighbors(
         self,
@@ -260,6 +291,13 @@ class DuckPGQGraphStore:
         windows: dict[str, list[MemoryNode]] = {}
         for row in rows:
             windows.setdefault(str(row[0]), []).append(self._row_to_node(row[1:]))
+        named = named_successors(node for nodes in windows.values() for node in nodes)
+        if named:
+            async with self._conn_lock:
+                foreign = await run_to_completion(self._foreign_ids_sync, named, user_id)
+            windows = {
+                key: hide_foreign_successors(nodes, foreign) for key, nodes in windows.items()
+            }
         return windows
 
     async def query_nodes(
@@ -302,9 +340,8 @@ class DuckPGQGraphStore:
         Returns:
             List of matching MemoryNodes.
         """
-        async with self._conn_lock:
-            return await run_to_completion(
-                self._query_nodes_sync,
+        def read() -> list[MemoryNode]:
+            nodes = self._query_nodes_sync(
                 node_type,
                 user_id,
                 scope,
@@ -319,6 +356,10 @@ class DuckPGQGraphStore:
                 oldest_first,
                 limit,
             )
+            return nodes if user_id is None else self._owned_view_sync(nodes, user_id)
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
 
     async def count_nodes(
         self,
@@ -523,9 +564,13 @@ class DuckPGQGraphStore:
             params.append(str(UUID(after_id)))
         params.append(limit)
         sql = "SELECT * FROM nodes WHERE " + " AND ".join(conditions) + " ORDER BY id ASC LIMIT ?"
+
+        def read() -> list[MemoryNode]:
+            nodes = [self._row_to_node(row) for row in self._conn.execute(sql, params).fetchall()]
+            return self._owned_view_sync(nodes, user_id) if user_id else nodes
+
         async with self._conn_lock:
-            rows = await run_to_completion(lambda: self._conn.execute(sql, params).fetchall())
-        return [self._row_to_node(row) for row in rows]
+            return await run_to_completion(read)
 
     async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
         """Retire only current, eligible sources covered by an active summary."""
@@ -687,6 +732,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -702,6 +748,9 @@ class DuckPGQGraphStore:
             min_confidence: Minimum node confidence.
             include_superseded: Include superseded/archived nodes.
             include_unverified_aliases: Traverse unaccepted alias proposals.
+            user_id: When given, the walk never steps onto another user's
+                node, only the user's nodes are returned, and a starting
+                node another user owns has no neighborhood.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -716,6 +765,7 @@ class DuckPGQGraphStore:
                 min_confidence,
                 include_superseded,
                 include_unverified_aliases,
+                user_id,
             )
 
     async def get_neighborhood_with_depth(
@@ -728,6 +778,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -743,6 +794,10 @@ class DuckPGQGraphStore:
             min_confidence: Minimum node confidence.
             include_superseded: Include superseded/archived nodes.
             include_unverified_aliases: Traverse unaccepted alias proposals.
+            user_id: When given, the walk never steps onto another user's
+                node, so it does not reach the user's nodes through one;
+                only the user's nodes are returned, and a starting node
+                another user owns has no neighborhood.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -758,6 +813,7 @@ class DuckPGQGraphStore:
                 min_confidence,
                 include_superseded,
                 include_unverified_aliases,
+                user_id,
             )
 
     async def find_shortest_path(
@@ -797,6 +853,7 @@ class DuckPGQGraphStore:
         node_id: str,
         *,
         direction: str = "forward",
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Traverse the supersedence chain from a node.
 
@@ -809,14 +866,33 @@ class DuckPGQGraphStore:
         Args:
             node_id: Starting node ID.
             direction: "forward" or "backward".
+            user_id: When given, a starting node another user owns has no
+                chain, each step follows the newest link whose node is not
+                another user's (so a fork follows the user's branch), the
+                chain ends where only another user's node is left, and
+                a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             Ordered list of MemoryNodes in the chain.
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._get_supersedence_chain_sync, node_id, direction
+                self._get_supersedence_chain_sync, node_id, direction, user_id
             )
+
+    async def find_cross_user_links(self, *, limit: int = 100) -> CrossUserLinks:
+        """Count and list the links that cross users (an operator read).
+
+        An edge crosses users when its two nodes, or the edge itself, do not
+        all belong to one user; a pointer crosses users when a node's
+        ``superseded_by`` names another user's node. Both are counted in
+        full and listed, in id order, up to ``limit`` each.
+        """
+        if limit < 0:
+            raise ValueError("limit must not be negative")
+        async with self._conn_lock:
+            return await run_to_completion(self._find_cross_user_links_sync, limit)
 
     # --- Cleanup / Rollback ---
 
@@ -1566,6 +1642,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None,
         include_superseded: bool,
         include_unverified_aliases: bool,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Get neighborhood via recursive CTE (sync).
 
@@ -1580,6 +1657,7 @@ class DuckPGQGraphStore:
             min_confidence,
             include_superseded,
             include_unverified_aliases,
+            user_id,
         )
         return [node for node, _depth in results]
 
@@ -1592,6 +1670,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None,
         include_superseded: bool,
         include_unverified_aliases: bool,
+        user_id: str | None = None,
     ) -> list[tuple[MemoryNode, int]]:
         """Get neighborhood with min hop depth via recursive CTE (sync).
 
@@ -1601,7 +1680,18 @@ class DuckPGQGraphStore:
         once per path, which would multiply with every hub entity on the
         way. Each reachable node is returned once with its minimum depth
         (GROUP BY id, MIN(depth)).
+
+        With ``user_id`` every step joins the node it reaches and drops it
+        when another user owns it, so the walk never passes through another
+        user's node (#438). A node that no longer exists is passed as
+        before; it belongs to nobody.
         """
+        if user_id is not None:
+            start = self._conn.execute(
+                "SELECT user_id FROM nodes WHERE id = ?", [node_id]
+            ).fetchone()
+            if start is not None and start[0] != user_id:
+                return []
         logger.debug(
             "get_neighborhood using recursive CTE (SQL fallback)",
             extra={"node_id": node_id, "max_hops": max_hops},
@@ -1644,9 +1734,28 @@ class DuckPGQGraphStore:
             node_conditions.append("n.confidence >= ?")
             node_params.append(min_confidence)
 
+        if user_id is not None:
+            node_conditions.append("n.user_id = ?")
+            node_params.append(user_id)
+
         node_where = (
             "AND " + " AND ".join(node_conditions) if node_conditions else ""
         )
+
+        # The owner guard on each step: join the node the step reaches and
+        # keep the step unless another user owns that node.
+        if user_id is not None:
+            base_join = (
+                "LEFT JOIN nodes o ON o.id = CASE WHEN e.source_id = CAST(? AS UUID) "
+                "THEN e.target_id ELSE e.source_id END"
+            )
+            step_join = (
+                "LEFT JOIN nodes o ON o.id = CASE WHEN e.source_id = nb.id "
+                "THEN e.target_id ELSE e.source_id END"
+            )
+            owner_where = "AND (o.id IS NULL OR o.user_id = ?)"
+        else:
+            base_join = step_join = owner_where = ""
 
         # Recursive CTE: base case finds direct neighbors (both directions),
         # recursive case expands from there. Uses CASE to handle bidirectional
@@ -1664,8 +1773,10 @@ class DuckPGQGraphStore:
                     END AS id,
                     1 AS depth
                 FROM edges e
+                {base_join}
                 WHERE (e.source_id = CAST(? AS UUID) OR e.target_id = CAST(? AS UUID))
                     {edge_where}
+                    {owner_where}
 
                 UNION
 
@@ -1679,7 +1790,9 @@ class DuckPGQGraphStore:
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_where}
+                {step_join}
                 WHERE nb.depth < ?
+                    {owner_where}
             )
             SELECT n.*, nb.min_depth
             FROM (
@@ -1691,15 +1804,23 @@ class DuckPGQGraphStore:
             WHERE n.id != CAST(? AS UUID) {node_where}
         """
 
+        scoped = user_id is not None
         params: list = []
-        # Base case: 3 refs to node_id + edge_params
+        # Base case: 3 refs to node_id (4 with the owner join) + edge_params
+        # (+ the owner)
         params.append(node_id)
+        if scoped:
+            params.append(node_id)
         params.append(node_id)
         params.append(node_id)
         params.extend(edge_params)
-        # Recursive case: edge_params + max_hops
+        if scoped:
+            params.append(user_id)
+        # Recursive case: edge_params + max_hops (+ the owner)
         params.extend(edge_params)
         params.append(max_hops)
+        if scoped:
+            params.append(user_id)
         # Final WHERE: node_id + node_params
         params.append(node_id)
         params.extend(node_params)
@@ -1707,7 +1828,11 @@ class DuckPGQGraphStore:
         rows = self._conn.execute(query, params).fetchall()
         # The depth column trails the full nodes row; _row_to_node reads
         # fixed positions and ignores trailing columns.
-        return [(self._row_to_node(row), int(row[-1])) for row in rows]
+        results = [(self._row_to_node(row), int(row[-1])) for row in rows]
+        if not scoped:
+            return results
+        nodes = self._owned_view_sync([node for node, _depth in results], user_id)
+        return [(node, depth) for node, (_node, depth) in zip(nodes, results)]
 
     def _find_shortest_path_sync(
         self,
@@ -1797,7 +1922,7 @@ class DuckPGQGraphStore:
         return None
 
     def _get_supersedence_chain_sync(
-        self, node_id: str, direction: str
+        self, node_id: str, direction: str, user_id: str | None = None
     ) -> list[MemoryNode]:
         """Traverse supersedence chain via iterative queries (sync).
 
@@ -1813,6 +1938,9 @@ class DuckPGQGraphStore:
             "get_supersedence_chain using iterative SQL",
             extra={"node_id": node_id, "direction": direction},
         )
+
+        if user_id is not None:
+            return self._get_owned_supersedence_chain_sync(node_id, direction, user_id)
 
         chain: list[MemoryNode] = []
         visited: set[str] = {node_id}
@@ -1869,6 +1997,112 @@ class DuckPGQGraphStore:
             current_id = next_id
 
         return chain
+
+    def _get_owned_supersedence_chain_sync(
+        self, node_id: str, direction: str, user_id: str
+    ) -> list[MemoryNode]:
+        """The supersedence chain one user reads (sync, #437, #444).
+
+        Each step reads every SUPERSEDES link of the current node, newest
+        first (``get_edges`` order, which the admitted view of a protected
+        store follows), and follows the first one whose node another user
+        does not own, so a fork resolves the same way on every read. A link
+        to a deleted node ends the chain, as it does unscoped.
+        """
+        if direction == "forward":
+            step = (
+                "SELECT CAST(source_id AS VARCHAR) FROM edges "
+                "WHERE target_id = ? AND edge_type = 'supersedes' "
+                "ORDER BY created_at DESC, id"
+            )
+        elif direction == "backward":
+            step = (
+                "SELECT CAST(target_id AS VARCHAR) FROM edges "
+                "WHERE source_id = ? AND edge_type = 'supersedes' "
+                "ORDER BY created_at DESC, id"
+            )
+        else:
+            raise ValueError(
+                f"Invalid direction: {direction}. Use 'forward' or 'backward'."
+            )
+        start = self._conn.execute(
+            "SELECT user_id FROM nodes WHERE id = ?", [node_id]
+        ).fetchone()
+        if start is not None and start[0] != user_id:
+            return []
+
+        chain: list[MemoryNode] = []
+        visited: set[str] = {str(node_id)}
+        current_id = node_id
+        for _ in range(100):
+            linked = [str(row[0]) for row in self._conn.execute(step, [current_id]).fetchall()]
+            foreign = self._foreign_ids_sync(linked, user_id)
+            next_id = next((item for item in linked if item not in foreign), None)
+            if next_id is None or next_id in visited:
+                break
+            visited.add(next_id)
+            node_row = self._conn.execute(
+                "SELECT * FROM nodes WHERE id = ?", [next_id]
+            ).fetchone()
+            if node_row is None:
+                break
+            chain.append(self._row_to_node(node_row))
+            current_id = next_id
+        return self._owned_view_sync(chain, user_id)
+
+    # --- Owner-scoped read helpers ---
+
+    def _foreign_ids_sync(self, node_ids: list[str], user_id: str) -> set[str]:
+        """The given node ids that another user owns (sync)."""
+        ids = sorted(set(node_ids))
+        if not ids:
+            return set()
+        placeholders = ", ".join("?" for _ in ids)
+        rows = self._conn.execute(
+            f"SELECT CAST(id AS VARCHAR) FROM nodes "
+            f"WHERE id IN ({placeholders}) AND user_id <> ?",
+            [*ids, user_id],
+        ).fetchall()
+        return {str(row[0]) for row in rows}
+
+    def _owned_view_sync(self, nodes: list[MemoryNode], user_id: str) -> list[MemoryNode]:
+        """Clear a ``superseded_by`` that names another user's node (sync, #443)."""
+        named = named_successors(nodes)
+        if not named:
+            return nodes
+        return hide_foreign_successors(nodes, self._foreign_ids_sync(named, user_id))
+
+    def _find_cross_user_links_sync(self, limit: int) -> CrossUserLinks:
+        edge_from = (
+            "FROM edges e JOIN nodes s ON s.id = e.source_id "
+            "JOIN nodes t ON t.id = e.target_id "
+            f"WHERE {CROSS_USER_EDGE_WHERE}"
+        )
+        pointer_from = (
+            "FROM nodes n JOIN nodes s ON s.id = n.superseded_by "
+            f"WHERE {CROSS_USER_POINTER_WHERE}"
+        )
+        edge_count = self._conn.execute(f"SELECT COUNT(*) {edge_from}").fetchone()[0]
+        pointer_count = self._conn.execute(f"SELECT COUNT(*) {pointer_from}").fetchone()[0]
+        edges = self._conn.execute(
+            "SELECT CAST(e.id AS VARCHAR), e.edge_type, e.user_id, "
+            "CAST(e.source_id AS VARCHAR), s.user_id, "
+            f"CAST(e.target_id AS VARCHAR), t.user_id {edge_from} "
+            "ORDER BY e.id LIMIT ?",
+            [limit],
+        ).fetchall()
+        pointers = self._conn.execute(
+            "SELECT CAST(n.id AS VARCHAR), n.user_id, "
+            f"CAST(n.superseded_by AS VARCHAR), s.user_id {pointer_from} "
+            "ORDER BY n.id LIMIT ?",
+            [limit],
+        ).fetchall()
+        return CrossUserLinks(
+            edge_count=int(edge_count),
+            pointer_count=int(pointer_count),
+            edges=[CrossUserEdge(*map(str, row)) for row in edges],
+            pointers=[CrossUserPointer(*map(str, row)) for row in pointers],
+        )
 
     # --- Row conversion helpers ---
 

@@ -13,6 +13,7 @@ from typing import Any, Protocol, runtime_checkable
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
+from prme.storage.owner_reads import CrossUserLinks
 from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.storage.alias_review import (
     AliasProposalInboxItem,
@@ -117,13 +118,21 @@ class GraphStore(Protocol):
         node_id: str,
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> MemoryNode | None:
         """Retrieve a node by ID.
+
+        Every read given a ``user_id`` never steps onto, returns or names
+        another user's node (#438, #443, #444); see
+        ``prme.storage.owner_reads``.
 
         Args:
             node_id: String UUID of the node.
             include_superseded: If False (default), returns None for
                 superseded/archived nodes.
+            user_id: When given, another user's node reads as not found,
+                and a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             The MemoryNode if found and visible, None otherwise.
@@ -135,6 +144,7 @@ class GraphStore(Protocol):
         node_ids: list[str],
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Retrieve multiple nodes by ID in a single round trip.
 
@@ -147,6 +157,9 @@ class GraphStore(Protocol):
             node_ids: String UUIDs of the nodes to fetch.
             include_superseded: If False (default), superseded/archived
                 nodes are omitted from the result.
+            user_id: When given, another user's nodes are omitted, and
+                a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             List of found, visible MemoryNodes (order not guaranteed).
@@ -195,7 +208,8 @@ class GraphStore(Protocol):
 
         Args:
             node_type: Filter by node type.
-            user_id: Filter by owner user.
+            user_id: Filter by owner user. A node's ``superseded_by`` is
+                then never another user's node.
             scope: Filter by a single memory scope.
             scopes: Filter by multiple scopes (``scope IN (...)``).
                 Mutually exclusive with ``scope``.
@@ -338,6 +352,7 @@ class GraphStore(Protocol):
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node.
 
@@ -351,6 +366,9 @@ class GraphStore(Protocol):
             include_unverified_aliases: Traverse alias proposals that have not
                 been accepted as identity. Disabled by default so proposals do
                 not affect ordinary retrieval.
+            user_id: When given, the walk never steps onto another user's
+                node, only the user's nodes are returned, and a starting
+                node another user owns has no neighborhood.
 
         Returns:
             List of reachable MemoryNodes (excluding the starting node).
@@ -367,6 +385,7 @@ class GraphStore(Protocol):
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops along with their minimum hop distance.
 
@@ -383,6 +402,8 @@ class GraphStore(Protocol):
             include_superseded: Include superseded/archived nodes.
             include_unverified_aliases: Traverse alias proposals that have not
                 been accepted as identity. Disabled by default.
+            user_id: As in get_neighborhood(): the walk never passes
+                through another user's node.
 
         Returns:
             List of (MemoryNode, min_depth) tuples, excluding the
@@ -419,6 +440,7 @@ class GraphStore(Protocol):
         node_id: str,
         *,
         direction: str = "forward",
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Traverse the supersedence chain from a node.
 
@@ -426,9 +448,20 @@ class GraphStore(Protocol):
             node_id: Starting node ID.
             direction: "forward" = what replaced this node,
                        "backward" = what this node replaced.
+            user_id: When given, a starting node another user owns has no
+                chain, each step follows the newest link whose node is not
+                another user's, and a retired node's ``superseded_by`` never
+                names another user's node.
 
         Returns:
             Ordered list of MemoryNodes in the chain.
+        """
+        ...
+
+    async def find_cross_user_links(self, *, limit: int = 100) -> CrossUserLinks:
+        """Count and list the edges and ``superseded_by`` pointers that cross users.
+
+        An unscoped operator read for repairing an old store (#438).
         """
         ...
 

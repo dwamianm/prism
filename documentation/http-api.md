@@ -277,6 +277,8 @@ All fields are optional. Omit `jobs` to run all.
 
 Get a single node by ID.
 
+On every node response (this route, the node lists, the chain and neighborhood routes and the lifecycle routes), a request with a user never gets another user's node id in `superseded_by`: where a node was retired in favor of another user's node (an unscoped merge in an older store, or a direct graph write), `superseded_by` is `null`. The chain and neighborhood routes read for the starting node's owner when the request has no user, so the same holds there. The other routes without a user are the unscoped operator read and return the stored value; `prme cross-user-links` lists such links.
+
 **Response (200):**
 
 ```json
@@ -346,7 +348,7 @@ Reinforce a node (boost confidence and salience).
 
 ### GET /v1/nodes/{node_id}/neighborhood
 
-Get nodes within N hops of a starting node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. On a store with protected privacy reads, the neighborhood is read through that user's admitted view, so a superseded starting node returns no neighbors there.
+Get nodes within N hops of a starting node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. The walk never steps onto another user's node, so an edge that crosses users does not reach the reader's nodes beyond it either. On a store with protected privacy reads, the neighborhood is read through that user's admitted view, so a superseded starting node returns no neighbors there.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -363,7 +365,7 @@ Get nodes within N hops of a starting node. Only the reader's nodes are returned
 
 ### GET /v1/nodes/{node_id}/chain
 
-Get the supersedence chain for a node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. The chain ends before the first node another user owns. On a store with protected privacy reads, the chain is read through that user's admitted view.
+Get the supersedence chain for a node. Only the reader's nodes are returned: the request's user, or the starting node's owner when the request has no user. Where a node was replaced by more than one node, the chain follows the reader's own branch, and it ends where only another user's node is left. On a store with protected privacy reads, the chain is read through that user's admitted view.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|

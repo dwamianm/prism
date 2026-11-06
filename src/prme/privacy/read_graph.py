@@ -23,16 +23,22 @@ class AdmittedGraphView:
             raise PrivacyDenied("privacy_boundary_mismatch")
         return self.context.user_id
 
-    async def get_node(self, node_id, *, include_superseded=False):
+    async def get_node(self, node_id, *, include_superseded=False, user_id=None):
+        self._owner(user_id)
         await self.context.check()
-        node = await self._graph.get_node(node_id, include_superseded=include_superseded)
+        node = await self._graph.get_node(
+            node_id, include_superseded=include_superseded, user_id=self.context.user_id,
+        )
         projected = await self.context.project_node(node)
         return await self.context.disclose(projected)
 
-    async def get_nodes(self, node_ids, *, include_superseded=False):
+    async def get_nodes(self, node_ids, *, include_superseded=False, user_id=None):
+        self._owner(user_id)
         await self.context.check()
         result = []
-        for node in await self._graph.get_nodes(node_ids, include_superseded=include_superseded):
+        for node in await self._graph.get_nodes(
+            node_ids, include_superseded=include_superseded, user_id=self.context.user_id,
+        ):
             projected = await self.context.project_node(node)
             if projected is not None:
                 result.append(projected)
@@ -169,7 +175,9 @@ class AdmittedGraphView:
 
     async def get_neighborhood_with_depth(self, node_id, *, max_hops=2, edge_types=None,
                                           valid_at=None, min_confidence=None,
-                                          include_superseded=False, include_unverified_aliases=False):
+                                          include_superseded=False, include_unverified_aliases=False,
+                                          user_id=None):
+        self._owner(user_id)
         seed = await self.get_node(node_id, include_superseded=include_superseded)
         if seed is None:
             return []
@@ -206,7 +214,8 @@ class AdmittedGraphView:
     async def get_neighborhood(self, node_id, **kwargs):
         return [node for node, _ in await self.get_neighborhood_with_depth(node_id, **kwargs)]
 
-    async def get_supersedence_chain(self, node_id, *, direction="forward"):
+    async def get_supersedence_chain(self, node_id, *, direction="forward", user_id=None):
+        self._owner(user_id)
         if direction not in {"forward", "backward"}:
             raise ValueError("direction must be forward or backward")
         seed = await self.get_node(node_id, include_superseded=True)

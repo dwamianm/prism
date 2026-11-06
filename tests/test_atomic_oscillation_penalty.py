@@ -183,7 +183,7 @@ async def test_stale_or_foreign_chain_cannot_change_confidence(config, user):
 async def test_engine_check_uses_atomic_penalty(config, user):
     async with MemoryEngine.open(config) as engine:
         current, _, _ = await seed_chain(engine, user)
-        await engine._check_oscillation(str(current.id))
+        await engine._check_oscillation(str(current.id), user)
         after = await engine.get_node(str(current.id), user_id=user)
         assert after.confidence_base == pytest.approx(0.7)
         assert len(await penalty_rows(engine, str(current.id))) == 1

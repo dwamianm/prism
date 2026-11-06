@@ -136,25 +136,28 @@ class OscillationDetector:
         node_id: str,
         *,
         max_chain_depth: int = 10,
+        user_id: str | None = None,
     ) -> list[OscillationResult]:
         """Check if a node is part of an oscillation pattern.
 
         Traverses the supersedence chain backward from node_id and checks
         for content similarity loops (where a newer node's content is similar
-        to an older superseded node's content).
+        to an older superseded node's content). With ``user_id`` the chain
+        is that user's own, so another user's node never counts (#444).
 
         Returns list of detected oscillation patterns.
         """
+        owner = {} if user_id is None else {"user_id": user_id}
         # Get the current node
         current_node = await graph_store.get_node(
-            node_id, include_superseded=True
+            node_id, include_superseded=True, **owner
         )
         if current_node is None:
             return []
 
         # Get the supersedence chain backward (what this node replaced)
         chain = await graph_store.get_supersedence_chain(
-            node_id, direction="backward"
+            node_id, direction="backward", **owner
         )
 
         if not chain:

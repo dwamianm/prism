@@ -106,11 +106,14 @@ async def suppress_replaced_sources(
                 retired.setdefault(ref, []).append(node)
     if not retired:
         return list(candidates), []
+    # Owner-scoped reads never name or return another user's node, so a
+    # pointer that crosses users decides nothing here (#444).
     replacements = {
         node.id: node
         for node in await graph_store.get_nodes(
             sorted({str(claim.superseded_by) for claims in retired.values() for claim in claims}),
             include_superseded=True,
+            user_id=user_id,
         )
     }
     # The candidates that go, each with the retired claim whose text it holds,

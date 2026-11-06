@@ -169,7 +169,7 @@ Show the supersedence chain for a node — its history of being replaced or repl
 prme chain <db_path> <node_id> [--user-id USER]
 ```
 
-With `--user-id`, only that user's nodes are shown, and each direction of the chain ends before the first node another user owns. Without it, the chain is the unscoped operator read of the whole store; a store with protected privacy reads requires `--user-id`.
+With `--user-id`, only that user's nodes are shown: where a node was replaced by more than one node, the chain follows the user's own branch, each direction ends where only another user's node is left, and a retired node's `superseded_by` never names another user's node. Without it, the chain is the unscoped operator read of the whole store; a store with protected privacy reads requires `--user-id`.
 
 ```bash
 prme chain ./memory.duckdb 550e8400-e29b-41d4-a716-446655440000
@@ -185,6 +185,23 @@ prme stats <db_path> [--format {table,json}]
 
 ```bash
 prme stats ./memory.duckdb
+```
+
+### prme cross-user-links
+
+Count and list the links that cross users: edges whose two nodes, or whose own owner, are not all one user's, and nodes whose `superseded_by` names another user's node. A store gets them from an unscoped deduplicate or alias run before merges refused nodes of different users, or from direct graph writes. Reads for a user already skip these links (a graph walk never steps onto another user's node, and `superseded_by` never names one); this command is how an operator finds them to repair an old store. It reads node ids and owners only.
+
+```bash
+prme cross-user-links <db_path> [--limit N] [--format {table,json}]
+```
+
+| Flag | Description | Values |
+|------|-------------|--------|
+| `--limit` | Most edges and most pointers to list; the counts are always complete | 1 to 1000, default 100 |
+| `--format` | Output format | `table` (default) or `json` |
+
+```bash
+prme cross-user-links ./memory.duckdb --format json
 ```
 
 ## Search

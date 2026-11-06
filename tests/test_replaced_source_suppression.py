@@ -191,10 +191,13 @@ class Store:
         self.lookups.append("query")
         return self.superseded(user_id)[:limit]
 
-    async def get_nodes(self, node_ids, *, include_superseded=False):
+    async def get_nodes(self, node_ids, *, include_superseded=False, user_id=None):
         assert include_superseded is True
         self.lookups.append("get")
-        return [item for item in self.nodes if str(item.id) in node_ids]
+        return [
+            item for item in self.nodes
+            if str(item.id) in node_ids and (user_id is None or item.user_id == user_id)
+        ]
 
 
 async def run(store, *candidates):

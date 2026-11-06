@@ -24,6 +24,15 @@ from prme.storage.graph_rows import EDGE_COLUMNS as _EDGE_COLUMNS
 from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS
 from prme.storage.graph_rows import record_to_edge, record_to_node
 from prme.storage.organizer_merge import MergeResult
+from prme.storage.owner_reads import (
+    CROSS_USER_EDGE_WHERE,
+    CROSS_USER_POINTER_WHERE,
+    CrossUserEdge,
+    CrossUserLinks,
+    CrossUserPointer,
+    hide_foreign_successors,
+    named_successors,
+)
 from prme.storage.alias_proposal import AliasProposalEvidence, AliasProposalResult
 from prme.models.derivation import DerivationPlan, DerivationReceipt
 from prme.models.extraction_work import ExtractionClaim
@@ -170,8 +179,13 @@ class PgGraphStore:
         node_id: str,
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> MemoryNode | None:
-        """Retrieve a node by ID."""
+        """Retrieve a node by ID.
+
+        With ``user_id``, another user's node reads as not found, and
+        a retired node's ``superseded_by`` never names another user's node.
+        """
         async with self._pool.acquire() as conn:
             if include_superseded:
                 row = await conn.fetchrow(
@@ -184,20 +198,28 @@ class PgGraphStore:
                     "WHERE id = $1 AND lifecycle_state IN ('tentative', 'stable', 'contested')",
                     node_id,
                 )
-        if row is None:
-            return None
-        return self._record_to_node(row)
+            if row is None:
+                return None
+            node = self._record_to_node(row)
+            if user_id is None:
+                return node
+            if node.user_id != user_id:
+                return None
+            return (await self._owned_view(conn, [node], user_id))[0]
 
     async def get_nodes(
         self,
         node_ids: list[str],
         *,
         include_superseded: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Retrieve multiple nodes by ID in a single round trip.
 
         Batch equivalent of get_node() with identical visibility
-        semantics. Missing IDs are silently omitted.
+        semantics. Missing IDs are silently omitted. With ``user_id``,
+        another user's nodes are omitted, and a retired node's
+        ``superseded_by`` never names another user's node.
         """
         if not node_ids:
             return []
@@ -214,7 +236,12 @@ class PgGraphStore:
             )
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, node_ids)
-        return [self._record_to_node(row) for row in rows]
+            nodes = [self._record_to_node(row) for row in rows]
+            if user_id is None:
+                return nodes
+            return await self._owned_view(
+                conn, [node for node in nodes if node.user_id == user_id], user_id
+            )
 
     @staticmethod
     def _escape_like(pattern: str) -> str:
@@ -235,7 +262,9 @@ class PgGraphStore:
                 f"SELECT {_NODE_COLUMNS} FROM nodes WHERE user_id = $1 "
                 "AND evidence_refs @> $2::jsonb ORDER BY id", user_id, evidence,
             )
-        return [self._record_to_node(row) for row in rows]
+            return await self._owned_view(
+                conn, [self._record_to_node(row) for row in rows], user_id
+            )
 
     async def get_session_neighbors(
         self,
@@ -292,11 +321,18 @@ class PgGraphStore:
         """
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
-        windows: dict[str, list[MemoryNode]] = {}
-        for row in rows:
-            windows.setdefault(str(row["trigger_id"]), []).append(
-                self._record_to_node(row)
-            )
+            windows: dict[str, list[MemoryNode]] = {}
+            for row in rows:
+                windows.setdefault(str(row["trigger_id"]), []).append(
+                    self._record_to_node(row)
+                )
+            named = named_successors(node for nodes in windows.values() for node in nodes)
+            if named:
+                foreign = await self._foreign_ids(conn, named, user_id)
+                windows = {
+                    key: hide_foreign_successors(nodes, foreign)
+                    for key, nodes in windows.items()
+                }
         return windows
 
     async def query_nodes(
@@ -395,7 +431,10 @@ class PgGraphStore:
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
-        return [self._record_to_node(row) for row in rows]
+            nodes = [self._record_to_node(row) for row in rows]
+            if user_id is None:
+                return nodes
+            return await self._owned_view(conn, nodes, user_id)
 
     async def count_nodes(
         self,
@@ -468,7 +507,10 @@ class PgGraphStore:
                  + f" ORDER BY id ASC LIMIT ${len(params)}")
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
-        return [self._record_to_node(row) for row in rows]
+            nodes = [self._record_to_node(row) for row in rows]
+            if not user_id:
+                return nodes
+            return await self._owned_view(conn, nodes, user_id)
 
     # Fields allowed for update_node. Maps Python field name -> SQL column name.
     _UPDATE_ALLOWED_FIELDS: set[str] = {
@@ -1101,12 +1143,14 @@ class PgGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
         """Get nodes within N hops of a starting node via recursive CTE.
 
         Delegates to the depth-aware variant and discards depths -- the
         reachable node set is identical. Unaccepted alias proposals are
-        excluded unless explicitly requested.
+        excluded unless explicitly requested. ``user_id`` scopes the walk
+        as in get_neighborhood_with_depth().
         """
         results = await self.get_neighborhood_with_depth(
             node_id,
@@ -1116,6 +1160,7 @@ class PgGraphStore:
             min_confidence=min_confidence,
             include_superseded=include_superseded,
             include_unverified_aliases=include_unverified_aliases,
+            user_id=user_id,
         )
         return [node for node, _depth in results]
 
@@ -1129,6 +1174,7 @@ class PgGraphStore:
         min_confidence: float | None = None,
         include_superseded: bool = False,
         include_unverified_aliases: bool = False,
+        user_id: str | None = None,
     ) -> list[tuple[MemoryNode, int]]:
         """Get nodes within N hops with their minimum hop distance.
 
@@ -1138,6 +1184,12 @@ class PgGraphStore:
         multiply with every hub entity on the way. The outer query collapses
         the rows to one per node with MIN(depth). Unaccepted alias proposals
         are excluded unless explicitly requested.
+
+        With ``user_id`` every step joins the node it reaches and drops it
+        when another user owns it, so the walk never passes through another
+        user's node (#438); only the user's nodes are returned, and a
+        starting node another user owns has no neighborhood. A node that no
+        longer exists belongs to nobody and is passed as before.
         """
         # Build edge filter
         edge_filter_parts: list[str] = []
@@ -1183,6 +1235,25 @@ class PgGraphStore:
             params.append(min_confidence)
             idx += 1
 
+        if user_id is not None:
+            params.append(user_id)
+            owner_idx = idx
+            idx += 1
+            node_filter_parts.append(f"n.user_id = ${owner_idx}")
+            # The owner guard on each step: join the node the step reaches
+            # and keep the step unless another user owns that node.
+            base_join = (
+                "LEFT JOIN nodes o ON o.id = CASE WHEN e.source_id = $1::uuid "
+                "THEN e.target_id ELSE e.source_id END"
+            )
+            step_join = (
+                "LEFT JOIN nodes o ON o.id = CASE WHEN e.source_id = nb.id "
+                "THEN e.target_id ELSE e.source_id END"
+            )
+            owner_where = f"AND (o.id IS NULL OR o.user_id = ${owner_idx})"
+        else:
+            base_join = step_join = owner_where = ""
+
         node_filter = "AND " + " AND ".join(node_filter_parts) if node_filter_parts else ""
 
         query = f"""
@@ -1195,8 +1266,10 @@ class PgGraphStore:
                     END AS id,
                     1 AS depth
                 FROM edges e
+                {base_join}
                 WHERE (e.source_id = $1::uuid OR e.target_id = $1::uuid)
                     {edge_filter}
+                    {owner_where}
 
                 UNION
 
@@ -1210,7 +1283,9 @@ class PgGraphStore:
                 FROM neighborhood nb
                 JOIN edges e ON (e.source_id = nb.id OR e.target_id = nb.id)
                     {edge_filter}
+                {step_join}
                 WHERE nb.depth < ${max_hops_idx}
+                    {owner_where}
             )
             SELECT {_NODE_COLUMNS_QUALIFIED}, nb.min_depth
             FROM (
@@ -1223,10 +1298,22 @@ class PgGraphStore:
         """
 
         async with self._pool.acquire() as conn:
+            if user_id is not None:
+                start = await conn.fetchval(
+                    "SELECT user_id FROM nodes WHERE id = $1::uuid", node_id
+                )
+                if start is not None and start != user_id:
+                    return []
             rows = await conn.fetch(query, *params)
-        return [
-            (self._record_to_node(row), int(row["min_depth"])) for row in rows
-        ]
+            results = [
+                (self._record_to_node(row), int(row["min_depth"])) for row in rows
+            ]
+            if user_id is None:
+                return results
+            nodes = await self._owned_view(
+                conn, [node for node, _depth in results], user_id
+            )
+        return [(node, depth) for node, (_node, depth) in zip(nodes, results)]
 
     async def find_shortest_path(
         self,
@@ -1309,8 +1396,17 @@ class PgGraphStore:
         node_id: str,
         *,
         direction: str = "forward",
+        user_id: str | None = None,
     ) -> list[MemoryNode]:
-        """Traverse the supersedence chain from a node."""
+        """Traverse the supersedence chain from a node.
+
+        ``user_id`` scopes the chain to one user, as the DuckDB store does:
+        a starting node another user owns has no chain, each step follows
+        the newest link whose node is not another user's, and
+        a retired node's ``superseded_by`` never names another user's node.
+        """
+        if user_id is not None:
+            return await self._get_owned_supersedence_chain(node_id, direction, user_id)
         chain: list[MemoryNode] = []
         visited: set[str] = {node_id}
         current_id = node_id
@@ -1356,6 +1452,113 @@ class PgGraphStore:
                 current_id = next_id
 
         return chain
+
+    async def _get_owned_supersedence_chain(
+        self, node_id: str, direction: str, user_id: str
+    ) -> list[MemoryNode]:
+        """The supersedence chain one user reads (#437, #444).
+
+        Links are read newest first, as in the DuckDB store, and the first
+        whose node another user does not own is followed.
+        """
+        if direction == "forward":
+            step = (
+                "SELECT source_id::text FROM edges "
+                "WHERE target_id = $1::uuid AND edge_type = 'supersedes' "
+                "ORDER BY created_at DESC, id"
+            )
+        elif direction == "backward":
+            step = (
+                "SELECT target_id::text FROM edges "
+                "WHERE source_id = $1::uuid AND edge_type = 'supersedes' "
+                "ORDER BY created_at DESC, id"
+            )
+        else:
+            raise ValueError(
+                f"Invalid direction: {direction}. Use 'forward' or 'backward'."
+            )
+        chain: list[MemoryNode] = []
+        visited: set[str] = {str(node_id)}
+        current_id = node_id
+        async with self._pool.acquire() as conn:
+            start = await conn.fetchval(
+                "SELECT user_id FROM nodes WHERE id = $1::uuid", node_id
+            )
+            if start is not None and start != user_id:
+                return []
+            for _ in range(100):
+                linked = [str(row[0]) for row in await conn.fetch(step, current_id)]
+                foreign = await self._foreign_ids(conn, linked, user_id)
+                next_id = next((item for item in linked if item not in foreign), None)
+                if next_id is None or next_id in visited:
+                    break
+                visited.add(next_id)
+                node_row = await conn.fetchrow(
+                    f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = $1", next_id
+                )
+                if node_row is None:
+                    break
+                chain.append(self._record_to_node(node_row))
+                current_id = next_id
+            return await self._owned_view(conn, chain, user_id)
+
+    async def find_cross_user_links(self, *, limit: int = 100) -> CrossUserLinks:
+        """Count and list the links that cross users (an operator read).
+
+        Same report as the DuckDB store's find_cross_user_links().
+        """
+        if limit < 0:
+            raise ValueError("limit must not be negative")
+        edge_from = (
+            "FROM edges e JOIN nodes s ON s.id = e.source_id "
+            "JOIN nodes t ON t.id = e.target_id "
+            f"WHERE {CROSS_USER_EDGE_WHERE}"
+        )
+        pointer_from = (
+            "FROM nodes n JOIN nodes s ON s.id = n.superseded_by "
+            f"WHERE {CROSS_USER_POINTER_WHERE}"
+        )
+        async with self._pool.acquire() as conn:
+            edge_count = await conn.fetchval(f"SELECT COUNT(*) {edge_from}")
+            pointer_count = await conn.fetchval(f"SELECT COUNT(*) {pointer_from}")
+            edges = await conn.fetch(
+                "SELECT e.id::text, e.edge_type, e.user_id, e.source_id::text, "
+                f"s.user_id, e.target_id::text, t.user_id {edge_from} "
+                "ORDER BY e.id LIMIT $1",
+                limit,
+            )
+            pointers = await conn.fetch(
+                "SELECT n.id::text, n.user_id, n.superseded_by::text, "
+                f"s.user_id {pointer_from} ORDER BY n.id LIMIT $1",
+                limit,
+            )
+        return CrossUserLinks(
+            edge_count=int(edge_count or 0),
+            pointer_count=int(pointer_count or 0),
+            edges=[CrossUserEdge(*(str(value) for value in row)) for row in edges],
+            pointers=[CrossUserPointer(*(str(value) for value in row)) for row in pointers],
+        )
+
+    # --- Owner-scoped read helpers ---
+
+    @staticmethod
+    async def _foreign_ids(conn, node_ids: list[str], user_id: str) -> set[str]:
+        """The given node ids that another user owns."""
+        ids = sorted(set(node_ids))
+        if not ids:
+            return set()
+        rows = await conn.fetch(
+            "SELECT id::text FROM nodes WHERE id = ANY($1::uuid[]) AND user_id <> $2",
+            ids, user_id,
+        )
+        return {str(row[0]) for row in rows}
+
+    async def _owned_view(self, conn, nodes: list[MemoryNode], user_id: str) -> list[MemoryNode]:
+        """Clear a ``superseded_by`` that names another user's node (#443)."""
+        named = named_successors(nodes)
+        if not named:
+            return nodes
+        return hide_foreign_successors(nodes, await self._foreign_ids(conn, named, user_id))
 
     # --- Cleanup / Rollback ---
 
