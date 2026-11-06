@@ -35,7 +35,7 @@ from prme.ingestion.owner_name import carried_owner_entity
 from prme.models.speaker import metadata_speaker
 from prme.organizer.profiles import mentions_entity, run_profile_work
 from prme.retrieval.owner_profile import PROFILE_PREFIX, profile_entity_name, profiles_named
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 if TYPE_CHECKING:
     from prme.models.nodes import MemoryNode
@@ -64,12 +64,59 @@ def _newest(nodes: list[MemoryNode]) -> MemoryNode:
     return max(nodes, key=lambda node: (node.created_at, str(node.id)))
 
 
+async def _bound_claims(engine: MemoryEngine, *, user_id: str, scope: Scope, name: str) -> list[MemoryNode]:
+    """The active claims the graph binds to *name*'s entity, profiles left out.
+
+    ``consolidate_knowledge()`` takes the same claims (issue #448), so a
+    profile built before extraction materialized them is rebuilt once they
+    arrive. Only the entity's subject claims are read here: a claim whose
+    first-person text was written with the name, and a claim from the
+    person's turn, are among the newest records :func:`_mentioning` reads.
+    It reads the plain graph store, so its callers must have refused a store
+    with a privacy policy first, as both do.
+    """
+    from prme.storage.engine import PROFILE_CLAIM_TYPES
+
+    graph = engine._graph_store
+    wanted = name.casefold()
+    # A content filter keeps this read small: the pass runs it once per
+    # profile it considers, and an unscoped entity scan per profile is costly.
+    entities = await graph.query_nodes(
+        user_id=user_id, scope=scope, node_type=NodeType.ENTITY,
+        lifecycle_states=list(PROFILE_SOURCE_STATES), content_contains_any=[name], limit=MENTION_SCAN,
+    )
+    entities = [node for node in entities if node.content.strip().casefold() == wanted]
+    people = [
+        str(node.id) for node in entities
+        if str((node.metadata or {}).get("entity_type") or "").strip().casefold() == "person"
+    ]
+    entity_ids = people or [str(node.id) for node in entities]
+    targets: set[str] = set()
+    for entity_id in entity_ids:
+        targets.update(
+            str(edge.target_id)
+            for edge in await graph.get_edges(source_id=entity_id, edge_type=EdgeType.HAS_FACT)
+            if edge.user_id == user_id
+        )
+    if not targets:
+        return []
+    return [
+        node for node in await graph.get_nodes(sorted(targets), user_id=user_id)
+        if node.scope == scope
+        and node.node_type in PROFILE_CLAIM_TYPES
+        and node.lifecycle_state in PROFILE_SOURCE_STATES
+        and not (node.metadata or {}).get("entity_profile")
+    ]
+
+
 async def _mentioning(engine: MemoryEngine, *, user_id: str, scope: Scope, name: str) -> list[MemoryNode]:
     """The newest active records in *scope* that mention *name* or that *name* said, profiles left out.
 
     These are the records ``consolidate_knowledge()`` builds the person's
     profile from with ``enable_owner_profile_context``: an owner's own turns
-    rarely say their name.
+    rarely say their name. The claims bound to the person's entity are added
+    from the graph, since neither a first-person claim nor a claim from their
+    turn names them (issue #448).
     """
     graph = engine._graph_store
     named = await graph.query_nodes(user_id=user_id, scope=scope, content_contains_any=[name], limit=MENTION_SCAN)
@@ -81,24 +128,52 @@ async def _mentioning(engine: MemoryEngine, *, user_id: str, scope: Scope, name:
     wanted = name.casefold()
 
     def matching() -> list[MemoryNode]:
-        return [
-            node for node in nodes.values()
-            if (metadata_speaker(node.metadata) or "").casefold() == wanted
-            or mentions_entity(node.content, name)
-        ]
+        found = []
+        for node in nodes.values():
+            if (metadata_speaker(node.metadata) or "").casefold() == wanted or mentions_entity(node.content, name):
+                found.append(node)
+                continue
+            reference = (node.metadata or {}).get("speaker_reference")
+            speaker = reference.get("speaker") if isinstance(reference, dict) else None
+            if isinstance(speaker, str) and speaker.casefold() == wanted:
+                found.append(node)
+        return found
 
-    return await run_profile_work(matching)
+    found = await run_profile_work(matching)
+    # A claim from the person's turn can carry no speaker of its own when the
+    # turn wrote the name into the claim, so the event it cites decides, as
+    # consolidate_knowledge() reads it. Only the newest records are checked.
+    from prme.storage.engine import PROFILE_CLAIM_TYPES
+
+    known = {node.id for node in found}
+    for node in nodes.values():
+        if node.id in known or node.node_type not in PROFILE_CLAIM_TYPES:
+            continue
+        reference = (node.metadata or {}).get("speaker_reference")
+        if isinstance(reference, dict) and isinstance(reference.get("speaker"), str):
+            continue
+        if not node.evidence_refs:
+            continue
+        event = await engine._event_store.get(str(node.evidence_refs[-1]))
+        if (
+            event is not None and event.user_id == user_id and event.scope == scope
+            and (metadata_speaker(event.metadata) or "").casefold() == wanted
+        ):
+            found.append(node)
+    bound = await _bound_claims(engine, user_id=user_id, scope=scope, name=name)
+    # One record can qualify on more than one path; count it once.
+    return list({node.id: node for node in (*found, *bound)}.values())
 
 
 async def _is_stale(engine: MemoryEngine, profile: MemoryNode, mentions: list[MemoryNode]) -> bool:
     """Whether a rebuild could change *profile*.
 
-    It could when a newer record names or was said by its person and is not
-    among its sources, or when one of its sources is no longer a source a
-    build reads (a correction retired it). ``build_profile`` keeps a
-    profile's oldest sources within its token budget, so a profile that
-    already left sources out and still has all of its own would be rebuilt
-    with the same text; it is left as it is.
+    It could when a newer record names its person, was said by them, or is a
+    claim their entity binds and is not among its sources, or when one of its
+    sources is no longer a source a build reads (a correction retired it).
+    ``build_profile`` keeps a profile's oldest sources within its token
+    budget, so a profile that already left sources out and still has all of
+    its own would be rebuilt with the same text; it is left as it is.
     """
     metadata = profile.metadata or {}
     sources = [str(value) for value in metadata.get("source_node_ids") or ()]
@@ -136,9 +211,10 @@ async def refresh_stale_profiles(engine: MemoryEngine, *, user_id: str, deadline
     """Rebuild the owner's stale profiles until *deadline* (``time.monotonic()``).
 
     Reads the owner's ``PROFILE_REFRESH_SCAN`` newest active profiles and
-    rebuilds each one that a newer active record mentions or that its person
-    said, newest profile first, once per person and scope. A rebuild starts
-    only before the deadline; one that has started runs to its end. Returns
+    rebuilds each one that a newer active record mentions, that its person
+    said, or that its person's entity binds, newest profile first, once per
+    person and scope. A rebuild starts only before the deadline; one that has
+    started runs to its end. Returns
     one entry per rebuild: the person, the scope and whether a profile was
     published (a person with fewer than two sources has their profile retired
     instead).
@@ -177,10 +253,11 @@ async def refresh_owner_profiles(engine: MemoryEngine, *, user_id: str, deadline
 
     The owner of a scope is the person entity a user turn most recently
     marked with the owner's name there. Their profile is built when they have
-    none and at least two active records mention them or were said by them,
-    and rebuilt when such a record is newer than it; otherwise it is left as
-    it is. A rebuild is kept under the name the newest profile has, so it
-    replaces that profile. A build starts only before the deadline. Returns
+    none and at least two active records mention them, were said by them, or
+    are claims their entity binds, and rebuilt when such a record is newer
+    than it; otherwise it is left as it is. A rebuild is kept under the name
+    the newest profile has, so it replaces that profile. A build starts only
+    before the deadline. Returns
     one entry per build or rebuild, as :func:`refresh_stale_profiles` does,
     or None when the owner's memories are under a privacy policy.
     """
