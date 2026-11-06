@@ -85,6 +85,10 @@ from prme.retrieval.owner_profile import (
     find_owner_profile,
 )
 from prme.retrieval.packing import pack_context, requires_memory_text
+from prme.retrieval.profile_sources import (
+    exclude_unverified_profiles,
+    suppress_retired_profiles,
+)
 from prme.retrieval.query_analysis import (
     DEFAULT_TEMPORAL_LANGUAGES,
     QUERY_INTENT_ORDERS,
@@ -1130,6 +1134,19 @@ class RetrievalPipeline:
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
         excluded.extend(type_excluded)
 
+        # --- Stage 5.5h: Profiles that quote a retired memory (issue #462) ---
+        # A profile is a derived view of the records it names in
+        # source_node_ids. Once one of them is archived, superseded or
+        # deleted, the profile keeps quoting text retrieval no longer returns.
+        # Leave the profile out until a rebuild publishes a replacement;
+        # nothing is written. An explicit consolidate_knowledge() call does the
+        # rebuild, and so does the organizer's stale-profile pass when
+        # enable_owner_profile_context is on.
+        scored, profile_excluded = await self._suppress_retired_profiles(
+            scored, user_id=user_id, retrieval_mode=analysis.retrieval_mode,
+        )
+        excluded.extend(profile_excluded)
+
         # --- Stage 5.6: Replaced Source Suppression (opt-in, issue #270) ---
         # A correction retires the claim it replaces, not the message that
         # stated it or a sibling claim from the same sentence. Leave those
@@ -1194,6 +1211,9 @@ class RetrievalPipeline:
                     analysis.retrieval_mode,
                     unverified_threshold=self._unverified_confidence_threshold,
                 )
+                hint_candidates, _ = await self._suppress_retired_profiles(
+                    hint_candidates, user_id=user_id, retrieval_mode=analysis.retrieval_mode,
+                )
                 if self._superseded_source_suppression and analysis.retrieval_mode != RetrievalMode.EXPLICIT:
                     hint_candidates, _ = await self._suppress_replaced_sources(hint_candidates, user_id)
                 # Score the hints using the same weights and timestamp.
@@ -1249,6 +1269,18 @@ class RetrievalPipeline:
             max_per_evidence=max_per_evidence,
         )
         excluded.extend(selection_excluded)
+        if (
+            "owner_profile_context" in execution_features
+            and owner_profile is not None
+            and not any(
+                candidate.node.id == owner_profile.node.id for candidate in scored
+            )
+        ):
+            # The receipt records the feature only while the profile it placed
+            # is still in the results (issue #398, #462). This covers the
+            # profile stages above and the result limit and floors here.
+            execution_features.pop("owner_profile_context")
+            candidate_counts.pop("OWNER_PROFILE", None)
         cross_scope_hints, _ = select_candidates(cross_scope_hints, min_score=hint_floor, limit=None)
         traces = [c.score_trace for c in scored if c.score_trace is not None]
 
@@ -1650,6 +1682,31 @@ class RetrievalPipeline:
                 exc_info=not bool(getattr(self, "_privacy_context", None)),
             )
             return candidates, []
+
+    async def _suppress_retired_profiles(
+        self,
+        candidates: list[RetrievalCandidate],
+        *,
+        user_id: str,
+        retrieval_mode: RetrievalMode,
+    ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
+        """Leave out profiles that quote a retired memory (issue #462)."""
+        try:
+            return await suppress_retired_profiles(
+                candidates, graph_store=self._graph_store, user_id=user_id,
+                retrieval_mode=retrieval_mode,
+            )
+        except PrivacyDenied:
+            raise
+        except Exception:
+            # The rule is that retired text is not returned through a profile,
+            # so a failed source read leaves every profile out (fail closed)
+            # rather than serving one whose sources were never checked.
+            logger.warning(
+                "Retired profile suppression failed; leaving profiles out",
+                exc_info=not bool(getattr(self, "_privacy_context", None)),
+            )
+            return exclude_unverified_profiles(candidates)
 
     async def _expand_reformulated_queries(
         self,
