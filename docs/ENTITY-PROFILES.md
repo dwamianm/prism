@@ -69,6 +69,22 @@ and numerical embedding are saved in a checksummed immutable operation. An
 unchanged retry reuses that preparation; a changed request replaces it explicitly.
 A successfully published rebuild retires prior profiles for that name.
 
+Retrieval treats a profile as a view of the records it quotes. When a record
+named in the profile's `source_node_ids` is archived, superseded or deleted,
+`retrieve()` leaves the profile out of its results and the packed context until
+a rebuild publishes a replacement. Other profiles, whose quoted records are all
+active, are returned as before. A profile with no parsable `source_node_ids`,
+written before profile format version 2, cannot be checked and is left out in
+every retrieval mode, and if the source read itself fails the profiles are left
+out rather than served unchecked. Nothing is written on the read path, so the stored profile,
+its publication generation and `StaleProfileError` are unchanged, and
+`retrieval_mode=RetrievalMode.EXPLICIT` still returns a profile whose quoted
+record is retired rather than deleted. An explicit `consolidate_knowledge()`
+rebuild publishes a replacement from the same source list. The organizer's
+stale-profile pass does the same when `enable_owner_profile_context` is on, so
+a deployment without that option keeps the profile out of retrieval until it
+calls the rebuild.
+
 Prepared work survives restart. The sync client and async engine expose the same
 owner-scoped recovery methods:
 
