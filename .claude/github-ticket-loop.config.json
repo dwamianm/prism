@@ -1,7 +1,8 @@
 {
   "baseBranch": "main",
   "includeLabels": [
-    "organized-memory"
+    "organized-memory",
+    "scale"
   ],
   "excludeLabels": [
     "epic",
