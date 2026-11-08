@@ -27,7 +27,10 @@ async def test_restore_ignores_a_checkpoint_copied_from_a_newer_export(tmp_path,
     await export_protected_pack(engine, old)
     await engine.request_erasure(ErasureRequest(request_id=uuid4(), scope=policy.scope, event_ids=(UUID(erased),)),
                                  user_id=owner)
-    await engine.process_erasures(user_id=owner)
+    # The default 1 s budget is a bounded pending-work window, not a promise
+    # that a purge finishes; a loaded CI runner can expire it mid-stage and
+    # leave the job blocked, which is what the export then refuses.
+    await engine.process_erasures(user_id=owner, budget_ms=60000)
     head = (await export_protected_pack(engine, tmp_path / "current.json")).ledger_checkpoint
     config = engine._config
     await engine.close()
@@ -68,7 +71,7 @@ async def test_export_refuses_an_accepted_erasure_until_it_is_processed(tmp_path
         with pytest.raises(PrivacyDenied, match="privacy_erased"):
             await export_protected_pack(engine, artifact)
         assert not artifact.exists()
-        await engine.process_erasures(user_id=owner)
+        await engine.process_erasures(user_id=owner, budget_ms=60000)
         await export_protected_pack(engine, artifact)
         contents = [node["content"] for node in json.loads(artifact.read_bytes())["nodes"]]
         assert ERASED not in contents and KEPT in contents
@@ -82,7 +85,7 @@ async def test_an_erased_owner_reads_empty_not_damaged(tmp_path, analyzer, nativ
     erased = await engine.store(ERASED, user_id=owner)
     await engine.request_erasure(ErasureRequest(request_id=uuid4(), scope=policy.scope, event_ids=(UUID(erased),)),
                                  user_id=owner)
-    await engine.process_erasures(user_id=owner)
+    await engine.process_erasures(user_id=owner, budget_ms=60000)
     config = engine._config.model_copy(update={"privacy_policy": None})
     await engine.close()
     engine = await MemoryEngine.create(config, privacy_runtime=runtime, embedding_provider=runtime.embedder)
