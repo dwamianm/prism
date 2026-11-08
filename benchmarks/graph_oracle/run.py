@@ -419,6 +419,16 @@ def main(argv: list[str] | None = None) -> None:
     command = commands.add_parser("fidelity", help="Score an extracted graph (the gold file format) against a gold graph")
     command.add_argument("--gold", required=True)
     command.add_argument("--graph", type=Path, required=True)
+    command = commands.add_parser(
+        "extraction-fidelity",
+        help="Extract the oracle's fixtures through the local model and score the graph it builds against the gold")
+    command.add_argument("--out", type=Path, required=True)
+    command.add_argument("--fixtures", nargs="+", default=None,
+                         help="Fixtures to extract (default: all four the issue names)")
+    command.add_argument("--model", default=None, help="The Ollama model that extracts")
+    command.add_argument("--endpoint", default=None, help="The Ollama server's OpenAI-compatible endpoint")
+    command.add_argument("--untyped", action="store_true",
+                         help="Extract with enable_typed_extraction off, for the normalizer's baseline")
     command = commands.add_parser("blind", help="The blind validation run (BLIND.md): original items, blind questions, paraphrases")
     command.add_argument("--out", type=Path, required=True)
     command = commands.add_parser("routed", help="The routing gate's run on the new blind draw (GATE.md)")
@@ -447,6 +457,17 @@ def main(argv: list[str] | None = None) -> None:
         from benchmarks.graph_oracle.fidelity import fidelity, fidelity_markdown
 
         print(fidelity_markdown(fidelity(load_gold(args.gold), json.loads(args.graph.read_text()))))
+        return
+    if args.command == "extraction-fidelity":
+        from benchmarks.graph_oracle import extraction as extraction_bench
+
+        _quiet_offline_cli()
+        report = asyncio.run(extraction_bench.write(
+            args.out, tuple(args.fixtures or extraction_bench.FIXTURES),
+            model=args.model or extraction_bench.MODEL, endpoint=args.endpoint or extraction_bench.ENDPOINT,
+            typed=not args.untyped))
+        print((args.out / "report.md").read_text())
+        print(f"extraction fidelity: {report['seconds']}s, report in {args.out}", file=sys.stderr)
         return
     _quiet_offline_cli()
     if args.command == "blind":

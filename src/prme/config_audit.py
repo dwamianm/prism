@@ -285,6 +285,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "enable_relation_routing is true",
         bool,
     ),
+    "enable_typed_extraction": (
+        "enable_typed_extraction",
+        "enable_typed_extraction is true",
+        bool,
+    ),
     "novelty_high_threshold": (
         "enable_surprise_gating",
         "enable_surprise_gating is true",

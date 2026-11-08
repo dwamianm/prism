@@ -280,6 +280,44 @@ def test_a_candidate_equal_to_the_gold_graph_scores_one_and_missing_or_wrong_cla
     assert fidelity(gold, contained)["inferred_containment_found"] > 0
 
 
+async def test_the_extracted_candidate_reads_a_stored_graph_and_scores_one(mock_embeddings, tmp_path):  # noqa: F811
+    """The gold graph written into the store, read back as a candidate, scores one: the format and the links match."""
+    from benchmarks.graph_oracle.extraction import candidate_graph
+
+    async with _stored(tmp_path, "defects-v1") as (engine, gold, _handles, _data):
+        nodes = await engine.query_nodes(user_id=gold.owner, limit=10_000)
+        edges = await engine._graph_store.get_edges(node_ids=[str(node.id) for node in nodes])
+        candidate = candidate_graph(nodes, edges, gold.owner)
+    scored = fidelity(gold, candidate.as_graph())
+    assert (scored["entity_recall"], scored["entity_precision"], scored["relation_recall"],
+            scored["relation_precision"], scored["polarity_accuracy"], scored["status_accuracy"]) == (1.0,) * 6
+    assert candidate.claims == candidate.typed and candidate.untyped == 0
+
+
+async def test_the_candidate_counts_a_claim_that_states_no_relation_as_untyped(mock_embeddings, tmp_path):  # noqa: F811
+    """A claim that kept only its predicate is counted and is not scored as a gold relation."""
+    from benchmarks.graph_oracle.extraction import candidate_graph
+    from prme.models.edges import MemoryEdge
+    from prme.models.nodes import MemoryNode
+    from prme.types import EdgeType, NodeType
+
+    pack = tmp_path / "pack"
+    (pack / "lexical_index").mkdir(parents=True)
+    async with MemoryEngine.open(gate_config(pack)) as engine:
+        subject = await engine._graph_store.create_node(MemoryNode(
+            user_id="owner", node_type=NodeType.ENTITY, content="Alex"))
+        claim = await engine._graph_store.create_node(MemoryNode(
+            user_id="owner", node_type=NodeType.FACT, content="Alex works at Northwind.",
+            metadata={"extraction_kind": "fact", "subject": "Alex", "predicate": "works_at",
+                      "object": "Northwind", "polarity": "positive"}))
+        await engine._graph_store.create_edge(MemoryEdge(
+            source_id=subject, target_id=claim, edge_type=EdgeType.HAS_FACT, user_id="owner"))
+        nodes = await engine.query_nodes(user_id="owner", limit=100)
+        edges = await engine._graph_store.get_edges(node_ids=[str(node.id) for node in nodes])
+        candidate = candidate_graph(nodes, edges, "owner")
+    assert candidate.claims == 1 and candidate.untyped == 1 and candidate.relations == []
+
+
 # --- Blind validation --------------------------------------------------------------------------------
 
 

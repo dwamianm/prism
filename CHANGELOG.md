@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Typed extraction (`enable_typed_extraction`, off by default; dwamianm/prism#400) asks the extractor for each fact's relation in the graph oracle's closed vocabulary, with a role and a status, and stores the admitted fields on the claim and its `HAS_FACT` link. Relation routing then reads the stored relation instead of mapping an open predicate, so a claim with an unmappable predicate such as `has_dependents` can still be found by a routed question. The open predicate is kept; a relation outside the vocabulary is dropped with its role and status and the claim keeps only its predicate. The option changes the extraction request, so recorded extractions do not replay under it, and it is part of the re-derivation settings only while it is on. `python -m benchmarks.graph_oracle extraction-fidelity` reports entity and claim recall and precision and polarity and status accuracy for the oracle's four fixtures.
+
 - `prme cross-user-links` and `MemoryEngine.find_cross_user_links()` count and list the links in a store that cross users: edges whose two nodes, or whose own owner, are not all one user's, and nodes whose `superseded_by` names another user's node (dwamianm/prism#438). Older stores can hold them after an unscoped deduplicate or alias run, and direct graph writes can make them. The report gives full counts and lists, in id order, up to `--limit` of each, with node ids and owners only, so an operator can repair an old store. Both graph stores implement `find_cross_user_links()`.
 
 ### Fixed

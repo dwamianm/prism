@@ -4,8 +4,8 @@ A route (:func:`prme.retrieval.relations.route_question`) names the relations a
 question asks for. The walk starts at the question's seed entities, reads the
 claims on them in one SQL statement and keeps those whose relation, read from
 the claim's predicate by :func:`prme.retrieval.relations.normalize_predicate`
-(or from a typed ``relation`` on its ``HAS_FACT`` link), is one the route
-accepts. A claim is a fact node: ``HAS_FACT`` from its subject entity and
+(or from a typed ``relation`` on the claim node or its ``HAS_FACT`` link), is
+one the route accepts. A claim is a fact node: ``HAS_FACT`` from its subject entity and
 ``MENTIONS`` to its object entity, so a seed can be either end. The statement:
 
 1. the claims on the seeds, newest first, at most ``SEED_CAP`` per seed;
@@ -252,14 +252,32 @@ class _Claim:
     pivots: dict[int, set[str]] = field(default_factory=lambda: defaultdict(set))
 
 
-def _typed(edge_metadata: dict) -> ClaimRelation | None:
-    """A claim typed on its HAS_FACT link (``metadata.relation`` in the vocabulary), as the graph oracle writes it."""
-    relation = edge_metadata.get("relation")
-    if not isinstance(relation, str) or relation not in RELATIONS or relation in UNROUTED_RELATIONS:
+def _typed(metadata: dict) -> ClaimRelation | None:
+    """A claim typed in ``metadata.relation`` (the vocabulary), on its node or its HAS_FACT link.
+
+    Typed extraction (enable_typed_extraction) writes the relation on the claim node and its HAS_FACT link; the
+    graph oracle writes it on the link. A relation outside the vocabulary, or ``has`` (a literal attribute), is not
+    a typed claim and is read through the predicate normalizer instead.
+    """
+    relation = metadata.get("relation")
+    if not isinstance(relation, str):
         return None
-    role = edge_metadata.get("role")
+    relation = relation.strip().casefold()
+    if relation not in RELATIONS or relation in UNROUTED_RELATIONS:
+        return None
+    role = metadata.get("role")
     role = role.strip().casefold() if isinstance(role, str) and role.strip() else None
-    return ClaimRelation(relation, role, "object" if role else None)
+    role_end = "object" if role else None
+    # A typed extraction claim also keeps its open predicate. When the normalizer names the same relation and role,
+    # its role end is the one the claim's words state ("is_child_of" puts the child at the subject end); otherwise
+    # the prompt's own rule, that the role qualifies the relation's far end, gives the object end.
+    predicate = metadata.get("predicate")
+    if role is not None and isinstance(predicate, str):
+        normalized = normalize_predicate(predicate)
+        if (normalized is not None and normalized.relation == relation and normalized.role == role
+                and normalized.role_end is not None):
+            role_end = normalized.role_end
+    return ClaimRelation(relation, role, role_end)
 
 
 def _parse(rows: list[tuple]) -> tuple[dict[str, _Claim], dict[str, str]]:
@@ -275,11 +293,19 @@ def _parse(rows: list[tuple]) -> tuple[dict[str, _Claim], dict[str, str]]:
             claim.pivots[int(layer)].add(other)
         elif kind == "n":
             meta = _metadata(metadata)
-            if claim_id not in typed:
+            stored = _typed(meta)
+            if stored is not None:
+                # A typed claim (enable_typed_extraction) states its relation itself, so the predicate normalizer
+                # is not asked what an open predicate meant.
+                claim.relation = stored
+                typed[claim_id] = stored
+            elif claim_id not in typed:
                 claim.relation = normalize_predicate(meta.get("predicate") if isinstance(meta.get("predicate"), str)
                                                      else None)
             if meta.get("polarity") == "negative":
                 claim.polarity = "negative"
+            # The claim's lifecycle, not the extractor's stated status, decides whether a stored claim is retired:
+            # a typed claim's ``superseded`` status is the model's label, and the lifecycle is the product's record.
             claim.retired = claim.retired or lifecycle in _RETIRED
         elif edge_type == "derived_from":
             if lifecycle not in _RETIRED:
@@ -290,12 +316,16 @@ def _parse(rows: list[tuple]) -> tuple[dict[str, _Claim], dict[str, str]]:
             if edge_type == "has_fact":
                 claim.subjects.add(other)
                 found = _typed(edge_meta)
-                if found is not None:
+                if found is not None and claim_id not in typed:
+                    # The graph oracle types the claim on its link; a typed extraction states the same relation on
+                    # the node, where its predicate also gives the role end, so the node's reading stands.
                     typed[claim_id] = found
                     claim.relation = found
                     if edge_meta.get("polarity") == "negative":
                         claim.polarity = "negative"
-                    if edge_meta.get("status") == "superseded":
+                    if edge_meta.get("status") == "superseded" and edge_meta.get("shape") is not None:
+                        # The graph oracle's hand-written graph states the old claim as superseded; a typed
+                        # extraction's status is the model's label, and its lifecycle is the product's record.
                         claim.retired = True
             elif edge_meta.get("basis") == TEXT_LINK_METADATA["basis"]:
                 # A text mention (enable_mention_links) records only that the claim's text names the entity;

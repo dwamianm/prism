@@ -55,8 +55,9 @@ class StoredTurnCache(ExtractionCache):
     """The extraction cache, keyed by a batched request without its turns' wall-clock times."""
 
     @staticmethod
-    def _batch_key(provider, turns, memories=()) -> str:
-        return ExtractionCache._batch_key(provider, [dataclasses.replace(turn, time=None) for turn in turns], memories)
+    def _batch_key(provider, turns, memories=(), typed: bool = False) -> str:
+        return ExtractionCache._batch_key(provider, [dataclasses.replace(turn, time=None) for turn in turns],
+                                          memories, typed)
 
 
 class RequestMeter:
@@ -77,7 +78,7 @@ class RequestMeter:
             provider.repair_pronouns = self._repair_pronouns
 
     async def _extract_batch(self, turns, **extra):
-        key = self._cache._batch_key(self._provider, turns, extra.get("memories", ()))
+        key = self._cache._batch_key(self._provider, turns, extra.get("memories", ()), bool(extra.get("typed")))
         misses, before = self._cache.misses, self._usage.snapshot()
         self.requests += 1
         try:
@@ -104,13 +105,14 @@ class RequestMeter:
         finally:
             self._count(key, misses, before)
 
-    async def _extract(self, content, *, role="user", context=(), resolve=None, speaker=None):
+    async def _extract(self, content, *, role="user", context=(), resolve=None, speaker=None, typed=False):
         window = tuple(line for line in context if line and line.strip())
-        key = self._cache._key(self._provider, content, role, window, resolve)
+        key = self._cache._key(self._provider, content, role, window, resolve, typed)
         misses, before = self._cache.misses, self._usage.snapshot()
         self.requests += 1
         try:
-            return await self._cached_turn(content, role=role, context=context, resolve=resolve, speaker=speaker)
+            return await self._cached_turn(content, role=role, context=context, resolve=resolve, speaker=speaker,
+                                          typed=typed)
         finally:
             self._count(key, misses, before)
 

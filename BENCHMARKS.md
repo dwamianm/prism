@@ -4607,6 +4607,50 @@ graph stages were rerun with an ANALYZE (commit `dc1e734e`, which also adds the 
 every baseline and routed number was identical. The 10,000 memory store of each kind, text and graph, was
 built once per run on one laptop; latencies vary with the machine's load.
 
+### Typed extraction: can extraction build the gold graph? (dwamianm/prism#400)
+
+`enable_typed_extraction` (off by default) asks extraction for each fact's relation in the vocabulary above, with a
+role and a status, and stores the fields the closed vocabulary admits. `python -m
+benchmarks.graph_oracle extraction-fidelity` stores each fixture's memories, derives them through `reingest()` with the
+option on, reads the claim nodes and their links back, writes the extracted graph in the gold file's format and scores
+it with `fidelity`. The model is `deepseek-v4.1-flash:cloud` through the local Ollama server. One run on 2026-11-08
+on the change's working tree, on a laptop:
+
+| Fixture | Entity recall | Entity precision | Relation recall | Relation precision | Polarity | Status | Typed claims | Untyped claims |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| store-v1 | 0.847 | 0.410 | 0.277 | 0.272 | 1.000 | 0.871 | 114 | 22 |
+| defects-v1 | 1.000 | 0.667 | 0.179 | 0.312 | 1.000 | 1.000 | 16 | 1 |
+| chat-v1 | 0.955 | 0.543 | 0.412 | 0.435 | 1.000 | 0.950 | 46 | 18 |
+| draw2-v1 | 0.849 | 0.520 | 0.315 | 0.333 | 1.000 | 0.931 | 87 | 21 |
+
+The run made 21 batched model calls (7, 3, 6 and 5 per fixture) and took 272 seconds. "Typed claims" counts claims
+whose admitted relation is scored; "untyped claims" counts claims that kept only their predicate, which includes
+claims converted from the extractor's separate relationships list, since only facts carry the typed fields.
+
+This is not enough to route on. Relation recall is 0.18 to 0.41, so extraction misses most of the gold claims, and
+relation precision is 0.27 to 0.44, so a quarter to a half of what it states is not in the gold graph. Entity
+recall is high (0.85 to 1.0) but entity precision is 0.41 to 0.67, because extraction lists many more entities than
+the gold graph keeps. Polarity is perfect and status is 0.87 to 1.0 on the claims that do match. The gold graph is
+the best case and a single live sample, not a benchmark estimate, so these numbers do not support turning
+`enable_typed_extraction` on; they say what the extractor still has to produce.
+
+The fast gate ran twice on the on side (`python -m benchmarks.fast_cycle run --set
+enable_typed_extraction=true`), against the committed off baseline:
+
+| Run | defects-v1 top 3 / top 5 | corrections-v1 top 3 / top 5 | chat-v1 top 3 / top 5 |
+|---|---:|---:|---:|
+| baseline (off) | 7 / 7 | 3 / 3 | 14 / 15 |
+| on, sample 1 | 6 / 7 | 3 / 3 | 12 / 14 |
+| on, sample 2 | 7 / 7 | 3 / 3 | 12 / 14 |
+
+An off run on the current tree replayed the committed extraction cache and reproduced the baseline counts exactly,
+so the differences are the option's. Both samples put fewer chat-v1 answers in the top 3 and top 5 than the off
+baseline, and sample 1 was one lower on defects-v1's top 3, so the issue's criterion that the option is not below
+off on those counts is not met. Both runs also failed a gated repeated-records measure on defects-v1 (0 to 7),
+which the typed extraction's extra claims cause, and the extraction-token measure, because the typed prompt and
+schema are longer; sample 2 failed the gated user-claims-attached-to-I-or-We measure on defects-v1 (4 to 8). The
+option stays off.
+
 ### Embedding models: does a larger local model improve meaning search? (dwamianm/prism#366)
 
 The default embedding model, `BAAI/bge-small-en-v1.5` (384 dimensions), makes the vectors behind the vector

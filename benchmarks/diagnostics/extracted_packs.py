@@ -345,16 +345,18 @@ class ExtractionCache:
         # Live results the kept raw output did not reproduce; those are not kept.
         self.unreproduced = 0
 
-    def _key(self, provider, content: str, role: str, context: tuple[str, ...] = (), resolve=None) -> str:
+    def _key(self, provider, content: str, role: str, context: tuple[str, ...] = (), resolve=None,
+             typed: bool = False) -> str:
         from prme.ingestion.extraction import _extraction_prompt_for_role, _source_details_message
 
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
-                 _extraction_prompt_for_role(role), role, content]
+                 _extraction_prompt_for_role(role, typed=typed), role, content]
         # The window and fact text resolution (#91) change what the model is
         # asked. A turn asked neither keeps the key it had before them, so an
         # existing cache still serves it.
         if context or resolve is not None:
-            parts += [_extraction_prompt_for_role(role, windowed=bool(context), resolving=resolve is not None),
+            parts += [_extraction_prompt_for_role(role, windowed=bool(context), resolving=resolve is not None,
+                                                  typed=typed),
                       list(context), _source_details_message(resolve) if resolve is not None else None,
                       resolve is not None]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
@@ -379,26 +381,27 @@ class ExtractionCache:
     def wrap(self, provider) -> None:
         from prme.ingestion.extraction import (
             _RAW_OUTPUT,
-            _CitedExtractionResult,
-            _ResolvingCitedExtractionResult,
+            _single_result_model,
             validate_raw_output,
         )
+        from prme.ingestion.pipeline import _accepts_keyword
 
         extract = provider.extract
 
-        async def cached(content: str, *, role: str = "user", context=(), resolve=None, speaker=None):
+        async def cached(content: str, *, role: str = "user", context=(), resolve=None, speaker=None,
+                         typed: bool = False):
             window = tuple(line for line in context if line and line.strip())
-            key = self._key(provider, content, role, window, resolve)
+            key = self._key(provider, content, role, window, resolve, typed)
             raw_path = self.folder / key[:2] / f"{key}.raw.json"
             path = self.folder / key[:2] / f"{key}.json"
             if raw_path.exists():
                 self.hits += 1
                 return validate_raw_output(json.loads(raw_path.read_bytes()), content, role=role,
-                                           resolving=resolve is not None, speaker=speaker)
+                                           resolving=resolve is not None, speaker=speaker, typed=typed)
             if path.exists() and speaker is None:
                 self.hits += 1
                 # No source context: the source checks already ran when the entry was written.
-                model = _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
+                model = _single_result_model(resolving=resolve is not None, typed=typed)
                 return model.model_validate_json(path.read_bytes())
             self.misses += 1
             # Named only when set, as ingest() does, so the provider is called
@@ -408,6 +411,8 @@ class ExtractionCache:
                 extra["resolve"] = resolve
             if speaker is not None:
                 extra["speaker"] = speaker
+            if typed and _accepts_keyword(extract, "typed"):
+                extra["typed"] = True
             raw: list[dict] = []
             token = _RAW_OUTPUT.set(raw)
             try:
@@ -418,7 +423,7 @@ class ExtractionCache:
             if raw:
                 # A retried call parses once per attempt; the last one produced the result.
                 replayed = validate_raw_output(raw[-1], content, role=role, resolving=resolve is not None,
-                                               speaker=speaker)
+                                               speaker=speaker, typed=typed)
                 if replayed.model_dump() == result.model_dump():
                     self._write(raw_path, json.dumps(raw[-1]))
                 else:
@@ -435,13 +440,14 @@ class ExtractionCache:
             self._wrap_repairs(provider)
 
     @staticmethod
-    def _batch_key(provider, turns, memories=()) -> str:
+    def _batch_key(provider, turns, memories=(), typed: bool = False) -> str:
         from prme.ingestion.extraction import batch_request_messages
 
         # Earlier memories (enable_extraction_corrections, #277) are part of
-        # the messages; a request without them keeps the key it had before.
+        # the messages, and so is the typed guidance (enable_typed_extraction,
+        # #400); a request without either keeps the key it had before.
         parts = [provider.model_name, provider._model, provider._temperature, provider._reasoning_effort,
-                 "batch", batch_request_messages(turns, memories)]
+                 "batch", batch_request_messages(turns, memories, typed=typed)]
         return hashlib.sha256(json.dumps(parts).encode()).hexdigest()
 
     @staticmethod
@@ -482,7 +488,7 @@ class ExtractionCache:
         extract_batch = provider.extract_batch
 
         async def cached(turns, **extra):
-            key = self._batch_key(provider, turns, extra.get("memories", ()))
+            key = self._batch_key(provider, turns, extra.get("memories", ()), bool(extra.get("typed")))
             path = self.folder / key[:2] / f"{key}.batch.json"
             failed = self.folder / key[:2] / f"{key}.batch-failed.json"
             if path.exists():

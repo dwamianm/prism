@@ -305,7 +305,7 @@ async def test_the_request_meter_counts_live_tokens_and_the_tokens_recorded_for_
         misses = 0
 
         @staticmethod
-        def _batch_key(provider, turns, memories=()):
+        def _batch_key(provider, turns, memories=(), typed=False):
             return turns[0]
 
     class Usage:
@@ -345,7 +345,7 @@ async def test_the_request_meter_counts_a_turn_asked_on_its_own_with_its_window(
         misses = 0
 
         @staticmethod
-        def _key(provider, content, role, context=(), resolve=None):
+        def _key(provider, content, role, context=(), resolve=None, typed=False):
             return f"{content}|{role}|{'/'.join(context)}|{resolve}"
 
     class Usage:

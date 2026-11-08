@@ -16,7 +16,7 @@ from prme.models.speaker import SPEAKER_METADATA_KEY, normalize_speaker
 from prme.models.value_bindings import VALUE_BINDINGS_METADATA_KEY, MemoryValueBinding
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.records import PRIVACY_KEY
-from prme.types import EpistemicType, NodeType
+from prme.types import EdgeType, EpistemicType, NodeType
 
 if TYPE_CHECKING:
     from prme.privacy.capabilities import SanitizedContent
@@ -213,14 +213,25 @@ def project_direct_node(node: MemoryNode) -> MemoryNode:
 
 
 def project_admitted_edge(edge: MemoryEdge) -> MemoryEdge:
+    from prme.retrieval.relations import RELATIONS
+
     metadata = edge.metadata or {}
     projected = {}
     # Aliases retain the exact structural barrier, never free-form proposal
-    # evidence, names or review explanations.
+    # evidence, names or review explanations. A typed extraction's
+    # closed-vocabulary relation on a HAS_FACT link is a routing hint, not
+    # evidence: it is left out of the projection rather than read as free-form
+    # relation text, so a store that ever ran enable_typed_extraction can still
+    # be migrated or exported.
     if "relation" in metadata:
-        if metadata["relation"] != "alias":
+        relation = metadata["relation"]
+        if relation == "alias":
+            projected["relation"] = "alias"
+        elif (edge.edge_type == EdgeType.HAS_FACT and isinstance(relation, str)
+              and relation in RELATIONS):
+            pass
+        else:
             raise PrivacyDenied("privacy_invalid_result")
-        projected["relation"] = "alias"
     if "identity_verified" in metadata:
         value = metadata["identity_verified"]
         if value not in (True, False, "true", "false"):

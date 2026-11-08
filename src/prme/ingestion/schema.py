@@ -232,6 +232,19 @@ class ExtractedFact(BaseModel):
     replaces_node_id: SkipJsonSchema[str | None] = Field(
         default=None, exclude_if=lambda value: value is None,
     )
+    # The claim's relation in the closed vocabulary, its qualifier and its
+    # status (dwamianm/prism#400). Hidden from the model's schema unless
+    # enable_typed_extraction asks for them, and left out of saved output when
+    # unset, so extraction without the option is unchanged.
+    relation: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+    role: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
+    status: SkipJsonSchema[str | None] = Field(
+        default=None, exclude_if=lambda value: value is None,
+    )
 
     @field_validator("replaces_memory", mode="before")
     @classmethod
