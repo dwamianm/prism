@@ -101,6 +101,22 @@ jobs:
       - name: Start PostgreSQL
         run: docker compose up -d --wait
 
+      # A newer runner image can carry client tools newer than the PostgreSQL
+      # 16 server in docker-compose.yml. A newer pg_dump writes settings that
+      # server rejects, such as "transaction_timeout". Install the client that
+      # matches the server and put it first on PATH.
+      - name: Use the PostgreSQL 16 client tools
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+
       - name: Free runner disk (#407)
         run: |
           df -h / | tail -1
@@ -158,6 +174,22 @@ jobs:
 
       - name: Start PostgreSQL
         run: docker compose up -d --wait
+
+      # A newer runner image can carry client tools newer than the PostgreSQL
+      # 16 server in docker-compose.yml. A newer pg_dump writes settings that
+      # server rejects, such as "transaction_timeout". Install the client that
+      # matches the server and put it first on PATH.
+      - name: Use the PostgreSQL 16 client tools
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
 
       - name: Free runner disk (#407)
         run: |
