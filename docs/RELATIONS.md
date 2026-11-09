@@ -50,10 +50,15 @@ rule of `benchmarks/graph_oracle/gold.py` (a test keeps the two equal).
 4. a verb of the word table (`lives`, `adopted`, `trip`, `dislikes`, which is `prefers` with negative polarity);
 5. a word whose stem is a derived cue of exactly one relation.
 
-Anything else stays unmapped (`has_dependents`, `diagnosed_with`, `coworker_of`). A claim typed on its `HAS_FACT`
-link (`metadata.relation` in the vocabulary, as the graph oracle writes it and as typed extraction will) is read
-as typed. `python -m benchmarks.diagnostics.relation_coverage <build or pack>` reports how many of a pack's claims
-map, by relation, and the unmapped predicates by count.
+Anything else stays unmapped (`has_dependents`, `diagnosed_with`, `coworker_of`). A claim that states its relation
+itself (`metadata.relation` in the vocabulary, on the claim node and its `HAS_FACT` link) is read as typed, and its
+predicate is not normalized: typed extraction (`enable_typed_extraction`, `PRME_ENABLE_TYPED_EXTRACTION`) writes the
+relation, role and status the extractor stated, and the graph oracle writes the same fields on the link. A relation
+outside the vocabulary, and `has` (a literal attribute), are read through the normalizer instead. The extractor's
+status is stored for the graph, but the claim's lifecycle, not that label, decides whether a routed question may read
+it; the graph oracle's own `superseded` status on a link still retires that claim.
+`python -m benchmarks.diagnostics.relation_coverage <build or pack>` reports how many of a pack's claims map, by
+relation, and the unmapped predicates by count.
 
 ## Questions: concepts and the router
 

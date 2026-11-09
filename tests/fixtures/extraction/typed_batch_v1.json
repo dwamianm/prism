@@ -1,0 +1,185 @@
+{
+ "note": "Recorded typed extraction from deepseek-v4.1-flash:cloud through the local Ollama server on 2026-11-08, before any check. The facts state a relation from the graph oracle's vocabulary.",
+ "turns": [
+  {
+   "content": "Alex Rivera is a senior backend engineer at Northwind Logistics, a freight-tracking startup.",
+   "role": "user"
+  },
+  {
+   "content": "Alex is married to Jordan and they live in Denver.",
+   "role": "user"
+  }
+ ],
+ "response": {
+  "turns": [
+   {
+    "turn": 1,
+    "entities": [
+     {
+      "name": "Alex Rivera",
+      "entity_type": "person",
+      "description": "Senior backend engineer at Northwind Logistics",
+      "scope": "personal"
+     },
+     {
+      "name": "Northwind Logistics",
+      "entity_type": "organization",
+      "description": "A freight-tracking startup",
+      "scope": "organisation"
+     }
+    ],
+    "facts": [
+     {
+      "subject": "Alex Rivera",
+      "subject_entity_type": "person",
+      "predicate": "works_at",
+      "object": "Northwind Logistics",
+      "object_entity_type": "organization",
+      "quantity": null,
+      "polarity": "positive",
+      "evidence_quote": "Alex Rivera is a senior backend engineer at Northwind Logistics, a freight-tracking startup.",
+      "confidence": 0.95,
+      "temporal_ref": null,
+      "fact_type": "fact",
+      "scope": "personal",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "temporal_intent": "assertion",
+      "replaces_object": null,
+      "relation": "works_at",
+      "role": "senior backend engineer",
+      "status": "current"
+     },
+     {
+      "subject": "Northwind Logistics",
+      "subject_entity_type": "organization",
+      "predicate": "is_a",
+      "object": "freight-tracking startup",
+      "object_entity_type": null,
+      "quantity": null,
+      "polarity": "positive",
+      "evidence_quote": "Alex Rivera is a senior backend engineer at Northwind Logistics, a freight-tracking startup.",
+      "confidence": 0.9,
+      "temporal_ref": null,
+      "fact_type": "fact",
+      "scope": "organisation",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "temporal_intent": "assertion",
+      "replaces_object": null,
+      "relation": "has",
+      "role": null,
+      "status": "current"
+     }
+    ],
+    "relationships": [
+     {
+      "source_entity": "Alex Rivera",
+      "source_entity_type": "person",
+      "target_entity": "Northwind Logistics",
+      "target_entity_type": "organization",
+      "relationship_type": "works_at",
+      "polarity": "positive",
+      "evidence_quote": "Alex Rivera is a senior backend engineer at Northwind Logistics, a freight-tracking startup.",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "confidence": 0.95
+     }
+    ]
+   },
+   {
+    "turn": 2,
+    "entities": [
+     {
+      "name": "Alex",
+      "entity_type": "person",
+      "description": "Married to Jordan, lives in Denver",
+      "scope": "personal"
+     },
+     {
+      "name": "Jordan",
+      "entity_type": "person",
+      "description": "Married to Alex",
+      "scope": "personal"
+     },
+     {
+      "name": "Denver",
+      "entity_type": "location",
+      "description": "Where Alex and Jordan live",
+      "scope": "personal"
+     }
+    ],
+    "facts": [
+     {
+      "subject": "Alex",
+      "subject_entity_type": "person",
+      "predicate": "married_to",
+      "object": "Jordan",
+      "object_entity_type": "person",
+      "quantity": null,
+      "polarity": "positive",
+      "evidence_quote": "Alex is married to Jordan and they live in Denver.",
+      "confidence": 0.95,
+      "temporal_ref": null,
+      "fact_type": "fact",
+      "scope": "personal",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "temporal_intent": "assertion",
+      "replaces_object": null,
+      "relation": "partner_of",
+      "role": null,
+      "status": "current"
+     },
+     {
+      "subject": "they",
+      "subject_entity_type": null,
+      "predicate": "lives_in",
+      "object": "Denver",
+      "object_entity_type": "location",
+      "quantity": null,
+      "polarity": "positive",
+      "evidence_quote": "Alex is married to Jordan and they live in Denver.",
+      "confidence": 0.9,
+      "temporal_ref": null,
+      "fact_type": "fact",
+      "scope": "personal",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "temporal_intent": "assertion",
+      "replaces_object": null,
+      "relation": "lives_in",
+      "role": null,
+      "status": "current"
+     }
+    ],
+    "relationships": [
+     {
+      "source_entity": "Alex",
+      "source_entity_type": "person",
+      "target_entity": "Jordan",
+      "target_entity_type": "person",
+      "relationship_type": "married_to",
+      "polarity": "positive",
+      "evidence_quote": "Alex is married to Jordan and they live in Denver.",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "confidence": 0.95
+     },
+     {
+      "source_entity": "they",
+      "source_entity_type": null,
+      "target_entity": "Denver",
+      "target_entity_type": "location",
+      "relationship_type": "lives_in",
+      "polarity": "positive",
+      "evidence_quote": "Alex is married to Jordan and they live in Denver.",
+      "epistemic_type": "asserted",
+      "condition": null,
+      "confidence": 0.9
+     }
+    ]
+   }
+  ]
+ }
+}

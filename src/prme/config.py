@@ -1361,6 +1361,28 @@ class PRMEConfig(_ProjectSettings):
             "False until the fast gate passes."
         ),
     )
+    enable_typed_extraction: bool = Field(
+        default=False,
+        description=(
+            "[HYPOTHESIS] When True, extraction also asks for each fact's "
+            "relation in the graph oracle's closed vocabulary "
+            "(benchmarks/graph_oracle/DESIGN.md), with a role and a status "
+            "(dwamianm/prism#400). The open predicate is kept, and the "
+            "admitted relation, role and status are stored in the claim's "
+            "metadata and on its HAS_FACT link, so relation routing reads a "
+            "typed claim instead of mapping its predicate. A relation the "
+            "model leaves out, or one outside the vocabulary, is dropped "
+            "with its role and status, the claim keeps only its predicate, "
+            "and the drop is logged. The option changes the extraction "
+            "request, so recorded extractions do not replay under it; it is "
+            "part of the re-derivation settings only while it is on, so "
+            "memories derived without it stay current while it is off. It "
+            "does not apply to privacy-protected extraction, whose guarded "
+            "provider keeps the untyped schema, and turning it off does not "
+            "un-type claims already stored. Default False: the first fidelity "
+            "and fast-gate report does not support turning it on."
+        ),
+    )
     enable_qa_pairing: bool = Field(
         default=False,
         description=(

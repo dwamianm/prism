@@ -16,6 +16,7 @@ import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
+from functools import lru_cache
 import hashlib
 from html import escape
 import json
@@ -54,6 +55,58 @@ if TYPE_CHECKING:
     from prme.config import ExtractionConfig
 
 logger = structlog.get_logger(__name__)
+
+# The statuses a typed claim may state (benchmarks/graph_oracle/DESIGN.md, "Corrections and time").
+RELATION_STATUSES = ("planned", "current", "done", "past", "superseded")
+_STATUS_WORDS = ", ".join(RELATION_STATUSES)
+
+
+@lru_cache(maxsize=1)
+def typed_extraction_guidance() -> str:
+    """The prompt block that asks for each claim's relation, role and status (#400).
+
+    The vocabulary is the graph oracle's closed one (`prme.retrieval.relations`), with each name's definition and
+    subject and object kinds, so the prompt and the router read the same table. Built once: the request digest in
+    retrieval receipts and extraction caches has to stay stable within a process.
+    """
+    from prme.retrieval.relations import RELATIONS
+
+    rows = "\n".join(f"   - {name}: {definition} (subject and object: {kinds})"
+                     for name, (kinds, definition) in RELATIONS.items())
+    return f"""\
+TYPED RELATIONS: for every fact, also state the relation it holds in one fixed vocabulary, with its qualifier and
+status. The open predicate stays as it is; these fields are added beside it.
+- relation: exactly one of the names below, or null when no name fits. Never invent a name: a claim with no fitting
+  relation keeps only its predicate.
+{rows}
+- role: a short qualifier of the relation's far end, copied from the source when it states one: the family word for
+  kin_of (sister, child, mother), the title for works_at, and what the person did for involved_in (leads, reviewer).
+  Null when the source states none.
+- status: one of {_STATUS_WORDS}. Use planned for a trip or a plan not yet done, done for a completed action, past
+  for something that no longer holds, current for present state, and superseded only for a claim the source says an
+  earlier one was replaced by.
+- Polarity is independent of the relation: a dislike is prefers with negative polarity, and a rejected option is
+  decided with negative polarity. Use has for an attribute value whose object is a literal, not an entity."""
+
+
+def admit_relation(fact: ExtractedFact) -> tuple[str | None, str | None, str | None]:
+    """The typed claim fields to store, dropping any the model left out or invented (#400).
+
+    A relation outside the closed vocabulary is dropped together with its role and status, and the claim keeps its
+    open predicate; the caller counts it. A role or status outside its own fixed set is dropped alone.
+    """
+    from prme.retrieval.relations import RELATIONS
+
+    relation = (fact.relation or "").strip().casefold()
+    if relation not in RELATIONS:
+        return None, None, None
+    role = (fact.role or "").strip().casefold() or None
+    if role is not None and (len(role) > 50 or re.fullmatch(r"[a-z0-9][a-z0-9 _'-]*", role) is None):
+        role = None
+    status = (fact.status or "").strip().casefold() or None
+    if status not in RELATION_STATUSES:
+        status = None
+    return relation, role, status
 
 _VALIDATION_SOURCE: ContextVar[str | None] = ContextVar(
     "prme_extraction_validation_source", default=None
@@ -267,6 +320,43 @@ class _CitedRelationship(ExtractedRelationship):
     )
     evidence_quote: str = Field(min_length=1, description=ExtractedFact.model_fields["evidence_quote"].description)
     epistemic_type: str = Field(description=ExtractedFact.model_fields["epistemic_type"].description)
+
+
+# The schema descriptions the model reads when enable_typed_extraction shows these fields (#400).
+_TYPED_RELATION_DESCRIPTION = (
+    "The claim's relation in the closed vocabulary the prompt lists, or null when no name fits. Do not invent a "
+    "name; the predicate stays as it is either way."
+)
+_TYPED_ROLE_DESCRIPTION = (
+    "A short qualifier of the relation's far end, copied from the source when it states one: the family word for "
+    "kin_of (sister, child), the title for works_at, what the person did for involved_in. Null when unstated."
+)
+_TYPED_STATUS_DESCRIPTION = (
+    f"One of {_STATUS_WORDS}: planned for a trip or plan not yet done, done for a completed action, past for "
+    "something that no longer holds, current for present state, superseded only when the source says an earlier "
+    "claim was replaced."
+)
+
+
+class _TypedClaimFields(BaseModel):
+    """The relation, role and status a typed claim states (dwamianm/prism#400).
+
+    A value that is not text is dropped to null here, so a malformed optional
+    field never costs the claim it is attached to.
+    """
+
+    relation: str | None = Field(default=None, description=_TYPED_RELATION_DESCRIPTION)
+    role: str | None = Field(default=None, description=_TYPED_ROLE_DESCRIPTION)
+    status: str | None = Field(default=None, description=_TYPED_STATUS_DESCRIPTION)
+
+    @field_validator("relation", "role", "status", mode="before")
+    @classmethod
+    def ignore_non_text(cls, value: object) -> str | None:
+        return value if isinstance(value, str) else None
+
+
+class _TypedCitedFact(_TypedClaimFields, _CitedFact):
+    """A cited fact that also states its relation, role and status (dwamianm/prism#400)."""
 
 
 def _nonactual_cue_predicate(prefix: str) -> str | None:
@@ -823,6 +913,12 @@ class _CitedExtractionResult(ExtractionResult):
         self.relationships = closed_relationships
         return self
 
+class _TypedCitedExtractionResult(_CitedExtractionResult):
+    """A single turn's output whose facts state their relation (#400)."""
+
+    facts: list[_TypedCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+
 class _ResolvingCitedFact(_CitedFact):
     """A cited fact that also carries its self-contained text (#91)."""
 
@@ -838,8 +934,18 @@ class _ResolvingCitedFact(_CitedFact):
     )
 
 
+class _TypedResolvingCitedFact(_TypedClaimFields, _ResolvingCitedFact):
+    """A cited fact with its self-contained text and its typed relation (#91, #400)."""
+
+
 class _ResolvingCitedExtractionResult(_CitedExtractionResult):
     facts: list[_ResolvingCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+
+class _TypedResolvingCitedExtractionResult(_ResolvingCitedExtractionResult):
+    """A single turn's output with self-contained claim text and typed relations (#91, #400)."""
+
+    facts: list[_TypedResolvingCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
 
 
 EXTRACTION_SYSTEM_PROMPT = """\
@@ -1062,7 +1168,7 @@ _RESOLUTION_GUIDANCE = (
 
 
 def _extraction_prompt_for_role(
-    role: str, *, windowed: bool = False, resolving: bool = False
+    role: str, *, windowed: bool = False, resolving: bool = False, typed: bool = False
 ) -> str:
     """Add source-role admission policy without trusting role as prompt text."""
     normalized = role.strip().casefold()
@@ -1073,7 +1179,9 @@ def _extraction_prompt_for_role(
         prompt = f"{EXTRACTION_SYSTEM_PROMPT}\nSOURCE MESSAGE ROLE: {normalized or 'unknown'}\n{policy}"
     if windowed:
         prompt = f"{prompt}\n{_WINDOW_GUIDANCE}"
-    return f"{prompt}\n{_RESOLUTION_GUIDANCE}" if resolving else prompt
+    if resolving:
+        prompt = f"{prompt}\n{_RESOLUTION_GUIDANCE}"
+    return f"{prompt}\n{typed_extraction_guidance()}" if typed else prompt
 
 
 def _window_message(window: list[str]) -> str:
@@ -1112,17 +1220,17 @@ def _source_details_message(resolution: FactTextResolution) -> str | None:
 
 def validate_raw_output(
     raw: dict[str, Any], content: str, *, role: str = "user", resolving: bool = False,
-    speaker: str | None = None, plural_first_person: bool = False,
+    speaker: str | None = None, plural_first_person: bool = False, typed: bool = False,
 ) -> ExtractionResult:
     """Check a provider's parsed output as :meth:`InstructorExtractionProvider.extract` does.
 
     ``raw`` is what the provider returned before any check, as kept through
     ``_RAW_OUTPUT``. The checks are deterministic, so the same output, source,
-    role, speaker and ``plural_first_person`` give the same result as the live
-    call, and the same output can be checked again under other grounding rules
-    without a model call.
+    role, speaker, ``plural_first_person`` and ``typed`` give the same result
+    as the live call, and the same output can be checked again under other
+    grounding rules without a model call.
     """
-    model = _ResolvingCitedExtractionResult if resolving else _CitedExtractionResult
+    model = _single_result_model(resolving=resolving, typed=typed)
     return model.model_validate_json(json.dumps(raw), context={
         "source_text": content, "source_role": role.strip().casefold(), "speaker": speaker,
         "plural_first_person": plural_first_person,
@@ -1272,16 +1380,20 @@ _MEMORY_TEXT_CHARS = 300
 
 
 def batch_request_messages(
-    turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = (),
+    turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = (), *, typed: bool = False,
 ) -> list[dict[str, str]]:
     """The chat messages of a batched extraction request, as the provider sends them.
 
     The same turns always give the same messages, so their digest identifies
     the request (``ExtractionBatchRecord.request_sha256``) and a benchmark
     cache can key on them. Earlier ``memories`` (#277) add their guidance and
-    a reference message; without them the request is unchanged.
+    a reference message; without them the request is unchanged. ``typed``
+    (#400) adds the relation vocabulary, and its digest differs from the
+    request without it.
     """
     system = f"{BATCH_EXTRACTION_SYSTEM_PROMPT}\n{_CORRECTIONS_GUIDANCE}" if memories else BATCH_EXTRACTION_SYSTEM_PROMPT
+    if typed:
+        system = f"{system}\n{typed_extraction_guidance()}"
     messages = [{"role": "system", "content": system}]
     if memories:
         messages.append({"role": "user", "content": _memories_message(memories)})
@@ -1291,8 +1403,9 @@ def batch_request_messages(
     return messages
 
 
-def batch_request_sha256(turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = ()) -> str:
-    return hashlib.sha256(json.dumps(batch_request_messages(turns, memories)).encode()).hexdigest()
+def batch_request_sha256(turns: Sequence[BatchTurn], memories: Sequence[CorrectionMemory] = (),
+                         *, typed: bool = False) -> str:
+    return hashlib.sha256(json.dumps(batch_request_messages(turns, memories, typed=typed)).encode()).hexdigest()
 
 
 # Receives the parsed output of each attempt of a batched call, before any check.
@@ -1333,6 +1446,18 @@ class _BatchTurnExtraction(BaseModel):
         return _admitted_items(items, model[info.field_name])
 
 
+class _TypedBatchTurnExtraction(_BatchTurnExtraction):
+    """One turn's output whose facts state their relation, role and status (#400)."""
+
+    facts: list[_TypedCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+    @field_validator("entities", "facts", "relationships", mode="before")
+    @classmethod
+    def drop_malformed_items(cls, items: Any, info: ValidationInfo) -> list[Any]:
+        model = {"entities": ExtractedEntity, "facts": _TypedCitedFact, "relationships": _CitedRelationship}
+        return _admitted_items(items, model[info.field_name])
+
+
 class _BatchExtractionResult(BaseModel):
     """What each turn of the conversation states, one entry per turn."""
 
@@ -1347,6 +1472,14 @@ class _BatchExtractionResult(BaseModel):
         if raw_output is not None and isinstance(value, dict):
             raw_output.append(copy.deepcopy(value))
         return value
+
+
+class _TypedBatchExtractionResult(_BatchExtractionResult):
+    """What each turn states, with typed claim fields (#400)."""
+
+    turns: list[_TypedBatchTurnExtraction] = Field(  # type: ignore[assignment]
+        description="One entry for every turn of the message, in order, each citing its turn's index"
+    )
 
 
 # The schema of a request that shows earlier memories (#277). Only the schema
@@ -1377,6 +1510,45 @@ class _CorrectingBatchExtractionResult(_BatchExtractionResult):
     )
 
 
+class _TypedCorrectingCitedFact(_TypedClaimFields, _CorrectingCitedFact):
+    """A fact that may correct an earlier memory and also states its relation (#277, #400)."""
+
+
+class _TypedCorrectingBatchTurnExtraction(_TypedBatchTurnExtraction):
+    """One turn's output that may correct earlier memories and whose facts are typed (#277, #400)."""
+
+    facts: list[_TypedCorrectingCitedFact] = Field(default_factory=list)  # type: ignore[assignment]
+
+    @field_validator("entities", "facts", "relationships", mode="before")
+    @classmethod
+    def drop_malformed_items(cls, items: Any, info: ValidationInfo) -> list[Any]:
+        model = {"entities": ExtractedEntity, "facts": _TypedCorrectingCitedFact,
+                 "relationships": _CitedRelationship}
+        return _admitted_items(items, model[info.field_name])
+
+
+class _TypedCorrectingBatchExtractionResult(_TypedBatchExtractionResult):
+    """What each turn states, with earlier-memory corrections and typed claim fields (#277, #400)."""
+
+    turns: list[_TypedCorrectingBatchTurnExtraction] = Field(  # type: ignore[assignment]
+        description="One entry for every turn of the message, in order, each citing its turn's index"
+    )
+
+
+def _single_result_model(*, resolving: bool, typed: bool) -> type[ExtractionResult]:
+    """The response model of one turn's request: with or without self-contained text and typed fields."""
+    if typed:
+        return _TypedResolvingCitedExtractionResult if resolving else _TypedCitedExtractionResult
+    return _ResolvingCitedExtractionResult if resolving else _CitedExtractionResult
+
+
+def _batch_result_model(*, correcting: bool, typed: bool) -> type[_BatchExtractionResult]:
+    """The response model of a batched request: with or without earlier-memory corrections and typed fields."""
+    if typed:
+        return _TypedCorrectingBatchExtractionResult if correcting else _TypedBatchExtractionResult
+    return _CorrectingBatchExtractionResult if correcting else _BatchExtractionResult
+
+
 def _parse_batch_output(raw: Any) -> tuple[Any, _BatchExtractionResult]:
     """A batched response as a dict and as parsed, or ExtractionError when it lacks the batch shape."""
     if isinstance(raw, BaseModel):
@@ -1401,7 +1573,7 @@ def batch_turns_without_entry(raw: Any, turns: Sequence[BatchTurn]) -> list[int]
 
 def validate_batch_output(
     raw: Any, turns: Sequence[BatchTurn], *, speakers: dict[int, str | None] | None = None,
-    plural_first_person: bool = False,
+    plural_first_person: bool = False, typed: bool = False,
 ) -> dict[int, ExtractionResult]:
     """Split a batched response by cited turn and check each part as a single turn's output (#254).
 
@@ -1414,8 +1586,10 @@ def validate_batch_output(
     an entry gets an empty result. ``speakers`` names, by index, the turns'
     speakers for grounding (enable_speaker_grounding). With
     ``plural_first_person`` (enable_ingest_claim_fixes) a claim's I, me or my
-    that its sentences write as we, us or our becomes that word. The checks
-    are deterministic, so the same response gives the same results on replay.
+    that its sentences write as we, us or our becomes that word. With
+    ``typed`` (enable_typed_extraction) a fact may also keep its relation,
+    role and status. The checks are deterministic, so the same response gives
+    the same results on replay.
 
     Raises ExtractionError with reason ValidationError when the response as
     a whole does not have the batch shape.
@@ -1444,7 +1618,7 @@ def validate_batch_output(
         turn = by_index[index]
         try:
             results[index] = validate_raw_output(part, turn.content, role=turn.role, speaker=speakers.get(index),
-                                                 plural_first_person=plural_first_person)
+                                                 plural_first_person=plural_first_person, typed=typed)
         except ValidationError as exc:
             raise ExtractionError("Batched extraction output failed a turn's checks",
                                   reason_code="ValidationError") from exc
@@ -1508,6 +1682,9 @@ class ExtractionProvider(Protocol):
                 claim's I, me or my that the cited sentences write as we, us
                 or our (and use no singular form) becomes the sentences' own
                 word instead of being discarded.
+            typed: Given only with enable_typed_extraction (#400). The prompt
+                asks for each fact's relation, role and status, and the
+                response schema admits them.
 
         Returns:
             ExtractionResult with entities, facts, relationships, and summary.
@@ -1537,6 +1714,11 @@ class BatchExtractionProvider(Protocol):
         does, and each fact may name one of them in ``replaces_memory``. It
         is passed only when there are memories to show, so a provider
         without the parameter works while the option is off.
+
+        With enable_typed_extraction (#400), ingestion passes ``typed=True``,
+        and the request and response schema then carry each fact's relation,
+        role and status. It is passed only while the option is on, so a
+        provider without the parameter works while it is off.
         """
         ...
 
@@ -1662,7 +1844,7 @@ class InstructorExtractionProvider:
     async def extract(
         self, content: str, *, role: str = "user", context: Sequence[str] = (),
         resolve: FactTextResolution | None = None, speaker: str | None = None,
-        plural_first_person: bool = False,
+        plural_first_person: bool = False, typed: bool = False,
     ) -> ExtractionResult:
         """Extract structured information from message content.
 
@@ -1691,7 +1873,7 @@ class InstructorExtractionProvider:
             window = [line for line in context if line and line.strip()]
             messages: list[dict] = [
                 {"role": "system", "content": _extraction_prompt_for_role(
-                    role, windowed=bool(window), resolving=resolve is not None,
+                    role, windowed=bool(window), resolving=resolve is not None, typed=typed,
                 )},
             ]
             if window:
@@ -1707,9 +1889,7 @@ class InstructorExtractionProvider:
             # authoritative source classification downstream.
             messages.append({"role": "user", "content": content})
             create_kwargs: dict = {
-                "response_model": (
-                    _ResolvingCitedExtractionResult if resolve is not None else _CitedExtractionResult
-                ),
+                "response_model": _single_result_model(resolving=resolve is not None, typed=typed),
                 "messages": messages,
                 "max_retries": self._max_retries,
                 "temperature": self._temperature,
@@ -1748,6 +1928,7 @@ class InstructorExtractionProvider:
 
     async def extract_batch(
         self, turns: Sequence[BatchTurn], *, memories: Sequence[CorrectionMemory] = (),
+        typed: bool = False,
     ) -> dict[str, Any]:
         """Extract several turns of one session in one call (#254).
 
@@ -1766,8 +1947,8 @@ class InstructorExtractionProvider:
         try:
             client = self._ensure_client()
             create_kwargs: dict = {
-                "response_model": _CorrectingBatchExtractionResult if memories else _BatchExtractionResult,
-                "messages": batch_request_messages(turns, memories),
+                "response_model": _batch_result_model(correcting=bool(memories), typed=typed),
+                "messages": batch_request_messages(turns, memories, typed=typed),
                 "max_retries": self._max_retries if len(turns) == 1 else 1,
                 "temperature": self._temperature,
             }

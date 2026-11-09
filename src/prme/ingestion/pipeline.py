@@ -307,6 +307,7 @@ class IngestionPipeline:
         link_owner_groups: bool = False,
         pronoun_repair_turns: int | None = None,
         named_claim_text: bool = False,
+        typed_extraction: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -374,6 +375,18 @@ class IngestionPipeline:
         # A claim from a turn whose I, me and my bind to a name is stored with the name written into its text
         # (enable_named_claim_text).
         self._named_claim_text = named_claim_text
+        # Ask for each fact's relation, role and status in the closed vocabulary, and store what is admitted
+        # (enable_typed_extraction, #400). A provider written against the earlier signature keeps its schema and
+        # cannot return a relation, so the option then stores nothing and is not part of the derivation settings.
+        self._typed_extraction = typed_extraction
+        batch_extract = getattr(extraction_provider, "extract_batch", None)
+        self._typed_batch = bool(typed_extraction and batch_extract is not None
+                                 and _accepts_keyword(batch_extract, "typed"))
+        self._typed_single = bool(typed_extraction and _accepts_keyword(extraction_provider.extract, "typed"))
+        self._typed_claims = self._typed_batch or self._typed_single
+        if typed_extraction and not self._typed_claims:
+            logger.warning("ingestion.typed_extraction_unsupported",
+                           provider=extraction_provider.provider_name)
         # One pending flush per owner and scope, armed by ingest() without waiting.
         self._flush_timers: dict[tuple[str, Scope], asyncio.Task] = {}
         # The owner and scope of each flush running in the background.
@@ -1023,6 +1036,9 @@ class IngestionPipeline:
             # A provider written against the earlier signature is not asked, so the default that turned
             # the option on does not break it; its "I" for a "we" is discarded as before.
             extra["plural_first_person"] = True
+        if self._typed_single:
+            # A provider written against the earlier signature keeps its schema and returns no relation.
+            extra["typed"] = True
         async with self._extraction_semaphore:
             result = await self._extraction_provider.extract(
                 event.content, role=event.role, **extra
@@ -1205,6 +1221,11 @@ class IngestionPipeline:
         # Named only when there are memories, so a provider written before
         # enable_extraction_corrections keeps working while it is off.
         extra = {"memories": memories} if memories else {}
+        # A provider written before enable_typed_extraction keeps its schema, and then the request and its checks
+        # stay the untyped ones, and the option is not part of the derivation settings.
+        typed = self._typed_batch
+        if typed:
+            extra["typed"] = True
         try:
             if run is not None:
                 run.requests += 1
@@ -1217,7 +1238,8 @@ class IngestionPipeline:
             # The speaker is shown to the model either way; grounding accepts
             # the speaker's own I, me and my only with speaker grounding on.
             speakers = {turn.index: turn.speaker for turn in turns} if self._speaker_grounding else {}
-            results = validate_batch_output(raw, turns, speakers=speakers, plural_first_person=self._claim_fixes)
+            results = validate_batch_output(raw, turns, speakers=speakers, plural_first_person=self._claim_fixes,
+                                            typed=typed)
             without_entry = batch_turns_without_entry(raw, turns)
         except ExtractionError as exc:
             if len(events) == 1 and exc.reason_code in _HALVABLE_FAILURES - _VALIDATION_FAILURES:
@@ -1246,7 +1268,7 @@ class IngestionPipeline:
         batch = ExtractionBatchRecord(
             user_id=head.user_id, scope=head.scope, session_id=head.session_id, head_event_id=head.id,
             provider=self._extraction_provider.provider_name, model=self._extraction_provider.model_name,
-            request_sha256=batch_request_sha256(turns, memories),
+            request_sha256=batch_request_sha256(turns, memories, typed=typed),
             turns=tuple(
                 ExtractionBatchTurn(index=turn.index, event_id=event.id, role=event.role, speaker=turn.speaker,
                                     event_time=turn.time, content_hash=event.content_hash)
@@ -1718,6 +1740,26 @@ class IngestionPipeline:
                 "temporal_intent": fact.temporal_intent,
                 "replaces_object": fact.replaces_object,
             }
+            # The relation the extractor stated in the closed vocabulary, with its role and status
+            # (enable_typed_extraction, #400). A relation it left out, or one outside the vocabulary, is dropped
+            # with its role and status: the claim keeps its open predicate, and the drop is counted here.
+            typed_fields: dict = {}
+            if self._typed_claims:
+                from prme.ingestion.extraction import admit_relation
+
+                relation, typed_role, typed_status = admit_relation(fact)
+                if relation is None:
+                    logger.info("ingestion.typed_relation_dropped", predicate=fact.predicate,
+                                stated_relation=fact.relation,
+                                reason="missing" if not (fact.relation or "").strip() else "not_in_vocabulary")
+                else:
+                    if (fact.role or "").strip() and typed_role is None:
+                        logger.info("ingestion.typed_role_dropped", predicate=fact.predicate, role=fact.role)
+                    if (fact.status or "").strip() and typed_status is None:
+                        logger.info("ingestion.typed_status_dropped", predicate=fact.predicate, status=fact.status)
+                    typed_fields = {"relation": relation, **({"role": typed_role} if typed_role else {}),
+                                    **({"status": typed_status} if typed_status else {})}
+                    fact_metadata.update(typed_fields)
             if speaker is not None:
                 bound_fields = [field for field, value, kind in (
                     ("subject", fact.subject, fact.subject_entity_type),
@@ -1880,6 +1922,7 @@ class IngestionPipeline:
                     edge_type=EdgeType.HAS_FACT,
                     user_id=event.user_id,
                     provenance_event_id=event.id,
+                    metadata=dict(typed_fields) or None,
                 )
                 await writer.create_edge(has_fact_edge)
 

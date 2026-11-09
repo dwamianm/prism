@@ -105,6 +105,11 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
     from prme.ingestion.pipeline import _GROUNDING_POLICY
 
     provider = pipeline._extraction_provider
+    # A provider written before enable_typed_extraction keeps its schema, so the request is unchanged under it and
+    # the option is not part of the settings: turning it on cannot change what that provider derives.
+    typed = pipeline._typed_batch
+    typed_single = pipeline._typed_single
+    typed_request = typed if pipeline._batch_target_tokens > 0 else typed_single
     sample = BatchTurn(index=1, role="user", content="Sample turn.", speaker="Sample",
                        time=datetime(2000, 1, 1, tzinfo=timezone.utc))
     settings = {
@@ -112,17 +117,22 @@ def extraction_settings(pipeline: IngestionPipeline) -> dict:
         "provider": provider.provider_name,
         "model": provider.model_name,
         "grounding_policy": _GROUNDING_POLICY,
-        "request": batch_request_sha256([sample]),
+        "request": batch_request_sha256([sample], typed=typed),
         "batch_target_tokens": pipeline._batch_target_tokens,
         "extraction_corrections": pipeline._extraction_corrections,
         "claim_fixes": pipeline._claim_fixes,
         "speaker_grounding": pipeline._speaker_grounding,
     }
+    if typed_request:
+        # The option changes the request and what is derived, so a source derived without it is stale once it is
+        # on. Kept out while it is off, or when the provider cannot take it, so the settings of those engines are
+        # those they had before it.
+        settings["typed_extraction"] = True
     if pipeline._extraction_window_turns > 0 or pipeline._resolve_fact_text:
         # Each source is asked on its own, with these prompts, so they and the window decide the output. The
         # settings of an engine with both options off are those it had before them.
         prompt = _extraction_prompt_for_role("user", windowed=pipeline._extraction_window_turns > 0,
-                                             resolving=pipeline._resolve_fact_text)
+                                             resolving=pipeline._resolve_fact_text, typed=typed_single)
         settings["request"] = hashlib.sha256(prompt.encode()).hexdigest()
         settings["window_turns"] = pipeline._extraction_window_turns
         settings["window_owner_wide"] = pipeline._extraction_window_owner_wide

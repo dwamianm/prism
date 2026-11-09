@@ -84,6 +84,7 @@ EXPECTED_HYPOTHESES = {
     "enable_superseded_source_suppression",
     "enable_owner_profile_context",
     "enable_relation_routing",
+    "enable_typed_extraction",
     "novelty_high_threshold",
     "novelty_low_threshold",
     "novelty_salience_boost",

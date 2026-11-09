@@ -834,6 +834,7 @@ class MemoryEngine:
                 link_owner_groups=config.enable_owner_group_links,
                 pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
                 named_claim_text=config.enable_named_claim_text,
+                typed_extraction=config.enable_typed_extraction,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -1026,6 +1027,7 @@ class MemoryEngine:
                 link_owner_groups=config.enable_owner_group_links,
                 pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
                 named_claim_text=config.enable_named_claim_text,
+                typed_extraction=config.enable_typed_extraction,
             )
 
             startup.push_async_callback(pipeline.shutdown)
