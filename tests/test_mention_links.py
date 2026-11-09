@@ -3,17 +3,21 @@
 import asyncio
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
 from prme import MemoryEngine, PRMEConfig
 from prme.ingestion.mention_links import is_text_link, link_event_mentions
 from prme.ingestion.schema import ExtractionResult
+from prme.models import MemoryNode
+from prme.models.extraction import ExtractionRecord
 from prme.retrieval.candidates import _find_seed_entities, _seed_terms
 from prme.retrieval.config import PackingConfig
 from prme.retrieval.query_analysis import analyze_query
-from prme.types import NodeType
+from prme.types import LifecycleState, NodeType, Scope
 from tests import test_durable_ingestion
+from tests.test_profile_event_loop import MAX_GAP, longest_gap, measurable
 
 config = test_durable_ingestion.config
 user = test_durable_ingestion.user
@@ -309,6 +313,51 @@ def test_seed_terms_skip_function_words_numbers_and_short_words():
     ]
     assert _seed_terms("alex alex ALEX") == ["alex"]
     assert len(_seed_terms(" ".join(f"word{i}" for i in range(100)))) == 32
+
+
+async def test_slow_mention_matching_keeps_the_event_loop_running():
+    # Every position of the note starts a match that fails only at the last
+    # character of the name, so searching it costs about the text length times
+    # the name length (#413). The loop must stay free while that runs.
+
+    class Graph:
+        def __init__(self, entity):
+            self.entity = entity
+            self.edges = []
+
+        async def query_nodes(self, **_):
+            return [self.entity]
+
+        async def get_edges(self, **_):
+            return []
+
+        async def create_edge(self, edge):
+            self.edges.append(edge)
+
+    owner = "owner-413"
+    name = "-" * 2_000 + "x"
+    note = MemoryNode(user_id=owner, node_type=NodeType.NOTE, content="-" * 200_000, scope=Scope.PERSONAL)
+    entity = MemoryNode(
+        user_id=owner, node_type=NodeType.ENTITY, content=name, scope=Scope.PERSONAL,
+        lifecycle_state=LifecycleState.STABLE, metadata={"entity_type": "person"},
+    )
+    event_id = uuid4()
+    extraction = ExtractionRecord(
+        event_id=event_id, user_id=owner, scope=Scope.PERSONAL, content_hash="0" * 64,
+        provider="test", model="test", result={"entities": [{"name": name, "entity_type": "person"}]},
+    )
+    graph = Graph(entity)
+    link = link_event_mentions(
+        str(event_id), [note], user_id=owner, graph_store=graph, event_store=None,
+        create_edge=graph.create_edge, extraction=extraction,
+    )
+
+    created, elapsed, gap = await longest_gap(link)
+
+    # The name never matches, so the off-loop work shows only as elapsed time.
+    assert created == 0 and graph.edges == []
+    measurable(elapsed)
+    assert gap < MAX_GAP, f"event loop blocked for {gap:.3f} s of a {elapsed:.3f} s match"
 
 
 async def test_seeds_match_whole_words_of_names_not_parts_of_words(config, user):

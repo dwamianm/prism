@@ -106,7 +106,9 @@ class TestRecordedDevRun:
     async def test_the_replay_stores_what_the_dev_service_stored(self, config, user):
         async with MemoryEngine.open(hosted(config)) as engine:
             event_ids, requests = await replay_dev_run(engine, user)
-            assert (await engine.process_extractions(user_id=user)).processed == 4
+            # The default 5 s budget is checked between jobs, so a loaded runner can stop before the
+            # fourth one and leave it pending. This test is about what the replay stores, not its speed.
+            assert (await engine.process_extractions(user_id=user, budget_ms=60000)).processed == 4
             stored = await stored_claims(engine, user, event_ids)
         # One request carried the four turns in event order, as the dev service sent them.
         assert requests == [[(number, turn["role"], turn["content"])
@@ -123,7 +125,7 @@ class TestRecordedDevRun:
     async def test_most_claims_are_attached_to_the_owner_though_their_text_keeps_the_users_words(self, config, user):
         async with MemoryEngine.open(hosted(config)) as engine:
             event_ids, _ = await replay_dev_run(engine, user)
-            await engine.process_extractions(user_id=user)
+            await engine.process_extractions(user_id=user, budget_ms=60000)
             stored = await stored_claims(engine, user, event_ids)
             marked = [node for node in await engine.query_nodes(user_id=user, node_type=NodeType.ENTITY)
                       if "owner_name" in (node.metadata or {})]
@@ -144,7 +146,7 @@ class TestRecordedDevRun:
     async def test_without_the_carry_the_later_turn_keeps_its_own_i(self, config, user):
         async with MemoryEngine.open(hosted(config, enable_owner_name_carry=False)) as engine:
             event_ids, _ = await replay_dev_run(engine, user)
-            await engine.process_extractions(user_id=user)
+            await engine.process_extractions(user_id=user, budget_ms=60000)
             stored = await stored_claims(engine, user, event_ids)
         attached = [node for _, node, subject in stored if subject.content == "Alex Rivera"]
         on_i = [node for number, node, subject in stored if number == 4 and subject.content == "I"]

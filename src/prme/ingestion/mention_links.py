@@ -57,10 +57,11 @@ async def link_event_mentions(
     event's ID). The entities are the ones the event's saved extraction lists,
     or the ``extraction`` given when a re-derivation saved its own. A name that two listed
     entities share, or that no single active entity of the owner carries, is
-    skipped rather than guessed, as is a literal I or we. Best effort: a
-    failure is logged and returns what was linked so far, because the
-    derivation and the note are already durable. Returns the number of links
-    created.
+    skipped rather than guessed, as is a literal I or we. Each source's name
+    matching runs on the profile worker threads, so a slow match does not hold
+    the caller's loop; the edge writes stay on the loop. Best effort: a failure
+    is logged and returns what was linked so far, because the derivation and
+    the note are already durable. Returns the number of links created.
     """
     created = 0
     try:
@@ -100,7 +101,17 @@ async def link_event_mentions(
         if not targets:
             return 0
 
-        from prme.organizer.profiles import mentions_entity
+        from prme.organizer.profiles import mentions_entity, run_profile_work
+
+        def matching(source_id, texts: list, linked: set) -> list:
+            # The regex engine holds the GIL for a whole call, so run every
+            # match for one source on the profile workers rather than on the
+            # caller's loop; the loop then serves other work between sources.
+            return [
+                (name, entity) for name, entity in targets
+                if (source_id, entity.id) not in linked and (entity.id, source_id) not in linked
+                and any(isinstance(text, str) and mentions_entity(text, name) for text in texts)
+            ]
 
         linked = {
             (edge.source_id, edge.target_id)
@@ -111,11 +122,7 @@ async def link_event_mentions(
             texts = [source.content]
             if source.node_type != NodeType.NOTE:
                 texts.append((source.metadata or {}).get("object"))
-            for name, entity in targets:
-                if (source.id, entity.id) in linked or (entity.id, source.id) in linked:
-                    continue
-                if not any(isinstance(text, str) and mentions_entity(text, name) for text in texts):
-                    continue
+            for name, entity in await run_profile_work(matching, source.id, texts, linked):
                 edge = MemoryEdge(
                     id=uuid5(UUID(event_id), f"prme:text-link:{source.id}:{entity.id}"),
                     source_id=source.id, target_id=entity.id, edge_type=EdgeType.MENTIONS,
