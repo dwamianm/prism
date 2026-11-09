@@ -1,0 +1,486 @@
+{
+  "generated_at": "2026-11-09T22:26:32.311856+00:00",
+  "machine": {
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "processor": "arm",
+    "python": "3.11.6",
+    "postgres": "PostgreSQL 16.11 (Postgres.app) on aarch64-apple-darwin21.6.0, compiled by Apple clang version 14.0.0 (clang-1400.0.29.102), 64-bit"
+  },
+  "budget_ms": 120000,
+  "runs": {
+    "240": {
+      "full": {
+        "wall_ms": 6226.238,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 1517.11,
+            "processed": 100,
+            "modified": 100,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 13.29,
+            "processed": 36,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 11.81,
+            "processed": 36,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 2369.71,
+            "processed": 411,
+            "modified": 58,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 223.56,
+            "processed": 9,
+            "modified": 9,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 352.69,
+            "processed": 2,
+            "modified": 2,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 16.13,
+            "processed": 36,
+            "modified": 1,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 40.36,
+            "processed": 13,
+            "modified": 13,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 1636.9,
+            "processed": 9,
+            "modified": 3,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 1.0,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      },
+      "incremental": {
+        "wall_ms": 6962.714,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 3.6,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 7.62,
+            "processed": 50,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 5.94,
+            "processed": 50,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 5076.33,
+            "processed": 233,
+            "modified": 0,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 254.11,
+            "processed": 8,
+            "modified": 0,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 157.24,
+            "processed": 2,
+            "modified": 1,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 5.45,
+            "processed": 45,
+            "modified": 0,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 57.17,
+            "processed": 13,
+            "modified": 13,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 1356.81,
+            "processed": 12,
+            "modified": 1,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 0.76,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      }
+    },
+    "1000": {
+      "full": {
+        "wall_ms": 19288.810999999998,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 1502.48,
+            "processed": 100,
+            "modified": 100,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 20.81,
+            "processed": 320,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 24.36,
+            "processed": 320,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 3508.31,
+            "processed": 412,
+            "modified": 58,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 983.72,
+            "processed": 24,
+            "modified": 24,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 487.53,
+            "processed": 2,
+            "modified": 2,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 143.25,
+            "processed": 377,
+            "modified": 8,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 377.47,
+            "processed": 51,
+            "modified": 51,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 12181.95,
+            "processed": 147,
+            "modified": 49,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 1.73,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      },
+      "incremental": {
+        "wall_ms": 23397.001,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 8.9,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 26.86,
+            "processed": 379,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 26.88,
+            "processed": 379,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 10076.31,
+            "processed": 57,
+            "modified": 0,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 724.1,
+            "processed": 23,
+            "modified": 0,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 192.82,
+            "processed": 2,
+            "modified": 1,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 15.96,
+            "processed": 328,
+            "modified": 0,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 322.04,
+            "processed": 51,
+            "modified": 51,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 11935.37,
+            "processed": 144,
+            "modified": 45,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 1.57,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      }
+    },
+    "10000": {
+      "full": {
+        "wall_ms": 17100.238999999998,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 262.21,
+            "processed": 100,
+            "modified": 100,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 16.49,
+            "processed": 5,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 15.78,
+            "processed": 5,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 2153.1,
+            "processed": 493,
+            "modified": 58,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 4201.32,
+            "processed": 510,
+            "modified": 510,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 323.38,
+            "processed": 2,
+            "modified": 2,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 17.08,
+            "processed": 5,
+            "modified": 0,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 1739.47,
+            "processed": 500,
+            "modified": 500,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 8298.63,
+            "processed": 240,
+            "modified": 80,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 2.76,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      },
+      "incremental": {
+        "wall_ms": 16147.897,
+        "jobs_run": [
+          "promote",
+          "decay_sweep",
+          "archive",
+          "deduplicate",
+          "alias_resolve",
+          "summarize",
+          "tombstone_sweep",
+          "snapshot_generation",
+          "consolidate",
+          "index_compaction"
+        ],
+        "jobs_skipped": [],
+        "per_job": {
+          "promote": {
+            "duration_ms": 7.06,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          },
+          "decay_sweep": {
+            "duration_ms": 17.31,
+            "processed": 97,
+            "modified": 0,
+            "errors": 0
+          },
+          "archive": {
+            "duration_ms": 19.04,
+            "processed": 97,
+            "modified": 0,
+            "errors": 0
+          },
+          "deduplicate": {
+            "duration_ms": 4331.99,
+            "processed": 55,
+            "modified": 0,
+            "errors": 0
+          },
+          "alias_resolve": {
+            "duration_ms": 4005.49,
+            "processed": 510,
+            "modified": 1,
+            "errors": 0
+          },
+          "summarize": {
+            "duration_ms": 255.17,
+            "processed": 2,
+            "modified": 1,
+            "errors": 0
+          },
+          "tombstone_sweep": {
+            "duration_ms": 17.32,
+            "processed": 15,
+            "modified": 0,
+            "errors": 0
+          },
+          "snapshot_generation": {
+            "duration_ms": 1701.15,
+            "processed": 500,
+            "modified": 500,
+            "errors": 0
+          },
+          "consolidate": {
+            "duration_ms": 5726.0,
+            "processed": 249,
+            "modified": 22,
+            "errors": 0
+          },
+          "index_compaction": {
+            "duration_ms": 2.57,
+            "processed": 0,
+            "modified": 0,
+            "errors": 0
+          }
+        }
+      }
+    }
+  }
+}
