@@ -99,3 +99,18 @@ async def test_get_by_hash(pg_event_store):
 async def test_get_nonexistent(pg_event_store):
     result = await pg_event_store.get(str(uuid.uuid4()))
     assert result is None
+
+
+async def test_get_by_user_filters_by_speaker(pg_event_store):
+    """The event-log turn lookup matches without regard to case (issue #423)."""
+    from prme.models import Event
+    from prme.models.speaker import attach_speaker
+
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    mine = Event(content="mine", user_id=uid, role="user", metadata=attach_speaker({}, "Maya Okafor"))
+    other = Event(content="other", user_id=uid, role="user", metadata=attach_speaker({}, "Theo Marsh"))
+    for event in (mine, other):
+        await pg_event_store.append(event)
+
+    found = await pg_event_store.get_by_user(uid, speaker="maya okafor")
+    assert [e.content for e in found] == ["mine"]

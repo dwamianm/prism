@@ -479,8 +479,15 @@ class PgGraphStore:
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
         operator_unscoped: bool = False,
+        content_contains_any: list[str] | None = None,
+        speaker: list[str] | None = None,
+        evidence_events: list[str] | None = None,
     ) -> list[MemoryNode]:
-        """Read one tenant or explicit operator page in immutable UUID order."""
+        """Read one tenant or explicit operator page in immutable UUID order.
+
+        The optional filters narrow the page before it is materialized; see
+        ``DuckPGQGraphStore.scan_nodes`` for their meaning.
+        """
         if (
             limit < 1
             or user_id == ""
@@ -499,6 +506,22 @@ class PgGraphStore:
             if value is not None:
                 params.append(value.value)
                 conditions.append(f"{field} = ${len(params)}")
+        if content_contains_any:
+            params.append([f"%{self._escape_like(value.lower())}%" for value in content_contains_any])
+            conditions.append(f"LOWER(content) LIKE ANY(${len(params)}::text[])")
+        if speaker:
+            folded = [value.lower() for value in speaker]
+            params.append(folded)
+            first = len(params)
+            params.append(folded)
+            conditions.append(
+                f"(LOWER(TRIM(metadata->>'prme_speaker_v1')) = ANY(${first}::text[]) "
+                f"OR LOWER(TRIM(metadata->'speaker_reference'->>'speaker')) "
+                f"= ANY(${len(params)}::text[]))"
+            )
+        if evidence_events:
+            params.append([str(UUID(event_id)) for event_id in evidence_events])
+            conditions.append(f"evidence_refs ?| ${len(params)}::text[]")
         if after_id is not None:
             params.append(str(UUID(after_id)))
             conditions.append(f"id > ${len(params)}::uuid")

@@ -263,8 +263,16 @@ class GraphStore(Protocol):
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
         operator_unscoped: bool = False,
+        content_contains_any: list[str] | None = None,
+        speaker: list[str] | None = None,
+        evidence_events: list[str] | None = None,
     ) -> list[MemoryNode]:
-        """Read an owner page, or an explicit operator page, in immutable ID order."""
+        """Read an owner page, or an explicit operator page, in immutable ID order.
+
+        ``content_contains_any``, ``speaker`` and ``evidence_events`` narrow
+        the page before it is materialized, so a caller can page over the
+        records relevant to one subject instead of reading a whole scope.
+        """
         ...
 
     async def update_node(self, node_id: str, **updates: Any) -> None:

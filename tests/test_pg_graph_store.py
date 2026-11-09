@@ -208,3 +208,31 @@ async def test_delete_node(graph_store):
     nid = await graph_store.create_node(node)
     await graph_store.delete_node(nid)
     assert await graph_store.get_node(nid, include_superseded=True) is None
+
+
+async def test_scan_nodes_narrows_by_content_speaker_and_evidence(graph_store):
+    """The filtered page matches the DuckDB backend (issue #423)."""
+    from prme.models.speaker import SPEAKER_METADATA_KEY
+
+    user = f"scan-{uuid.uuid4()}"
+    event_id = uuid.uuid4()
+    turn = MemoryNode(user_id=user, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                      content="A turn that names nobody",
+                      metadata={SPEAKER_METADATA_KEY: "Maya Okafor"})
+    named = MemoryNode(user_id=user, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                       content="Maya Okafor likes the family plan")
+    claim = MemoryNode(user_id=user, node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                       content="Theo is her husband",
+                       metadata={"speaker_reference": {"speaker": "Maya Okafor"}})
+    cited = MemoryNode(user_id=user, node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                       content="Theo is her husband", evidence_refs=[event_id])
+    for node in (turn, named, claim, cited):
+        await graph_store.create_node(node)
+
+    by_content = await graph_store.scan_nodes(user_id=user, content_contains_any=["maya"])
+    by_speaker = await graph_store.scan_nodes(user_id=user, speaker=["MAYA OKAFOR"])
+    by_evidence = await graph_store.scan_nodes(user_id=user, evidence_events=[str(event_id)])
+
+    assert {n.id for n in by_content} == {named.id}
+    assert {n.id for n in by_speaker} == {turn.id, claim.id}
+    assert {n.id for n in by_evidence} == {cited.id}

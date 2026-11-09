@@ -553,6 +553,7 @@ class EventStore:
         offset: int = 0,
         until: datetime | None = None,
         before: Event | None = None,
+        speaker: str | None = None,
     ) -> list[Event]:
         """Retrieve events for a user, optionally filtered by session and scope.
 
@@ -567,13 +568,17 @@ class EventStore:
                 before it are returned. A time without a zone is read as UTC.
             before: Only events that come before this one in the order
                 below, so the first result is the event just before it.
+            speaker: Optional stored speaker name, matched without regard to
+                case. A profile rebuild uses it to find the person's turns
+                without reading every event (issue #423).
 
         Returns:
             List of Events ordered by timestamp descending.
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, until, before
+                self._get_by_user_sync, user_id, session_id, scopes, limit, offset, until, before,
+                speaker,
             )
 
     async def get_by_hash(
@@ -646,6 +651,7 @@ class EventStore:
         offset: int,
         until: datetime | None = None,
         before: Event | None = None,
+        speaker: str | None = None,
     ) -> list[Event]:
         """Retrieve events for a user (sync).
 
@@ -666,6 +672,10 @@ class EventStore:
             placeholders = ", ".join(["?" for _ in scopes])
             conditions.append(f"scope IN ({placeholders})")
             params.extend([s.value for s in scopes])
+
+        if speaker is not None:
+            conditions.append("LOWER(TRIM(json_extract_string(metadata, '$.prme_speaker_v1'))) = ?")
+            params.append(speaker.lower())
 
         if until is not None:
             conditions.append("timestamp <= ?")

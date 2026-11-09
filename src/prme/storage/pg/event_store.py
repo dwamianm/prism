@@ -499,12 +499,14 @@ class PgEventStore:
         offset: int = 0,
         until: datetime | None = None,
         before: Event | None = None,
+        speaker: str | None = None,
     ) -> list[Event]:
         """Retrieve events for a user, optionally filtered by session and scope.
 
         With ``until``, only events recorded at or before that ingestion time;
         a time without a zone is read as UTC. With ``before``, only events that
-        come before it in the result order.
+        come before it in the result order. ``speaker`` matches a stored source
+        speaker without regard to case.
         """
         conditions: list[str] = ["user_id = $1"]
         params: list = [user_id]
@@ -525,6 +527,11 @@ class PgEventStore:
             conditions.append(f"scope IN ({placeholders})")
             params.extend(s.value for s in scopes)
             idx += len(scopes)
+
+        if speaker is not None:
+            conditions.append(f"LOWER(TRIM(metadata->>'prme_speaker_v1')) = ${idx}")
+            params.append(speaker.lower())
+            idx += 1
 
         if until is not None:
             conditions.append(f"timestamp <= ${idx}")

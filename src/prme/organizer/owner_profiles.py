@@ -226,18 +226,28 @@ async def _owner_has_policy(engine: MemoryEngine, user_id: str) -> bool:
 
 async def _rebuild(
     engine: MemoryEngine, *, user_id: str, scope: Scope, name: str, profile: MemoryNode | None,
+    deadline: float | None = None,
 ) -> dict | None:
     """Rebuild one profile at the budget it recorded; None when the rebuild failed.
 
     *profile* is the active profile the rebuild replaces, or None when there is
     none yet. A caller must pass it rather than rely on a default, so a future
     caller cannot silently rebuild at the default budget (issue #422).
+    *deadline* (``time.monotonic()``) bounds the source read between pages; a
+    read that runs out leaves the previous profile in place and returns None,
+    logging the stop at info level rather than as a failure (issue #423).
     """
+    from prme.storage.engine import ProfileBuildDeadlineExceeded
+
     try:
         published = await engine.consolidate_knowledge(
             user_id=user_id, scope=scope, entity_names=[name],
             max_profile_tokens=_profile_budget(profile), include_speaker_turns=True,
+            deadline=deadline,
         )
+    except ProfileBuildDeadlineExceeded:
+        logger.info("Profile rebuild stopped at its deadline; the previous profile stays")
+        return None
     except Exception:
         logger.warning("Profile rebuild failed; the previous profile stays", exc_info=True)
         return None
@@ -250,8 +260,9 @@ async def refresh_stale_profiles(engine: MemoryEngine, *, user_id: str, deadline
     Reads the owner's ``PROFILE_REFRESH_SCAN`` newest active profiles and
     rebuilds each one that a newer active record mentions, that its person
     said, or that its person's entity binds, newest profile first, once per
-    person and scope. A rebuild starts only before the deadline; one that has
-    started runs to its end. Returns
+    person and scope. A rebuild starts only before the deadline, and its
+    source read stops between pages at the deadline without publishing, so the
+    previous profile stays. Returns
     one entry per rebuild: the person, the scope and whether a profile was
     published (a person with fewer than two sources has their profile retired
     instead).
@@ -281,6 +292,7 @@ async def refresh_stale_profiles(engine: MemoryEngine, *, user_id: str, deadline
             continue
         entry = await _rebuild(
             engine, user_id=user_id, scope=profile.scope, name=name, profile=profile,
+            deadline=deadline,
         )
         if entry is not None:
             rebuilt.append(entry)
@@ -296,7 +308,8 @@ async def refresh_owner_profiles(engine: MemoryEngine, *, user_id: str, deadline
     are claims their entity binds, and rebuilt when such a record is newer
     than it; otherwise it is left as it is. A rebuild is kept under the name
     the newest profile has, so it replaces that profile. A build starts only
-    before the deadline. Returns
+    before the deadline, and its source read stops between pages at the
+    deadline without publishing. Returns
     one entry per build or rebuild, as :func:`refresh_stale_profiles` does,
     or None when the owner's memories are under a privacy policy.
     """
@@ -324,6 +337,7 @@ async def refresh_owner_profiles(engine: MemoryEngine, *, user_id: str, deadline
             break
         entry = await _rebuild(
             engine, user_id=user_id, scope=scope, name=name, profile=profile,
+            deadline=deadline,
         )
         if entry is not None:
             rebuilt.append(entry)
