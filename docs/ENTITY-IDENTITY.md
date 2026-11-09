@@ -92,7 +92,17 @@ rewritten safely (a present tense verb the table does not know, `I'd`,
 `myself`, an inverted question "Do I need", "Jordan and I have", where the
 `I` may start a clause of its own) is kept whole under
 the name, as the reader context labels a turn ("Maya: I live in Denver with
-my partner Sam."). A second verb whose subject the sentence leaves out is not
+my partner Sam."). Only the plain spellings count, so an all-caps word that
+reads as one is left alone: "I have ME/CFS" keeps ME/CFS and "Augusta, ME is
+cold." is unchanged. A lowercase i is not read as I, so an informal turn that
+writes only i is left unnamed. A first person inside double quotes, or
+anywhere in a text that carries single-quoted speech, is someone else's
+("My husband said \"I was fired.\"", "He said 'call me later.'"), a set phrase
+is not a possessive ("Oh my god", "Oh my,"), "mine" after a determiner or noun
+is the noun ("a coal mine"), and a capitalized title or numbered part before
+the I makes it a numeral ("World War I", "Part I"); each of those keeps the
+sentence whole under the name too. A second
+verb whose subject the sentence leaves out is not
 conjugated ("Maya left Northwind and now work at Brightpath"). The literal
 pronoun stays the claim's subject or object, `speaker_reference` and the links
 are as above, the evidence quote stays verbatim, and `metadata.named_text`
@@ -102,10 +112,15 @@ reader context a named claim, a statement included, folds into the turn that
 shows that sentence
 (`packing.fold_repeated_text`), so the context costs no more lines. The
 extraction request is unchanged, so a recorded extraction replays unchanged;
-the option is part of the re-derivation settings only while it is on, so
-memories derived without it stay current while it is off, turning it on reads
-them as stale for `reingest()`, and memories derived while it was on read as
-stale once it is turned off.
+the option is part of the re-derivation settings only while it is on, so in
+steady state memories derived without it stay current while it is off,
+turning it on reads them as stale for `reingest()`, and memories derived while
+it was on read as stale once it is turned off. The rewrite's rule change in
+dwamianm/prism#409 bumped `DERIVATION_VERSION` to 2, and the version is in
+every fingerprint, so every memory stored before the bump reads as stale once,
+including the memories of a store that leaves the option off; `reingest()`
+then re-derives each source with a model request, and with the option off the
+derived records are unchanged.
 
 The option is off by default because the text is also what retrieval ranks.
 On the fast gate (2026-11-04, `BENCHMARKS.md`, "Named claim text") the named
