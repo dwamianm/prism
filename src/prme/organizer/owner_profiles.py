@@ -196,8 +196,12 @@ async def _is_stale(engine: MemoryEngine, profile: MemoryNode, mentions: list[Me
     claim their entity binds and is not among its sources, or when one of its
     sources is no longer a source a build reads (a correction retired it).
     ``build_profile`` keeps a profile's oldest sources within its token
-    budget, so a profile that already left sources out and still has all of
-    its own would be rebuilt with the same text; it is left as it is.
+    budget and breaks an event-time tie by content (issue #497), so a profile
+    that already left sources out and still has all of its own is rebuilt
+    with the same text and is left as it is. A profile built before that
+    tie-break kept the same sources but may have quoted a different tied
+    source; nothing here rebuilds it for the ordering change alone, so it
+    improves only when an application replaces it.
     """
     metadata = profile.metadata or {}
     sources = [str(value) for value in metadata.get("source_node_ids") or ()]

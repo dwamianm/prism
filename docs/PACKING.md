@@ -499,8 +499,11 @@ records how many sources each path supplied under `source_paths`.
   stale, newest first, one rebuild per person and scope, starting a rebuild
   only within the pass's time budget, and lists them in `profiles_rebuilt`.
 - A profile that already left sources out of its token budget is not rebuilt:
-  `build_profile` keeps the oldest sources first, so the text would not
-  change. The same rule is why the option stays off (below).
+  `build_profile` keeps the oldest sources first and breaks an event-time tie
+  by content, so the text would not change. A profile built before that
+  tie-break (issue #497) is not rebuilt for the ordering change alone, so it
+  keeps the tied source it quoted until an application replaces it. The same
+  rule is why the option stays off (below).
 
 Rebuilding replaces the profile record (the old one is archived); the records
 it is built from are never changed. Profiles are matched by name and speaker

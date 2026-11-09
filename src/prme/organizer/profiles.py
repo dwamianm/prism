@@ -13,6 +13,7 @@ from typing import ParamSpec, TypeVar
 from prme.models import MemoryNode
 from prme.retrieval.owner_profile import PROFILE_HEADER
 from prme.retrieval.tokenization import count_tokens
+from prme.types import NodeType
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -92,14 +93,44 @@ def _date(value: datetime | None) -> str:
     return (value.astimezone(timezone.utc) if value.tzinfo is not None else value).isoformat()
 
 
+# A turn is the record of what a person said at one event time; a claim
+# extracted from it is a narrower part of the same moment.
+_TURN_TYPES = frozenset({NodeType.NOTE, NodeType.EVENT})
+
+_WORD = re.compile(r"\w+")
+
+
+def _distinct_terms(content: str) -> int:
+    """How many different words a source states, a proxy for the facts it covers."""
+    return len({word.casefold() for word in _WORD.findall(content)})
+
+
+def _profile_order(node: MemoryNode) -> tuple:
+    """Oldest first; at one event time the broader source, never a random id.
+
+    The event time orders a profile, and its tie-break used to be the node
+    id, a random UUID: a turn and a claim extracted from it share one event
+    time, so which of them fit the token budget changed with the ids
+    (issue #497). A turn now comes before claims derived from it, a source
+    that states more distinct terms comes first, then its text, and only
+    records whose text is also the same fall back to their id.
+    """
+    return (
+        _date(node.event_time or node.created_at),
+        0 if node.node_type in _TURN_TYPES else 1,
+        -_distinct_terms(node.content),
+        node.content,
+        str(node.id),
+    )
+
+
 def build_profile(
     name: str, sources: list[MemoryNode], *, token_budget: int, tokenizer: str,
 ) -> tuple[str, list[MemoryNode], int] | None:
     """Select complete source records; distinct episodes never deduplicate by text."""
     text = PROFILE_HEADER.format(name=name) + "\nSource mentions; entity association is inferred."
     selected = []
-    # Stable identity breaks ties without relying on backend row order.
-    ordered = sorted(sources, key=lambda node: (_date(node.event_time or node.created_at), str(node.id)))
+    ordered = sorted(sources, key=_profile_order)
     for node in ordered:
         source = (
             f"[source={node.id}; event_time={_date(node.event_time)}; "
