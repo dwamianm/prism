@@ -309,7 +309,13 @@ async def publish_consolidation_plan(
         )
     # Additional-model writes run outside the publication guard and log their
     # failures unscoped, so a protected summary keeps only the guarded vector.
-    if engine._pool is not None and plan.privacy_manifest is None:
+    # A converged publication returns a sibling's id, and the abandoned plan's
+    # embedding must not be written under a node that was never created.
+    if (
+        engine._pool is not None
+        and plan.privacy_manifest is None
+        and node_id == str(plan.node.id)
+    ):
         from prme.storage.multi_model import write_additional_models
 
         await write_additional_models(engine._vector_index, [plan.embedding], user_id=owner)
@@ -494,7 +500,9 @@ async def _consolidate_cluster(
         )
         plan = await engine._graph_store.prepare_consolidation(plan)
 
-    return await publish_consolidation_plan(engine, plan, retired=retired), True
+    published = await publish_consolidation_plan(engine, plan, retired=retired)
+    # A converged publication returns the sibling's summary, not this plan's.
+    return published, published.id == plan.node.id
 
 
 async def forget_consolidated(
