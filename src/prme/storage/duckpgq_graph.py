@@ -52,6 +52,15 @@ from prme.types import (
 
 logger = logging.getLogger(__name__)
 
+# The opt-in archived-profile exclusion, shared by the listing and the count
+# so the two cannot drift. The JSON type check matches only a boolean marker,
+# as the Python facade and the rest of the codebase read it (issue #432).
+ARCHIVED_PROFILE_EXCLUSION_SQL = (
+    "NOT (node_type = 'summary' AND lifecycle_state = 'archived' "
+    "AND COALESCE(json_type(metadata, '$.entity_profile'), 'NULL') = 'BOOLEAN' "
+    "AND json_extract_string(metadata, '$.entity_profile') = 'true')"
+)
+
 
 class DuckPGQGraphStore:
     """GraphStore implementation backed by DuckDB tables.
@@ -315,6 +324,7 @@ class DuckPGQGraphStore:
         content_contains_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
+        exclude_archived_profiles: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters.
@@ -335,6 +345,9 @@ class DuckPGQGraphStore:
                 (matches content containing ANY of the strings).
             created_before: Only return nodes with created_at <= this value.
             oldest_first: Order by created_at ASC instead of the default DESC.
+            exclude_archived_profiles: Leave out archived entity profile
+                SUMMARY nodes (metadata.entity_profile). Applied inside the
+                query, before the limit.
             limit: Max results.
 
         Returns:
@@ -354,6 +367,7 @@ class DuckPGQGraphStore:
                 content_contains_any,
                 created_before,
                 oldest_first,
+                exclude_archived_profiles,
                 limit,
             )
             return nodes if user_id is None else self._owned_view_sync(nodes, user_id)
@@ -366,6 +380,7 @@ class DuckPGQGraphStore:
         *,
         user_id: str | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
+        exclude_archived_profiles: bool = False,
     ) -> int:
         """Count nodes matching the filters via SELECT COUNT(*).
 
@@ -375,13 +390,17 @@ class DuckPGQGraphStore:
         Args:
             user_id: Filter by user.
             lifecycle_states: Lifecycle filter (defaults to active).
+            exclude_archived_profiles: Leave out archived entity profile
+                SUMMARY nodes (metadata.entity_profile), matching
+                query_nodes().
 
         Returns:
             Number of matching nodes.
         """
         async with self._conn_lock:
             return await run_to_completion(
-                self._count_nodes_sync, user_id, lifecycle_states
+                self._count_nodes_sync, user_id, lifecycle_states,
+                exclude_archived_profiles,
             )
 
     # --- Node Update ---
@@ -1154,6 +1173,7 @@ class DuckPGQGraphStore:
         content_contains_any: list[str] | None,
         created_before: datetime | None,
         oldest_first: bool,
+        exclude_archived_profiles: bool,
         limit: int,
     ) -> list[MemoryNode]:
         """Query nodes with dynamic WHERE clause (sync)."""
@@ -1220,6 +1240,12 @@ class DuckPGQGraphStore:
             conditions.append("created_at <= ?")
             params.append(created_before)
 
+        if exclude_archived_profiles:
+            # A profile publication archives the previous SUMMARY node and
+            # keeps its metadata, so a newest-first read across lifecycle
+            # states turns into a run of retired profiles (issue #432).
+            conditions.append(ARCHIVED_PROFILE_EXCLUSION_SQL)
+
         where_clause = " AND ".join(conditions) if conditions else "1=1"
         order_direction = "ASC" if oldest_first else "DESC"
         query = f"""
@@ -1237,6 +1263,7 @@ class DuckPGQGraphStore:
         self,
         user_id: str | None,
         lifecycle_states: list[LifecycleState] | None,
+        exclude_archived_profiles: bool = False,
     ) -> int:
         """Count nodes with SELECT COUNT(*) (sync)."""
         conditions: list[str] = []
@@ -1253,6 +1280,10 @@ class DuckPGQGraphStore:
         if user_id is not None:
             conditions.append("user_id = ?")
             params.append(user_id)
+
+        if exclude_archived_profiles:
+            # Matches _query_nodes_sync so the count sees the same page.
+            conditions.append(ARCHIVED_PROFILE_EXCLUSION_SQL)
 
         where_clause = " AND ".join(conditions)
         query = f"SELECT COUNT(*) FROM nodes WHERE {where_clause}"

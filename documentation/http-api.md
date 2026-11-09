@@ -311,9 +311,10 @@ Query nodes with filters.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `type` | string | | Filter by node type |
-| `state` | string | | Filter by lifecycle state |
+| `state` | string | | Filter by lifecycle state; repeat the parameter to include several states |
 | `user_id` | string | | Filter by user |
 | `limit` | integer | 50 | Max results |
+| `exclude_archived_profiles` | boolean | `false` | Leave archived entity profile SUMMARY nodes out of the page, before the limit is applied. It matters when the requested states include `archived`. |
 
 **Response (200):**
 
@@ -400,6 +401,8 @@ System statistics. Node counting uses `COUNT(*)` (no rows are materialized).
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `user_id` | string | | Scope the node count to one user |
+| `state` | string | active states | Count only these lifecycle states; repeat the parameter to include several |
+| `exclude_archived_profiles` | boolean | `false` | Leave archived entity profile SUMMARY nodes out of the count. It matters when the requested states include `archived`. |
 
 **Response (200):**
 

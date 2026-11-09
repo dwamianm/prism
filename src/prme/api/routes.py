@@ -773,9 +773,10 @@ async def get_node_provenance(
 async def query_nodes(
     request: Request,
     type: str | None = None,
-    state: str | None = None,
+    state: list[str] | None = Query(default=None),
     user_id: str | None = None,
     limit: int = 50,
+    exclude_archived_profiles: bool = False,
 ) -> NodeListResponse:
     """Query nodes with flexible filters."""
     engine = _get_engine(request)
@@ -784,6 +785,8 @@ async def query_nodes(
     owner = _user_id(request, user_id)
     if owner is not None:
         kwargs["user_id"] = owner
+    if exclude_archived_profiles:
+        kwargs["exclude_archived_profiles"] = True
     if type is not None:
         try:
             kwargs["node_type"] = NodeType(type)
@@ -793,7 +796,7 @@ async def query_nodes(
             )
     if state is not None:
         try:
-            kwargs["lifecycle_states"] = [LifecycleState(state)]
+            kwargs["lifecycle_states"] = [LifecycleState(item) for item in state]
         except ValueError:
             raise HTTPException(
                 status_code=422, detail=f"Invalid lifecycle state: {state!r}"
@@ -1196,7 +1199,12 @@ async def health(request: Request) -> HealthResponse:
     response_model=StatsResponse,
     summary="System statistics",
 )
-async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
+async def stats(
+    request: Request,
+    user_id: str | None = None,
+    state: list[str] | None = Query(default=None),
+    exclude_archived_profiles: bool = False,
+) -> StatsResponse:
     """Get system statistics, optionally scoped to a single user."""
     engine = _get_engine(request)
     user_id = _user_id(request, user_id)
@@ -1206,8 +1214,21 @@ async def stats(request: Request, user_id: str | None = None) -> StatsResponse:
     backend = "duckdb"
     details: dict[str, Any] = {}
 
+    count_kwargs: dict[str, Any] = {"user_id": user_id}
+    if state is not None:
+        try:
+            count_kwargs["lifecycle_states"] = [
+                LifecycleState(item) for item in state
+            ]
+        except ValueError:
+            raise HTTPException(
+                status_code=422, detail=f"Invalid lifecycle state: {state!r}"
+            )
+    if exclude_archived_profiles:
+        count_kwargs["exclude_archived_profiles"] = True
+
     try:
-        node_count = await engine.count_nodes(user_id=user_id)
+        node_count = await engine.count_nodes(**count_kwargs)
     except Exception:
         logger.warning("Failed to count nodes for stats", exc_info=True)
 

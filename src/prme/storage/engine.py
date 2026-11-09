@@ -3226,7 +3226,7 @@ class MemoryEngine:
 
         Defaults to active lifecycle states (tentative + stable + contested).
         Accepts the keyword arguments supported by GraphStore.count_nodes()
-        (user_id, lifecycle_states).
+        (user_id, lifecycle_states, exclude_archived_profiles).
 
         Returns:
             Number of matching nodes.

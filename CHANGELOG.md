@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `query_nodes()` and `count_nodes()` can leave archived entity profiles out of a page (dwamianm/prism#432). Every profile rebuild archives the previous SUMMARY node and keeps its `metadata.entity_profile` marker, so a newest-first read across lifecycle states became a run of retired profiles and a user's older memories fell out of a fixed-size page. The new optional `exclude_archived_profiles` argument applies inside the query on both DuckDB and PostgreSQL, so the limit and the count see only kept nodes. `GET /v1/nodes` and `GET /v1/stats` accept it as a query parameter, and both now take a repeatable `state` parameter so a caller can request the multi-state page the filter applies to. The filter is by lifecycle state, not by replacement: a profile archived without a newer profile is left out too. The default read and count are unchanged, and a caller that does not ask for the filter gets exactly what it gets today.
+
 ## [0.17.0a4] - 2026-11-09
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
