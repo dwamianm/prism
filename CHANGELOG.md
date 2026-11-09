@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a3] - 2026-11-08
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a3`.
+
+What is new since 0.17.0a2: a named person's knowledge profile takes the claims the graph binds to
+that person's entity (dwamianm/prism#448); retrieval leaves out a profile that quotes a memory no
+longer retrievable (dwamianm/prism#462); graph reads, supersedence chains and contradiction
+annotations for a user stay off another user's nodes (dwamianm/prism#433, #437, #438, #443, #444),
+and `prme cross-user-links` reports the links in a store that cross users; and typed extraction
+(`enable_typed_extraction`, off; dwamianm/prism#400) is added for evaluation only. Upgrade notes:
+`DERIVATION_VERSION` is unchanged, so `reingest()` finds every memory current. Typed extraction is
+off and changes nothing until turned on. It did not pass its gate: on two live fast-gate samples it
+put fewer `chat-v1` answers in the top 3 (14 to 12) and top 5 (15 to 14) than with it off, and it
+failed the gated repeated-records measure on `defects-v1` (0 to 7), so keep it off outside an
+evaluation. The `GraphStore` protocol gained `user_id` keywords and `find_cross_user_links()`, so a
+custom graph store must accept them.
+
 ### Added
 
 - Typed extraction (`enable_typed_extraction`, off by default; dwamianm/prism#400) asks the extractor for each fact's relation in the graph oracle's closed vocabulary, with a role and a status, and stores the admitted fields on the claim and its `HAS_FACT` link. Relation routing then reads the stored relation instead of mapping an open predicate, so a claim with an unmappable predicate such as `has_dependents` can still be found by a routed question. The open predicate is kept; a relation outside the vocabulary is dropped with its role and status and the claim keeps only its predicate. The option changes the extraction request, so recorded extractions do not replay under it, and it is part of the re-derivation settings only while it is on. `python -m benchmarks.graph_oracle extraction-fidelity` reports entity and claim recall and precision and polarity and status accuracy for the oracle's four fixtures.
@@ -14,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `prme cross-user-links` and `MemoryEngine.find_cross_user_links()` count and list the links in a store that cross users: edges whose two nodes, or whose own owner, are not all one user's, and nodes whose `superseded_by` names another user's node (dwamianm/prism#438). Older stores can hold them after an unscoped deduplicate or alias run, and direct graph writes can make them. The report gives full counts and lists, in id order, up to `--limit` of each, with node ids and owners only, so an operator can repair an old store. Both graph stores implement `find_cross_user_links()`.
 
 ### Fixed
+
+- Retrieval's graph expansion and `GET /v1/nodes/{id}/neighborhood` no longer return a node another user owns (dwamianm/prism#433). The plain graph store's neighborhood traversal has no owner filter, so an edge that crosses users (left by an unscoped merge in a store from before v0.12.0, or written directly to the graph) could bring another user's node into `retrieve()` candidates and the packed context, or into the route's response. Graph expansion now skips a neighbor another user owns, so such a node is neither a candidate nor walked when the graph seed count is on. The route now reads through the same owner-scoped graph read as `MemoryEngine.get_neighborhood()`: it returns only the request user's nodes, or the starting node's owner's when the request has no user, and on a store with protected privacy reads it uses that user's admitted view. A superseded starting node keeps its neighborhood on a store without protected reads, as before; on a protected store it returns none, as `MemoryEngine.get_neighborhood()` does. Retrieval on a single-user store, and wherever no edge crosses users, is unchanged.
 
 - Retrieval leaves out a knowledge profile that quotes a memory no longer retrievable (dwamianm/prism#462). A profile is a SUMMARY node that writes the selected records' text into its content and names them in `source_node_ids`. Archiving, superseding or deleting one of those records retired only the record, while the profile stayed active, so `retrieve()` and the packed context kept returning the retired text. A read-path filter now drops a profile candidate when any quoted record is archived, superseded or gone, until an explicit `consolidate_knowledge()` rebuild (or the organizer's stale-profile pass, when `enable_owner_profile_context` is on) publishes a replacement. A profile with no parsable `source_node_ids`, written before profile format version 2, cannot be checked and is left out in every retrieval mode, and if the source read itself fails the profiles are left out rather than served unchecked. The filter covers the owner-profile insertion path too, and a profile whose quoted records are all active is returned as before. Nothing is written on the read path: the stored profile, its publication generation and `StaleProfileError` are unchanged, and `RetrievalMode.EXPLICIT` still returns a profile whose quoted record is retired rather than deleted. A store with no profile candidate makes no extra read, so packs built with `store()` and the saved benchmark packs retrieve and record the same receipts. `docs/ENTITY-PROFILES.md` describes the behavior.
 
@@ -48,8 +70,6 @@ options are off and change nothing until turned on.
 ### Fixed
 
 - A scoped organizer run (`organize(user_id=...)`) now builds each entity snapshot in the `snapshot_generation` job from that user's nodes only (dwamianm/prism#406). The job passed no user to the snapshot, so its one-hop neighborhood read was not limited to the user, and on a store with protected privacy reads every snapshot failed. With a `user_id`, `generate_entity_snapshot()` and `MemoryEngine.snapshot()` now refuse another user's entity as not found, leave out another user's neighbors, and keep only the user's own edges between the user's own nodes, also on a store without protected reads, where the graph traversal has no owner filter. The job's snapshots are still discarded, and it now stops at half of the remaining organize budget, as `deduplicate` and `alias_resolve` do, so the jobs after it keep time. An unscoped run reads the whole graph as before.
-
-- Retrieval's graph expansion and `GET /v1/nodes/{id}/neighborhood` no longer return a node another user owns (dwamianm/prism#433). The plain graph store's neighborhood traversal has no owner filter, so an edge that crosses users (left by an unscoped merge in a store from before v0.12.0, or written directly to the graph) could bring another user's node into `retrieve()` candidates and the packed context, or into the route's response. Graph expansion now skips a neighbor another user owns, so such a node is neither a candidate nor walked when the graph seed count is on. The route now reads through the same owner-scoped graph read as `MemoryEngine.get_neighborhood()`: it returns only the request user's nodes, or the starting node's owner's when the request has no user, and on a store with protected privacy reads it uses that user's admitted view. A superseded starting node keeps its neighborhood on a store without protected reads, as before; on a protected store it returns none, as `MemoryEngine.get_neighborhood()` does. Retrieval on a single-user store, and wherever no edge crosses users, is unchanged.
 
 ### Changed
 
@@ -3352,7 +3372,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a2...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a3...HEAD
+[0.17.0a3]: https://github.com/dwamianm/prism/compare/v0.17.0a2...v0.17.0a3
 [0.17.0a2]: https://github.com/dwamianm/prism/compare/v0.17.0a1...v0.17.0a2
 [0.17.0a1]: https://github.com/dwamianm/prism/compare/v0.16.1...v0.17.0a1
 [0.16.1]: https://github.com/dwamianm/prism/compare/v0.16.0...v0.16.1
