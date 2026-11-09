@@ -54,7 +54,14 @@ source evidence. Names use literal, case-insensitive word boundaries; automatic
 name discovery is heuristic, so supply known names when available. Whole excerpts
 that exceed the remaining budget are skipped. If none fits, no replacement is
 published. The budget includes labels, dates and provenance, measured with the
-configured packing tokenizer.
+configured packing tokenizer. On a store without a privacy policy, the profile
+records the budget it was built with (`max_profile_tokens`), and the
+owner-profile refresh rebuilds it with that budget instead of the default, so
+an application's larger budget is kept (issue #422). A profile written before
+the budget was recorded is rebuilt at the default 500 tokens, or at the tokens
+it used when that is larger. A privacy-protected profile's journal projection
+keeps only its source counts and tokens, and the owner-profile refresh does not
+run for an owner under a privacy policy.
 
 Every profile stays within one owner and scope. Omitting `scope` processes each
 scope separately. `Scope.PROJECT` is a scope category, not a named project ID;

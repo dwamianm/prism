@@ -29,6 +29,10 @@ from prme.retrieval.config import (
 )
 from prme.retrieval.temporal_relations import TemporalRelationConfig
 
+# Default token budget of a knowledge profile (consolidate_knowledge()). A
+# profile records it, so a rebuild keeps the budget it was built with.
+DEFAULT_MAX_PROFILE_TOKENS = 500
+
 
 class _ProjectSettings(BaseSettings):
     """Read project settings without exporting secrets into process globals."""
@@ -1341,8 +1345,9 @@ class PRMEConfig(_ProjectSettings):
             "take the turns stored with that person as their speaker, since "
             "an owner says \"my husband\", not their own name. Profiles are "
             "built by name and speaker matching with no model call; each "
-            "rebuild embeds one text, and the profile it replaces is "
-            "archived. Default False: the fast tiers passed with it on, but a "
+            "rebuild embeds one text, keeps the token budget the profile "
+            "recorded, and archives the profile it replaces. Default False: "
+            "the fast tiers passed with it on, but a "
             "full profile keeps its oldest sources, so the owner's profile "
             "can be a snapshot of their first records."
         ),

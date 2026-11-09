@@ -364,11 +364,14 @@ facts. Event evidence references and included source-node identities are retaine
 an exact limit under the configured packing tokenizer,
 including the complete profile header, separators and source metadata. Oversized
 sources are skipped intact so smaller later sources can fit; omitted sources
-remain active. Metadata records included/available source counts, encoding and
-tokens. If no complete source fits, no new profile is published. Names and token
-limits are validated before storage access. Existing profiles take this format
-on explicit rebuild; prior artifacts are not silently rewritten. Name matching
-is still a heuristic association.
+remain active. Metadata records included/available source counts, encoding,
+tokens and, except for a privacy-protected profile whose journal projection
+keeps only the source counts and tokens, the token budget. The owner-profile
+refresh reuses that budget on rebuild (issue #422). If no complete source fits,
+no new profile is published. Names and token limits are validated before
+storage access. Existing profiles take this format on explicit rebuild; prior
+artifacts are not silently rewritten. Name matching is still a heuristic
+association.
 
 Source collection uses scoped pages ordered by immutable node ID, rather than a
 newest-5,000 cutoff. Explicit entity names retain only matching source nodes in

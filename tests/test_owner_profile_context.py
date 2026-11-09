@@ -291,6 +291,84 @@ async def test_the_opportunistic_pass_rebuilds_a_profile_after_ingest(tmp_path):
         assert (await runner._run_maintenance(user_id="someone-else")).profiles_rebuilt == []
 
 
+async def test_a_rebuild_keeps_the_token_budget_its_profile_recorded(tmp_path):
+    pack = tmp_path / "pack"
+    detail = " ".join(["detail"] * 200)
+    async with MemoryEngine.open(config(pack, False)) as engine:
+        for index in range(3):
+            await engine.store(f"Maya keeps project note {index} about {detail}.", user_id=USER)
+        assert await engine.consolidate_knowledge(
+            user_id=USER, entity_names=["Maya"], max_profile_tokens=4000,
+        ) == 1
+    async with MemoryEngine.open(config(pack, True)) as engine:
+        organizer = engine._config.organizer.model_copy(update={"opportunistic_budget_ms": 60_000})
+        runner = MaintenanceRunner(engine, organizer)
+        [profile] = await profiles(engine)
+        assert profile.metadata["max_profile_tokens"] == 4000
+        assert profile.metadata["source_count_included"] == 3
+        # Retiring a quoted source makes the pass rebuild the profile. With the
+        # default 500-token budget only one of these sources would fit again.
+        await engine.archive(profile.metadata["source_node_ids"][0], user_id=USER)
+        result = await runner._run_maintenance(user_id=USER)
+        assert result.profiles_rebuilt == [
+            {"entity_name": "Maya", "scope": "personal", "published": True},
+        ]
+        [rebuilt] = await profiles(engine)
+        assert rebuilt.metadata["max_profile_tokens"] == 4000
+        assert rebuilt.metadata["source_count_available"] == 2
+        assert rebuilt.metadata["source_count_included"] == 2
+
+
+async def test_end_session_rebuilds_at_the_recorded_budget(tmp_path):
+    pack = tmp_path / "pack"
+    detail = " ".join(["detail"] * 200)
+    async with MemoryEngine.open(config(pack, False)) as engine:
+        await mark_owner(engine, "Maya")
+        for index in range(3):
+            await engine.store(f"Maya keeps project note {index} about {detail}.", user_id=USER)
+        assert await engine.consolidate_knowledge(
+            user_id=USER, entity_names=["Maya"], max_profile_tokens=4000,
+        ) == 1
+    async with MemoryEngine.open(config(pack, True)) as engine:
+        await engine.store("Maya moved to Denver.", user_id=USER)
+        ended = await engine.end_session(user_id=USER)
+        assert ended.per_job["owner_profile_refresh"].details["rebuilt"] == [
+            {"entity_name": "Maya", "scope": "personal", "published": True},
+        ]
+        [rebuilt] = await profiles(engine)
+        assert rebuilt.metadata["max_profile_tokens"] == 4000
+        assert rebuilt.metadata["source_count_included"] == rebuilt.metadata["source_count_available"]
+        assert "Denver" in rebuilt.content
+
+
+def test_a_profile_without_a_recorded_budget_falls_back_to_its_tokens():
+    import inspect
+
+    from prme.client import MemoryClient
+    from prme.config import DEFAULT_MAX_PROFILE_TOKENS
+    from prme.organizer.owner_profiles import _profile_budget
+
+    def profile(**metadata):
+        return MemoryNode(
+            user_id=USER, node_type=NodeType.SUMMARY, content="[Knowledge Profile: Maya]",
+            metadata={"entity_profile": True, "entity_name": "Maya", **metadata},
+        )
+
+    # The API default and the fallback share one constant.
+    assert DEFAULT_MAX_PROFILE_TOKENS == 500
+    for method in (MemoryEngine.consolidate_knowledge, MemoryClient.consolidate_knowledge):
+        default = inspect.signature(method).parameters["max_profile_tokens"].default
+        assert default == DEFAULT_MAX_PROFILE_TOKENS
+    assert _profile_budget(None) == DEFAULT_MAX_PROFILE_TOKENS
+    assert _profile_budget(profile(max_profile_tokens=2000)) == 2000
+    assert _profile_budget(profile(tokens_used=900)) == 900
+    assert _profile_budget(profile(tokens_used=40)) == DEFAULT_MAX_PROFILE_TOKENS
+    # A malformed or zero budget is not used.
+    assert _profile_budget(profile(max_profile_tokens=True, tokens_used=700)) == 700
+    assert _profile_budget(profile(max_profile_tokens=0, tokens_used=700)) == 700
+    assert _profile_budget(profile(max_profile_tokens=-1)) == DEFAULT_MAX_PROFILE_TOKENS
+
+
 async def test_the_opportunistic_pass_leaves_profiles_alone_with_the_option_off(tmp_path):
     await build(tmp_path / "pack")
     async with MemoryEngine.open(config(tmp_path / "pack", False)) as engine:
