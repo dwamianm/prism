@@ -4,7 +4,6 @@ import asyncio
 import base64
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-import hashlib
 import hmac
 import os
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -109,10 +108,14 @@ class FakeAuthority:
 
 
 class FakeSanitizer:
-    def __init__(self):
+    def __init__(self, *, echo_snapshot: bool = False):
         self.calls = []
         self.replace_text = None
         self.bad_generated = False
+        # Off by default so the component double keeps its historical
+        # snapshot-less ingress path. A test that exercises protected
+        # generated output turns this on; the real sanitizer always echoes it.
+        self.echo_snapshot = echo_snapshot
 
     async def admit(self, request):
         self.calls.append(request)
@@ -121,11 +124,19 @@ class FakeSanitizer:
         fields = request.fields_json
         if self.replace_text:
             fields = fields.replace(*self.replace_text)
-        return SanitizedContent(fields_json=fields, source_id=uuid4(), representation_id=uuid4(),
-            private_checksum=hashlib.sha256(fields.encode()).hexdigest(), sanitizer_version="prme-sanitizer-v1",
-            registry_version="prme-recognizers-v1", detector_versions=("component-double",),
+        from prme.privacy.local_analyzer import VERSIONS
+        from prme.privacy.sanitizer import sanitized_checksum
+
+        return SanitizedContent(fields_json=fields,
+            source_id=request.source.source_id if request.source else uuid4(),
+            representation_id=uuid4(),
+            private_checksum=sanitized_checksum(fields, request.source_role, request.source_time),
+            sanitizer_version="prme-sanitizer-v1",
+            registry_version="prme-recognizers-v1", detector_versions=VERSIONS,
             unambiguous="[ambiguous]" not in fields,
-            representation_role="admitted_memory" if request.mode == "generated_output" else "sanitized_source")
+            representation_role="admitted_memory" if request.mode == "generated_output" else "sanitized_source",
+            source_snapshot=request.snapshot if self.echo_snapshot else None,
+            source_role=request.source_role, source_time=request.source_time)
 
 
 class FakeProtector:

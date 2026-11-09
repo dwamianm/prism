@@ -783,9 +783,18 @@ async def _job_index_compaction(
     indexed node has a row there; the matching lexical doc is evicted by
     node_id at the same time.
 
-    Under a user scope only that user's stale entries are evicted. Rows whose
-    node has vanished from the graph entirely can no longer be attributed to
-    a user, so they are left for an unscoped run to collect.
+    Under a user scope only that user's entries for nodes that still exist are
+    evicted. DuckDB leaves vector-metadata rows whose node has vanished for an
+    unscoped run to collect.
+
+    PostgreSQL keeps an ordinary vector in the node row and some lexical
+    documents in ``lexical_documents``. Its branch clears the stored vector and
+    any ``lexical_documents`` row for a node the graph has already retired. A
+    document row with no node is left alone: the lexical index also writes
+    there before the graph row exists. A retired node's generated
+    ``nodes.content_tsv`` is not this job's anchor and keeps matching the
+    lexical search until that search filters lifecycle state
+    (dwamianm/prism#521).
 
     Current prepared plans remain retryable. Replaced revisions with uniquely
     reserved identities and no graph nodes can be collected in batches of 500.
@@ -797,12 +806,8 @@ async def _job_index_compaction(
 
     conn = getattr(engine, "_conn", None)
     if conn is None:
-        # PostgreSQL backend reconciles via its own mechanisms; nothing to do.
-        duration_ms = (time.monotonic() - start) * 1000.0
-        return JobResult(
-            job=job_name,
-            duration_ms=round(duration_ms, 2),
-            details={"note": "No DuckDB connection; compaction skipped"},
+        return await _compact_postgres_indexes(
+            job_name, engine, budget_ms, user_id, start,
         )
 
     # Use the canonical active-state set so this stays in sync with the
@@ -815,8 +820,9 @@ async def _job_index_compaction(
         # non-active lifecycle state. DISTINCT so a node with several
         # vectors is evicted once.
         if user_id is not None:
-            # An orphaned row has no owner to compare against, so a scoped
-            # run can only reach nodes that still exist.
+            # The stale query joins the graph, so a scoped run reaches only
+            # nodes that still exist; a row with no node waits for an
+            # unscoped run.
             rows = conn.execute(
                 "SELECT DISTINCT vm.node_id FROM vector_metadata vm "
                 "JOIN nodes n ON vm.node_id = n.id "
@@ -844,10 +850,105 @@ async def _job_index_compaction(
         retired_ids, cleanup_reason = await run_to_completion(retired_staging, conn, user_id=user_id)
     candidates = list(dict.fromkeys(stale_ids + retired_ids))
 
+    processed, modified, errors = await _evict_index_entries(
+        engine, candidates, budget_ms, start,
+    )
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=modified,
+        errors=errors,
+        duration_ms=round(duration_ms, 2),
+        details={"stale_found": len(stale_ids), "retired_staging_found": len(retired_ids),
+                 "stage_cleanup_blocked": cleanup_reason is not None, "stage_cleanup_reason": cleanup_reason},
+    )
+
+
+async def _compact_postgres_indexes(
+    job_name: str,
+    engine: MemoryEngine,
+    budget_ms: float,
+    user_id: str | None,
+    start: float,
+) -> JobResult:
+    """Evict PostgreSQL index entries for nodes the graph has already retired.
+
+    The vector lives in ``nodes.embedding`` and some lexical documents in
+    ``lexical_documents``. This pass selects non-active nodes that still hold
+    either and clears both. A ``lexical_documents`` row with no node is left
+    alone: the index also writes there before the graph row exists, so it is
+    not evidence of a retired node. A retired node's generated
+    ``nodes.content_tsv`` is not cleared here; the lexical search filter is
+    dwamianm/prism#521.
+    """
+    pool = getattr(engine, "_pool", None) or getattr(engine._graph_store, "_pool", None)
+    if pool is None:
+        duration_ms = (time.monotonic() - start) * 1000.0
+        return JobResult(
+            job=job_name,
+            duration_ms=round(duration_ms, 2),
+            details={"note": "PostgreSQL graph store has no connection pool; compaction skipped"},
+        )
+
+    active = [s.value for s in ACTIVE_LIFECYCLE_STATES]
+    state_placeholders = ", ".join(f"${index + 1}" for index in range(len(active)))
+    params: list = [*active]
+    indexed = (
+        "n.embedding IS NOT NULL "
+        "OR EXISTS (SELECT 1 FROM lexical_documents d WHERE d.node_id = n.id::text)"
+    )
+    if user_id is not None:
+        owner_placeholder = f"${len(active) + 1}"
+        params.append(user_id)
+        node_query = (
+            f"SELECT DISTINCT n.id::text AS node_id FROM nodes n "
+            f"WHERE n.user_id = {owner_placeholder} "
+            f"AND n.lifecycle_state NOT IN ({state_placeholders}) AND ({indexed})"
+        )
+    else:
+        node_query = (
+            f"SELECT DISTINCT n.id::text AS node_id FROM nodes n "
+            f"WHERE n.lifecycle_state NOT IN ({state_placeholders}) AND ({indexed})"
+        )
+    # Bound the fetch like the other jobs' node page; the eviction loop is
+    # budget-bounded, but the query itself must not outlast the pass.
+    node_query += " ORDER BY node_id LIMIT 500"
+
+    async with pool.acquire() as conn:
+        # Multi-model stores keep further vectors in node_embeddings; that
+        # per-model index is not reconciled here (dwamianm/prism#520).
+        rows = await conn.fetch(node_query, *params)
+        stale_ids = [str(row["node_id"]) for row in rows]
+
+    processed, modified, errors = await _evict_index_entries(
+        engine, stale_ids, budget_ms, start,
+    )
+
+    duration_ms = (time.monotonic() - start) * 1000.0
+    return JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=modified,
+        errors=errors,
+        duration_ms=round(duration_ms, 2),
+        details={"stale_found": len(stale_ids), "retired_staging_found": 0,
+                 "stage_cleanup_blocked": False, "stage_cleanup_reason": None},
+    )
+
+
+async def _evict_index_entries(
+    engine: MemoryEngine,
+    node_ids: list[str],
+    budget_ms: float,
+    start: float,
+) -> tuple[int, int, int]:
+    """Evict each node's index entries within the remaining budget."""
     processed = 0
     modified = 0
     errors = 0
-    for node_id in candidates:
+    for node_id in node_ids:
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
             break
@@ -862,14 +963,4 @@ async def _job_index_compaction(
                 exc_info=True,
             )
             errors += 1
-
-    duration_ms = (time.monotonic() - start) * 1000.0
-    return JobResult(
-        job=job_name,
-        nodes_processed=processed,
-        nodes_modified=modified,
-        errors=errors,
-        duration_ms=round(duration_ms, 2),
-        details={"stale_found": len(stale_ids), "retired_staging_found": len(retired_ids),
-                 "stage_cleanup_blocked": cleanup_reason is not None, "stage_cleanup_reason": cleanup_reason},
-    )
+    return processed, modified, errors

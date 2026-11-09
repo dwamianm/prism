@@ -39,6 +39,7 @@ RFC-0018 was drafted.
 Developer guides cover [entity profiles and recovery](ENTITY-PROFILES.md),
 [custom embedding providers](CUSTOM-EMBEDDINGS.md),
 [switching a store to another embedding model](EMBEDDING-MODELS.md),
+[organizer job readiness on PostgreSQL](ORGANIZER-JOBS.md),
 [entity identity and conservative merges](ENTITY-IDENTITY.md), and
 [relation routing](RELATIONS.md), the opt-in walk that answers a question asking for a
 kind of relation from the claims of that relation. These describe implemented
