@@ -521,16 +521,25 @@ class LexicalIndex:
 
         As with unmanaged derivation staging, an interrupted preparation is
         retained until an explicit rebuild; it is not an active graph memory.
+        A large profile is as big as every source it quotes, so its validation,
+        its fence check and its document are prepared on the profile workers
+        rather than on the caller's event loop.
         """
-        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
-        if fence is not None:
-            fence.verify_plan(plan)
-        node = plan.node
-        documents = ({
-            "node_id": [str(node.id)], "content": [node.content],
-            "user_id": [node.user_id], "node_type": [node.node_type.value],
-            "scope": [node.scope.value],
-        },)
+        from prme.organizer.profiles import run_profile_work
+
+        def prepared(plan):
+            plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+            if fence is not None:
+                fence.verify_plan(plan)
+            node = plan.node
+            documents = ({
+                "node_id": [str(node.id)], "content": [node.content],
+                "user_id": [node.user_id], "node_type": [node.node_type.value],
+                "scope": [node.scope.value],
+            },)
+            return documents
+
+        documents = await run_profile_work(prepared, plan)
         async with self._write_lock:
             if fence is None:
                 await run_to_completion(self._do_stage, documents)

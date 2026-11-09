@@ -4886,23 +4886,33 @@ class MemoryEngine:
                 provider = self._privacy.require_runtime().embedder
             else:
                 provider = self._vector_index._provider
-            request_hash = profile_request_hash(profile_node, selected_sources, previous, generation,
-                                                (provider.model_name, provider.model_version, provider.dimension))
+            # The request hash serializes the profile and every source it quotes,
+            # which a very large token budget grows to the size of the store.
+            request_hash = await run_profile_work(
+                profile_request_hash, profile_node, selected_sources, previous, generation,
+                (provider.model_name, provider.model_version, provider.dimension),
+            )
             plan = await self._profile_work.reusable(key, request_hash, user_id=user_id)
             if plan is None:
                 vectors = (await encode_generated(context, [profile_text]) if context.protected
                            else await encode_texts(provider, [profile_text]))
                 if len(vectors) != 1:
                     raise ValueError("Profile embedding provider must return exactly one vector")
-                plan = ProfilePublication(
-                    schema_version=2 if manifest is not None else 1, privacy_manifest=manifest,
-                    node=profile_node, sources=tuple(selected_sources), previous=previous, generation=generation,
-                    embedding=PreparedEmbedding(
-                        node_id=profile_node.id, content=profile_text,
-                        model=provider.model_name, version=provider.model_version,
-                        dimension=provider.dimension, values=tuple(vectors[0]),
-                    ),
-                )
+                def build_plan() -> ProfilePublication:
+                    return ProfilePublication(
+                        schema_version=2 if manifest is not None else 1, privacy_manifest=manifest,
+                        node=profile_node, sources=tuple(selected_sources), previous=previous,
+                        generation=generation,
+                        embedding=PreparedEmbedding(
+                            node_id=profile_node.id, content=profile_text,
+                            model=provider.model_name, version=provider.model_version,
+                            dimension=provider.dimension, values=tuple(vectors[0]),
+                        ),
+                    )
+
+                # A protected plan checksums the profile and every source, which a
+                # very large budget grows to the size of the store.
+                plan = await run_profile_work(build_plan)
                 plan = await self._profile_work.prepare(plan)
             await self._publish_prepared_profile(plan)
             for stale in existing_profiles.get(entity_name, []):
@@ -4914,6 +4924,7 @@ class MemoryEngine:
     async def _publish_prepared_profile(self, plan: ProfilePublication) -> str:
         from prme.storage.profile_work import ProfileStageFence
         from prme.storage._threading import run_async_to_completion
+        from prme.organizer.profiles import run_profile_work
         state = await self._profile_work.status(str(plan.node.id), user_id=plan.node.user_id)
         if state is None:
             raise ValueError('Profile publication requires durable preparation')
@@ -4921,7 +4932,10 @@ class MemoryEngine:
             from prme.models.profile import StaleProfileError
             raise StaleProfileError('Profile preparation was replaced by a newer request')
         if state['status'] != 'complete' and self._pool is None:
-            fence = ProfileStageFence(self._conn, self._event_store._conn_lock, plan)
+            # The fence keeps its own validated copy of the plan, whose text is
+            # the whole profile.
+            fence = await run_profile_work(
+                ProfileStageFence, self._conn, self._event_store._conn_lock, plan)
             async def stage():
                 await self._vector_index.stage(plan.embedding, user_id=plan.node.user_id, fence=fence)
                 await self._lexical_index.stage_profile(plan, fence=fence)

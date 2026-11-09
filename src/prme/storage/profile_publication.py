@@ -84,10 +84,14 @@ async def generation_postgres(store: PgGraphStore, key: str) -> int:
 
 @protected_mutation
 async def commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
-    snapshot = ProfilePublication.model_validate_json(plan.model_dump_json())
+    from prme.storage.profile_work import copy_plan
+
+    # The copy validates the whole profile text; take it before the shared
+    # connection lock so the lock is not held across that work.
+    plan = await run_to_completion(copy_plan, plan)
     async with store._conn_lock:
         try:
-            return await run_to_completion(_commit_duckdb, store, snapshot)
+            return await run_to_completion(_commit_duckdb, store, plan)
         except duckdb.TransactionException as exc:
             raise StaleProfileError(
                 "Concurrent profile storage change; rebuild explicitly"
@@ -202,8 +206,10 @@ def _commit_duckdb(store: DuckPGQGraphStore, plan: ProfilePublication) -> str:
 @protected_mutation
 async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
     from prme.storage.pg.graph_store import _NODE_COLUMNS
+    from prme.storage.profile_work import copy_plan
 
-    plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+    # The copy validates the whole profile text, so it is taken in a worker.
+    plan = await run_to_completion(copy_plan, plan)
     node, embedding = plan.node, plan.embedding
     async with store._pool.acquire() as conn, conn.transaction():
         from prme.storage.pg.vector_sql import resolve_vector_sql
@@ -220,7 +226,7 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             "SELECT payload FROM operations WHERE id = $1 AND op_type = 'PROFILE_PUBLISHED'",
             plan.operation_id,
         )
-        if _replayed(plan, value):
+        if value is not None and await run_to_completion(_replayed, plan, value):
             journal_deadline()
             return str(node.id)
         from prme.storage.profile_work import validate_pg_work, reserve_pg
@@ -233,7 +239,8 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             f"SELECT {_NODE_COLUMNS} FROM nodes WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE",
             ids,
         )
-        current = {str(row["id"]): store._record_to_node(row) for row in rows}
+        current = await run_to_completion(
+            lambda: {str(row["id"]): store._record_to_node(row) for row in rows})
         rows = await conn.fetch(
             "SELECT id FROM nodes WHERE user_id = $1 AND scope = $2 AND node_type = 'summary' "
             "AND lifecycle_state IN ('tentative', 'stable') "
@@ -242,7 +249,8 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             node.scope.value,
             plan.entity_name,
         )
-        _validate(plan, current, [str(row["id"]) for row in rows])
+        await run_to_completion(_validate, plan, current, [str(row["id"]) for row in rows])
+        prepared_payload = await run_to_completion(_payload, plan)
         await store._create_node_on_connection(conn, node)
         if getattr(store, "_multi_model_embeddings", False):
             from prme.storage.pg.model_vector_index import write_node_embedding
@@ -273,7 +281,7 @@ async def commit_postgres(store: PgGraphStore, plan: ProfilePublication) -> str:
             "VALUES ($1, 'PROFILE_PUBLISHED', $2, $3::jsonb, 'profile', $4, $5)",
             plan.operation_id,
             str(node.id),
-            _payload(plan),
+            prepared_payload,
             node.scope.value,
             node.created_at,
         )

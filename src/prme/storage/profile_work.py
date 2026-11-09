@@ -30,6 +30,26 @@ PROFILE_WORK_DDL = """CREATE TABLE IF NOT EXISTS profile_work (
 )"""
 
 
+def copy_plan(plan):
+    """Return an independent, validated copy of a prepared profile.
+
+    A large profile is as big as every source it quotes, and validating it walks
+    that entire text. Callers run this on the profile worker threads so a huge
+    ``max_profile_tokens`` budget cannot hold their event loop. The request hash
+    is read later on the caller's loop, so the copy remembers it here.
+    """
+    copied = ProfilePublication.model_validate_json(plan.model_dump_json())
+    copied.request_hash
+    return copied
+
+
+def decode_plan(value, *, user_id, plan_id=None):
+    """Validate a stored plan off the loop, remembering its request hash."""
+    plan = unpack(value, user_id=user_id, plan_id=plan_id)
+    plan.request_hash
+    return plan
+
+
 def payload(plan):
     return json.dumps(
         {"checksum": plan.checksum, "publication": plan.model_dump_json()}
@@ -44,6 +64,12 @@ def unpack(value, *, user_id, plan_id=None):
     if plan_id is not None and str(plan.node.id) != str(plan_id):
         raise ValueError("Prepared profile identity mismatch")
     return plan
+
+
+def replayed_preparation(plan, value):
+    """Validate a stored prepared plan and compare its identity, off the loop."""
+    saved = unpack(value, user_id=plan.node.user_id, plan_id=plan.node.id)
+    return saved, saved.checksum == plan.checksum
 
 
 def replacement_operation(old_id, new):
@@ -75,7 +101,12 @@ class ProfileWorkStore:
             return None
         if row[0] is None:
             raise ValueError("Prepared profile work lost its immutable plan")
-        plan = unpack(row[0], user_id=user_id, plan_id=plan_id)
+        # A prepared plan carries the whole profile text; decode and validate it
+        # on the profile workers rather than on the caller's event loop.
+        from prme.organizer.profiles import run_profile_work
+
+        plan = await run_profile_work(
+            decode_plan, row[0], user_id=user_id, plan_id=plan_id)
         if tuple(row[1:]) != (
             user_id,
             plan.node.scope.value,
@@ -115,7 +146,9 @@ class ProfileWorkStore:
 
     @protected_mutation
     async def prepare(self, plan: ProfilePublication) -> ProfilePublication:
-        plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        from prme.organizer.profiles import run_profile_work
+
+        plan = await run_profile_work(copy_plan, plan)
         if self.pool is not None:
             return await self._prepare_pg(plan)
         async with self.conn_lock:
@@ -238,8 +271,8 @@ class ProfileWorkStore:
                 plan.prepared_operation_id,
             )
             if prior is not None:
-                saved = unpack(prior, user_id=plan.node.user_id, plan_id=plan.node.id)
-                if saved.checksum != plan.checksum:
+                saved, matches = await run_to_completion(replayed_preparation, plan, prior)
+                if not matches:
                     raise ValueError("Prepared profile identity cannot be overwritten")
                 return saved
             await conn.execute(
@@ -267,7 +300,8 @@ class ProfileWorkStore:
                         raise ValueError(
                             "Prepared profile work lost its immutable plan"
                         )
-                    return unpack(value, user_id=plan.node.user_id, plan_id=old_id)
+                    return await run_to_completion(
+                        unpack, value, user_id=plan.node.user_id, plan_id=old_id)
                 await conn.execute(
                     "UPDATE profile_work SET status='abandoned', fence_epoch=fence_epoch+1, last_error='ReplacedPreparation' WHERE plan_id=$1",
                     old_id,
@@ -281,11 +315,12 @@ class ProfileWorkStore:
                     plan.node.scope.value,
                 )
             await reserve_pg(conn, plan)
+            prepared_payload = await run_to_completion(payload, plan)
             await conn.execute(
                 "INSERT INTO operations (id,op_type,target_id,payload,actor_id,namespace_id) VALUES ($1,'PROFILE_PREPARED',$2,$3::jsonb,$4,$5)",
                 plan.prepared_operation_id,
                 str(plan.node.id),
-                payload(plan),
+                prepared_payload,
                 plan.node.user_id,
                 plan.node.scope.value,
             )
@@ -456,7 +491,10 @@ async def validate_pg_work(conn, plan, *, expected_status="pending"):
         plan.prepared_operation_id,
         plan.node.user_id,
     )
-    managed = validate_work_row(plan, row, saved, expected_status=expected_status)
+    # The stored plan is the whole profile text; unpack and checksum it in a
+    # worker so the caller's event loop is not held for it.
+    managed = await run_to_completion(
+        validate_work_row, plan, row, saved, expected_status=expected_status)
     if managed:
         owner = await conn.fetchval(
             "SELECT operation_id FROM derivation_artifact_owners WHERE node_id=$1",
@@ -472,7 +510,7 @@ class ProfileStageFence:
 
     def __init__(self, conn, conn_lock, plan):
         self.conn, self.conn_lock = conn, conn_lock
-        self.plan = ProfilePublication.model_validate_json(plan.model_dump_json())
+        self.plan = copy_plan(plan)
 
     def verify_embedding(self, embedding, user_id):
         if user_id != self.plan.node.user_id or embedding != self.plan.embedding:

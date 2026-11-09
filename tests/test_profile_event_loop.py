@@ -74,6 +74,82 @@ async def test_long_run_of_one_character_keeps_the_loop_running(config, user):
         assert personal[0].metadata["source_count_included"] == 2
 
 
+async def test_a_huge_profile_budget_prepares_on_the_profile_workers(config, user, monkeypatch):
+    # A very large max_profile_tokens fills the profile with every related
+    # source, so its text grows to the size of all of them. Hashing that text,
+    # copying it for preparation and restaging it used to run on the caller's
+    # event loop (issue #414), where a service shares one loop between projects.
+    from prme.models import profile as profile_module
+    from prme.models.profile import ProfilePublication
+    from prme.storage import profile_work, vector_index
+
+    seen: dict[str, set[str]] = {}
+
+    def record(label, function):
+        def wrapper(*args, **kwargs):
+            seen.setdefault(label, set()).add(threading.current_thread().name)
+            return function(*args, **kwargs)
+        return wrapper
+
+    monkeypatch.setattr(profile_module, "profile_request_hash",
+                        record("hash", profile_module.profile_request_hash))
+    monkeypatch.setattr(ProfilePublication, "model_validate_json",
+                        record("plan", ProfilePublication.model_validate_json))
+    monkeypatch.setattr(profile_work.ProfileStageFence, "verify_plan",
+                        record("stage", profile_work.ProfileStageFence.verify_plan))
+    monkeypatch.setattr(vector_index.PreparedEmbedding, "model_validate_json",
+                        record("embedding", vector_index.PreparedEmbedding.model_validate_json))
+    source = "Aurora " + "northern office report about the budget. " * 2_000
+    async with MemoryEngine.open(config) as engine:
+        for i in range(3):
+            await engine.store(f"{source} {i}", user_id=user, scope=Scope.PERSONAL)
+        assert await engine.consolidate_knowledge(
+            user_id=user, scope=Scope.PERSONAL,
+            entity_names=["Aurora"], max_profile_tokens=10_000_000) == 1
+        profiles = [node for node in await engine.query_nodes(user_id=user, node_type=NodeType.SUMMARY)
+                    if (node.metadata or {}).get("entity_profile")]
+    assert len(profiles) == 1
+    # The budget was large enough to quote every source, so the prepared text
+    # is the whole store's worth of records.
+    assert profiles[0].metadata["source_count_included"] == 3
+    assert len(profiles[0].content) > 3 * len(source)
+    # The hash and the plan are also touched inside off-loop transactions, so
+    # only the event loop's own calls are ruled out here.
+    assert "MainThread" not in seen["hash"] and any(
+        name.startswith("prme-profile") for name in seen["hash"])
+    assert "MainThread" not in seen["plan"] and any(
+        name.startswith("prme-profile") for name in seen["plan"])
+    assert all(name.startswith("prme-profile") for name in seen.get("stage", set()))
+    # The PostgreSQL publication path stages its vector in the graph store, so
+    # the vector-index copy only appears on the DuckDB path.
+    assert "MainThread" not in seen.get("embedding", set())
+
+
+async def test_a_slow_profile_hash_does_not_hold_the_event_loop(config, user, monkeypatch):
+    # The hash serializes the whole profile and every source it quotes. Once a
+    # large budget makes that text the size of the store, a slow hash must run on
+    # a profile worker rather than on the shared loop (issue #414).
+    from prme.models import profile as profile_module
+
+    original = profile_module.profile_request_hash
+
+    def slow_hash(*args, **kwargs):
+        time.sleep(0.3)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(profile_module, "profile_request_hash", slow_hash)
+    async with MemoryEngine.open(config) as engine:
+        for i in range(3):
+            await engine.store(f"Aurora note {i}", user_id=user, scope=Scope.PERSONAL)
+        await engine.store("Aurora plan", user_id=user, scope=Scope.PERSONAL)
+        built, elapsed, gap = await longest_gap(engine.consolidate_knowledge(
+            user_id=user, scope=Scope.PERSONAL,
+            entity_names=["Aurora"], max_profile_tokens=10_000_000))
+    assert built == 1
+    assert elapsed > 0.3
+    assert gap < MAX_GAP, f"event loop blocked for {gap:.3f} s of a {elapsed:.3f} s build"
+
+
 async def test_long_names_against_text_that_matches_them_slowly_keep_the_loop_running(config, user):
     # Every position of the text starts a match that fails only at the last
     # character of the name, so one search of it compares about 400 million
