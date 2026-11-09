@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Two engines opening one fresh PostgreSQL database at the same moment no longer fail on a duplicate catalog object (dwamianm/prism#411). `initialize_pg_database` now holds a transaction-scoped advisory lock keyed to the target schema while it creates extensions, tables and indexes, so a second engine waits for the first and then finds every relation in place instead of racing `CREATE TABLE IF NOT EXISTS` into `pg_type_typname_nsp_index` or `CREATE EXTENSION` into `pg_extension_name_index`. Opening an existing database runs the same statements against the same schema.
+
 ## [0.17.0a3] - 2026-11-08
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
