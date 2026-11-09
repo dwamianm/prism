@@ -40,7 +40,13 @@ from prme.ingestion.named_text import NAMED_TEXT_KEY, has_first_person, named_cl
 from prme.ingestion.owner_name import carried_owner_entity, carried_owner_name, owner_name_marker
 from prme.ingestion.pronoun_repair import is_repair, resolved_from_context, with_names
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
-from prme.ingestion.temporal import validate_source_time
+from prme.ingestion.temporal import (
+    TemporalResolution,
+    dateparser_settings,
+    names_month_without_year,
+    resolve_month_without_year,
+    validate_source_time,
+)
 from prme.ingestion.supersedence import SupersedenceDetector, correctable_claim
 from prme.models.edges import MemoryEdge
 from prme.models.events import Event
@@ -1690,7 +1696,12 @@ class IngestionPipeline:
             fact_scope = scope
 
             # Resolve temporal reference
-            resolved_date = self._resolve_temporal(fact.temporal_ref, reference_time=event.event_time or event.timestamp)
+            temporal_resolution = self._resolve_temporal_reference(
+                fact.temporal_ref,
+                reference_time=event.event_time or event.timestamp,
+                source_text=fact.evidence_quote or event.content,
+            )
+            resolved_date = temporal_resolution.value if temporal_resolution is not None else None
 
             # Determine node type from fact_type
             node_type = _FACT_TYPE_TO_NODE_TYPE.get(
@@ -1827,6 +1838,9 @@ class IngestionPipeline:
                 fact_metadata["temporal_ref"] = fact.temporal_ref
             if resolved_date:
                 fact_metadata["resolved_date"] = resolved_date
+                if temporal_resolution.uncertain:
+                    # The year was guessed from a month with no tense signal.
+                    fact_metadata["resolved_date_uncertain"] = True
 
             # Determine epistemic type from LLM extraction
             try:
@@ -2145,28 +2159,50 @@ class IngestionPipeline:
 
     @staticmethod
     def _resolve_temporal(temporal_ref: str | None, *, reference_time: datetime | None = None,
-                          prefer_dates_from: Literal["past", "future"] = "past",
+                          prefer_dates_from: Literal["past", "future"] | None = None,
                           source_text: str | None = None) -> str | None:
         """Resolve a natural language temporal reference to an ISO date string.
 
         Uses dateparser to parse references like 'yesterday', 'last week',
-        'in March 2024'. Returns None if the reference is unparseable.
+        'in March 2024'. A month named without a year resolves against the
+        turn's own event time (:meth:`_resolve_temporal_reference`). Returns
+        None if the reference is unparseable.
 
         Args:
             temporal_ref: Raw temporal reference string, or None.
+            prefer_dates_from: An explicit dateparser preference. Omitted, a
+                month named without a year follows the turn's tense and every
+                other reference keeps the historical past preference.
 
         Returns:
             ISO format date string if parseable, None otherwise.
         """
+        resolution = IngestionPipeline._resolve_temporal_reference(
+            temporal_ref, reference_time=reference_time,
+            prefer_dates_from=prefer_dates_from, source_text=source_text)
+        return resolution.value if resolution is not None else None
+
+    @staticmethod
+    def _resolve_temporal_reference(
+        temporal_ref: str | None, *, reference_time: datetime | None = None,
+        prefer_dates_from: Literal["past", "future"] | None = None,
+        source_text: str | None = None,
+    ) -> TemporalResolution | None:
+        """Resolve a reference and say whether a guessed year is uncertain.
+
+        A month named without a year resolves to the next occurrence when the
+        turn talks about a plan or the future, to the most recent past
+        occurrence when it talks about something that already happened, and
+        otherwise to the occurrence nearest the event time, marked uncertain.
+        Every other reference resolves exactly as before.
+        """
         if temporal_ref is None:
             return None
-        settings = {
-            "PREFER_DATES_FROM": prefer_dates_from,
-            "RELATIVE_BASE": reference_time or datetime.now(timezone.utc),
-            "RETURN_AS_TIMEZONE_AWARE": True,
-            "TIMEZONE": "UTC",
-            "TO_TIMEZONE": "UTC",
-        }
+        base = reference_time or datetime.now(timezone.utc)
+        if prefer_dates_from is None and names_month_without_year(temporal_ref):
+            return resolve_month_without_year(temporal_ref, base=base, source_text=source_text)
+        prefer_dates_from = prefer_dates_from or "past"
+        settings = dateparser_settings(prefer_dates_from, base)
         if prefer_dates_from == "future":
             # Protected forward-start admission must not invent a calendar day
             # from a month/year-only reference or choose an ambiguous date order.
@@ -2184,7 +2220,7 @@ class IngestionPipeline:
                         or temporal_ref not in spans[0][0] or spans[0][1] != parsed):
                     return None
         if parsed is not None:
-            return parsed.isoformat()
+            return TemporalResolution(parsed.isoformat())
         return None
 
     def _schedule_retry(
