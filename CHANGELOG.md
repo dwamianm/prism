@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a4] - 2026-11-09
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a4`.
+
+What is new since 0.17.0a3: named claim text no longer writes the owner's name into words that are
+not the speaker's first person (dwamianm/prism#409); a month named without a year resolves against
+the turn's own event time (dwamianm/prism#498); a knowledge profile builds the same text from the
+same memories at an event-time tie and keeps a turn over its narrower claims (dwamianm/prism#497);
+a profile records its token budget and a rebuild reuses it (dwamianm/prism#422); a one-person
+profile rebuild reads only that person's records and honors a deadline (dwamianm/prism#423);
+concurrent identical consolidation publications converge on one summary (dwamianm/prism#493);
+PostgreSQL schema initialization is serialized with an advisory lock (dwamianm/prism#411); and
+profile preparation and mention-link matching run off the caller's event loop (dwamianm/prism#414,
+#413).
+
+Upgrade notes:
+
+- `DERIVATION_VERSION` moves from 1 to 2 (dwamianm/prism#409). The version is in every derivation
+  fingerprint, so every memory stored with 0.17.0a3 or earlier reads as stale once, and `reingest()`
+  re-derives each of them once, at the cost of one model request per memory. This applies to every
+  store, including one that leaves `enable_named_claim_text` off, where the derived records do not
+  otherwise change. The one re-derivation pass applies the current rules, so it carries both the
+  #409 claim-text rule and the #498 date rule. The #498 entry below says `DERIVATION_VERSION` is
+  unchanged: that is relative to #409, which already moved it to 2 in this release, so no second
+  pass is needed.
+- A knowledge profile built before #497 is not rewritten by the upgrade, and the automatic refresh
+  leaves a profile that already dropped a source alone. Rebuild a profile with
+  `consolidate_knowledge()` to get the new ordering.
+- The `GraphStore` protocol's `scan_nodes()` gained optional `content_contains_any`, `speaker` and
+  `evidence_events` filters, and `EventStore.get_by_user()` gained an optional `speaker` filter
+  (dwamianm/prism#423), so a custom backend must accept them. `consolidate_knowledge()` takes an
+  optional `deadline`, and `ProfileBuildDeadlineExceeded` is exported from `prme`.
+
 ### Fixed
 
 - A month named without a year in a user turn now resolves against the turn's own event time instead of always to a past occurrence (dwamianm/prism#498). The claim resolver passed `PREFER_DATES_FROM=past` to dateparser for every reference, so `I am planning a trip for us in December` stored on 2026-11-02 became a date in December 2025 and the trip sorted as the oldest memory. A turn that talks about a plan or the future now takes the next occurrence, a turn that talks about something that already happened takes the most recent past occurrence, and a turn whose tense gives no signal takes the occurrence nearest the event time and records `resolved_date_uncertain` in the claim's metadata. References that name a year, relative references such as `yesterday`, and the protected forward-start path resolve exactly as before. `DERIVATION_VERSION` is unchanged, so `reingest()` finds every stored memory current; a memory stored before the fix keeps the date it was given, and the new rule applies to memories stored after the upgrade.
@@ -3390,7 +3426,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a3...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a4...HEAD
+[0.17.0a4]: https://github.com/dwamianm/prism/compare/v0.17.0a3...v0.17.0a4
 [0.17.0a3]: https://github.com/dwamianm/prism/compare/v0.17.0a2...v0.17.0a3
 [0.17.0a2]: https://github.com/dwamianm/prism/compare/v0.17.0a1...v0.17.0a2
 [0.17.0a1]: https://github.com/dwamianm/prism/compare/v0.16.1...v0.17.0a1
