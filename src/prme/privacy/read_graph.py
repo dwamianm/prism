@@ -56,12 +56,17 @@ class AdmittedGraphView:
         ])
 
     async def scan_nodes(self, *, user_id=None, scope=None, node_type=None, lifecycle_states=None,
-                         after_id=None, limit=100, operator_unscoped=False):
+                         after_id=None, limit=100, operator_unscoped=False,
+                         content_contains_any=None, speaker=None, evidence_events=None):
         owner = self._owner(user_id)
         if operator_unscoped:
             raise PrivacyDenied("privacy_boundary_mismatch")
         if limit <= 0:
             return []
+        # The narrowing filters run on the stored values before project_node.
+        # Protected write paths store nodes that already equal their
+        # projection, and every returned node is still projected, so a filter
+        # can only select records whose admitted view the caller may see.
         result = []
         cursor = after_id
         # Filtering never makes a short page look like end-of-history.
@@ -70,6 +75,8 @@ class AdmittedGraphView:
             page = await self._graph.scan_nodes(
                 user_id=owner, scope=scope, node_type=node_type, lifecycle_states=lifecycle_states,
                 after_id=cursor, limit=page_size,
+                content_contains_any=content_contains_any, speaker=speaker,
+                evidence_events=evidence_events,
             )
             for node in page:
                 projected = await self.context.project_node(node)

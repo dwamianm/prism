@@ -117,7 +117,7 @@ from prme.models.extraction import ExtractionRecord
 from prme.models.extraction_work import ExtractionStatus, ExtractionProcessingResult
 from prme.models.reembed import ReembedResult
 from prme.models.reingest import ReingestResult
-from prme.storage.engine import MemoryEngine
+from prme.storage.engine import MemoryEngine, ProfileBuildDeadlineExceeded
 from prme.storage.namespace_identity import NamespaceIdentityError
 from prme.storage.ranking_profiles import StaleRankingProfileError
 from prme.storage.embedding import (
@@ -320,6 +320,7 @@ __all__ = [
     "Scope",
     "SourceType",
     "StaleProfileError",
+    "ProfileBuildDeadlineExceeded",
     "StaleAliasProposal",
     "StaleRankingProfileError",
     "StoreReceipt",

@@ -178,6 +178,16 @@ OWNER_PROFILE_REFRESH_BUDGET_S = 1.0
 # (issue #448).
 PROFILE_CLAIM_TYPES = (NodeType.FACT, NodeType.DECISION, NodeType.PREFERENCE, NodeType.TASK)
 
+
+class ProfileBuildDeadlineExceeded(RuntimeError):
+    """A profile build reached its caller's deadline before it read its sources.
+
+    Raised between source pages, before a profile is prepared, so the previous
+    profile stays in place and a background caller can stop within its budget
+    (issue #423).
+    """
+
+
 # The nodes the derived search indexes hold, in rebuild order: every active
 # node of every owner, by id. Callers skip rows without indexable content.
 # Each node gets a vector; the last column says whether it also gets a
@@ -3230,16 +3240,23 @@ class MemoryEngine:
         node_type: NodeType | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
+        content_contains_any: list[str] | None = None,
+        speaker: list[str] | None = None,
+        evidence_events: list[str] | None = None,
     ) -> list[MemoryNode]:
         """Read a scoped page in ID order; pass the last ID as the next cursor.
 
         This enumerates stored nodes without semantic ranking. Defaults to
         active states. Independent pages do not form a transaction snapshot.
+        ``content_contains_any``, ``speaker`` and ``evidence_events`` narrow
+        the page before it is materialized.
         """
         graph = await self._ordinary_graph(user_id, scopes=[scope] if scope else None)
         return await graph.scan_nodes(
             user_id=user_id, scope=scope, node_type=node_type,
             lifecycle_states=lifecycle_states, after_id=after_id, limit=limit,
+            content_contains_any=content_contains_any, speaker=speaker,
+            evidence_events=evidence_events,
         )
 
     async def iter_nodes(
@@ -3479,8 +3496,9 @@ class MemoryEngine:
         Args:
             user_id: The user to query events for.
             **kwargs: Additional filters: session_id, scopes, limit, offset,
-                and until, an ingestion time (only events recorded at or
-                before it; a time without a zone is read as UTC).
+                until, an ingestion time (only events recorded at or before
+                it; a time without a zone is read as UTC), and speaker, a
+                stored speaker name matched without regard to case.
 
         Returns:
             List of Events.
@@ -4551,6 +4569,7 @@ class MemoryEngine:
         entity_names: list[str] | None = None,
         max_profile_tokens: int = DEFAULT_MAX_PROFILE_TOKENS,
         include_speaker_turns: bool = False,
+        deadline: float | None = None,
     ) -> int:
         """Build entity knowledge profiles from stored nodes.
 
@@ -4577,12 +4596,21 @@ class MemoryEngine:
                 ``enable_owner_profile_context`` sets it (issue #398). A
                 named person's claims are taken from the graph whether or
                 not it is set (issue #448).
+            deadline: Optional ``time.monotonic()`` deadline. The source read
+                checks it between pages; a read that runs out raises
+                :class:`ProfileBuildDeadlineExceeded` before the profile is
+                prepared, so the caller's previous profile stays in place.
+                A background caller passes its own deadline here (issue #423).
 
         Returns:
             Number of entity profiles published. Each replacement is atomic;
             the complete multi-entity call is not a single transaction.
 
         Raises:
+            ProfileBuildDeadlineExceeded: *deadline* passed before the read
+                completed. Nothing was published for the unread entity. For
+                an owner under a privacy policy the disclosure wrapper reports
+                it as ``PrivacyDenied`` instead.
             StaleProfileError: A source or concurrent publication changed during
                 preparation. Call again to build from fresh source snapshots.
             Exception: Embedding, staging or storage failure. A failed
@@ -4590,8 +4618,10 @@ class MemoryEngine:
                 acknowledgement can still mean the replacement was committed.
         """
         import re
+        import time
         from prme.organizer.profiles import build_profile, mentions_entity, run_profile_work
         from prme.models.speaker import metadata_speaker
+        from prme.privacy.journals import without_availability
 
         if type(max_profile_tokens) is not int or max_profile_tokens < 0:
             raise ValueError("max_profile_tokens must be a nonnegative integer")
@@ -4601,6 +4631,8 @@ class MemoryEngine:
             ):
                 raise ValueError("entity_names must contain nonempty strings")
             entity_names = list(dict.fromkeys(name.strip() for name in entity_names))
+            if not entity_names:
+                return 0
 
         if scope is None:
             # Profiles have one namespace. Never pool evidence from different
@@ -4621,7 +4653,7 @@ class MemoryEngine:
                 total += await self.consolidate_knowledge(
                     user_id=user_id, scope=namespace, entity_names=entity_names,
                     max_profile_tokens=max_profile_tokens,
-                    include_speaker_turns=include_speaker_turns,
+                    include_speaker_turns=include_speaker_turns, deadline=deadline,
                 )
             return total
         scope = Scope(scope)
@@ -4633,23 +4665,44 @@ class MemoryEngine:
         # A person's own turns are sources of their profile on request: an
         # owner says "my husband is Theo", not their name (issue #398).
         own_turns = include_speaker_turns
+        source_states = [LifecycleState.TENTATIVE, LifecycleState.STABLE]
 
         # Name matching and token counting are CPU work that the caller's event
         # loop must not wait on: they run on the profile worker threads.
-        def mentioning(nodes: list[MemoryNode], names: list[str]) -> list[MemoryNode]:
-            speakers = {name.casefold() for name in names} if own_turns else set()
-            return [
-                node for node in nodes
-                if any(mentions_entity(node.content, name) for name in names)
-                or (speakers and (metadata_speaker(node.metadata) or "").casefold() in speakers)
-            ]
-
         def naming(nodes: list[MemoryNode], name: str) -> list[MemoryNode]:
             return [node for node in nodes if mentions_entity(node.content, name)]
 
         def said_by(nodes: list[MemoryNode], name: str) -> list[MemoryNode]:
             wanted = name.casefold()
             return [node for node in nodes if (metadata_speaker(node.metadata) or "").casefold() == wanted]
+
+        async def scan_pages(
+            *, lifecycle_states: list[LifecycleState], **filters: Any,
+        ) -> list[MemoryNode]:
+            """Every matching node in the scope, by immutable ID, page by page.
+
+            Paging by ID keeps the read complete for an unchanged store, so
+            older qualifying evidence cannot disappear from a rebuild and
+            retire a still-supported profile. A background caller's deadline
+            is checked between pages, and the read raises before any profile
+            is prepared (issue #423).
+            """
+            found: list[MemoryNode] = []
+            after_id: str | None = None
+            while True:
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise ProfileBuildDeadlineExceeded()
+                page = await graph.scan_nodes(
+                    user_id=user_id, scope=scope, lifecycle_states=lifecycle_states,
+                    after_id=after_id, limit=500, **filters,
+                )
+                if not page:
+                    break
+                found.extend(page)
+                if len(page) < 500:
+                    break
+                after_id = str(page[-1].id)
+            return found
 
         # Scan by immutable ID instead of interpreting a newest-N window as
         # complete history. Otherwise older qualifying evidence can disappear
@@ -4660,20 +4713,24 @@ class MemoryEngine:
         # also reads the claims the graph binds to their entity (issue #448).
         claim_nodes: list[MemoryNode] = []
         entity_nodes: dict[str, list[tuple[str, str | None]]] = {}
-        after_id: str | None = None
-        while True:
-            page = await graph.scan_nodes(
-                user_id=user_id, scope=scope,
-                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
-                after_id=after_id, limit=500,
-            )
-            if not page:
-                break
-            sources: list[MemoryNode] = []
-            for node in page:
+
+        absorbed: set[str] = set()
+
+        def absorb(nodes: list[MemoryNode]) -> None:
+            for node in nodes:
                 if context.protected:
-                    node = node.model_copy(update={"metadata": {key: value for key, value in (node.metadata or {}).items()
-                                                              if key != "source_availability"}})
+                    # A projected read attaches the public availability marker,
+                    # which is not part of a source's identity. Every read path
+                    # goes through here, so the plan checksum sees the same
+                    # source it can rebuild from (issue #423 review).
+                    node = without_availability(node)
+                if node.scope != scope or node.lifecycle_state not in source_states:
+                    continue
+                identifier = str(node.id)
+                # Several narrow reads can reach one record; count it once.
+                if identifier in absorbed:
+                    continue
+                absorbed.add(identifier)
                 meta = node.metadata or {}
                 if meta.get("entity_profile"):
                     # Generated profiles cannot qualify as fresh evidence.
@@ -4682,19 +4739,102 @@ class MemoryEngine:
                         if entity_names is None or name in entity_names:
                             existing_profiles.setdefault(name, []).append(node)
                 else:
-                    sources.append(node)
+                    all_nodes.append(node)
                     if node.node_type in PROFILE_CLAIM_TYPES:
                         claim_nodes.append(node)
                     if node.node_type == NodeType.ENTITY and node.content.strip():
                         entity_type = meta.get("entity_type")
                         entity_nodes.setdefault(node.content.strip().casefold(), []).append(
                             (str(node.id), entity_type if isinstance(entity_type, str) else None))
-            # Explicit names need retain only relevant source nodes,
-            # rather than every unrelated node in a large namespace.
-            if entity_names is not None and sources:
-                sources = await run_profile_work(mentioning, sources, entity_names)
-            all_nodes.extend(sources)
-            after_id = str(page[-1].id)
+
+        # The narrow read compares names in SQL with the database's LOWER(),
+        # while the final match uses mentions_entity()'s Unicode-aware rules.
+        # A non-ASCII name can fold differently (a final sigma, for example),
+        # so those names keep the whole-scope read rather than risk dropping a
+        # source the Python filter would keep (issue #423 review).
+        narrow = entity_names is not None and all(name.isascii() for name in entity_names)
+
+        entity_subjects: dict[str, set[str]] = {}
+
+        async def subjects_of(name: str) -> set[str]:
+            """The claim ids the person's entity binds through HAS_FACT (issue #448)."""
+            cached = entity_subjects.get(name)
+            if cached is not None:
+                return cached
+            candidates = entity_nodes.get(name.casefold(), ())
+            people = [identifier for identifier, kind in candidates
+                      if (kind or "").strip().casefold() == "person"]
+            targets: set[str] = set()
+            for entity_id in people or [identifier for identifier, _ in candidates]:
+                targets.update(
+                    str(edge.target_id)
+                    for edge in await graph.get_edges(
+                        source_id=entity_id, edge_type=EdgeType.HAS_FACT)
+                    if edge.user_id == user_id
+                )
+            entity_subjects[name] = targets
+            return targets
+
+        if not narrow:
+            # Auto-detected names and non-ASCII names still need every source
+            # in the scope.
+            absorb(await scan_pages(lifecycle_states=source_states))
+        else:
+            # A named person's rebuild reads only the records that name them,
+            # were said by them, or the graph binds to their entity, instead of
+            # paging the whole scope (issue #423).
+            absorb(await scan_pages(
+                lifecycle_states=source_states, content_contains_any=entity_names))
+            # Their turns and claimed statements. A turn keeps the speaker
+            # name on its source event and node, and a claim a
+            # ``speaker_reference``. The turn ids come from the event log, not
+            # the note nodes, because a note may not be materialized yet or may
+            # have been archived while a claim from its turn is still active.
+            attributed = await scan_pages(
+                lifecycle_states=source_states, speaker=entity_names)
+            absorb(attributed)
+
+            async def turn_events(name: str) -> list[str]:
+                found: list[str] = []
+                before = None
+                while True:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        raise ProfileBuildDeadlineExceeded()
+                    page = await self._event_store.get_by_user(
+                        user_id, scopes=[scope], limit=500, before=before, speaker=name,
+                    )
+                    found.extend(str(event.id) for event in page)
+                    if len(page) < 500:
+                        return found
+                    before = page[-1]
+
+            # Only a person with an entity node has claims read for their
+            # profile, and a protected owner's profile takes none from a turn
+            # (the per-name read below skips the evidence event), so those
+            # turns are not read from the event log.
+            events: list[str] = []
+            if not context.protected:
+                for name in entity_names:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        raise ProfileBuildDeadlineExceeded()
+                    if entity_nodes.get(name.casefold()):
+                        events.extend(await turn_events(name))
+            if events:
+                # A claim from the person's turn can carry no speaker of its
+                # own when the turn wrote the name into the claim, so the
+                # event it cites decides, as the per-name read below applies.
+                absorb(await scan_pages(
+                    lifecycle_states=source_states, evidence_events=events))
+            # Claims the graph binds to the person's entity (issue #448).
+            bound: set[str] = set()
+            for name in entity_names:
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise ProfileBuildDeadlineExceeded()
+                bound.update(await subjects_of(name))
+            if bound:
+                absorb(await graph.get_nodes(sorted(bound), user_id=user_id))
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise ProfileBuildDeadlineExceeded()
 
         async def retire_profile(name: str) -> None:
             for stale in existing_profiles.get(name, []):
@@ -4754,6 +4894,8 @@ class MemoryEngine:
 
         profiles_created = 0
         for entity_name in entity_names:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise ProfileBuildDeadlineExceeded()
             # Let other requests on this loop run between entity names.
             await asyncio.sleep(0)
             if context.protected:
@@ -4789,12 +4931,10 @@ class MemoryEngine:
             ]
             entity_ids = people or [identifier for identifier, _ in candidates]
             if entity_ids and claim_nodes:
-                subjects: set[str] = set()
-                for entity_id in entity_ids:
-                    edges = await graph.get_edges(source_id=entity_id, edge_type=EdgeType.HAS_FACT)
-                    # The graph read is owner-scoped here as the engine's own
-                    # edge read is; the claim scan already limits the targets.
-                    subjects.update(str(edge.target_id) for edge in edges if edge.user_id == user_id)
+                # The graph read is owner-scoped here as the engine's own edge
+                # read is; the claim scan already limits the targets. A named
+                # rebuild already read these edges, so it reuses the result.
+                subjects = await subjects_of(entity_name)
                 subject_claims = [node for node in claim_nodes if str(node.id) in subjects]
                 bound = {str(node.id) for node in subject_claims}
                 wanted = entity_name.casefold()

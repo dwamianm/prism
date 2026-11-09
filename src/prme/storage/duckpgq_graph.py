@@ -539,8 +539,20 @@ class DuckPGQGraphStore:
         lifecycle_states: list[LifecycleState] | None = None,
         after_id: str | None = None, limit: int = 100,
         operator_unscoped: bool = False,
+        content_contains_any: list[str] | None = None,
+        speaker: list[str] | None = None,
+        evidence_events: list[str] | None = None,
     ) -> list[MemoryNode]:
-        """Read a stable-ID page within a tenant or explicit operator scope."""
+        """Read a stable-ID page within a tenant or explicit operator scope.
+
+        The optional filters narrow the page before it is materialized, so a
+        caller can page over the records relevant to one subject without
+        reading the whole scope. ``content_contains_any`` is a case-insensitive
+        substring match, like ``query_nodes()``. ``speaker`` matches a record
+        attributed to one of these names: the reserved source speaker or a
+        claim's ``speaker_reference``. ``evidence_events`` matches a record
+        whose evidence cites one of these event ids.
+        """
         if (
             limit < 1
             or user_id == ""
@@ -559,6 +571,26 @@ class DuckPGQGraphStore:
             if value is not None:
                 conditions.append(f"{field} = ?")
                 params.append(value.value)
+        if content_contains_any:
+            conditions.append(
+                "(" + " OR ".join(["LOWER(content) LIKE ? ESCAPE '\\'" for _ in content_contains_any]) + ")"
+            )
+            params.extend(f"%{self._escape_like(value.lower())}%" for value in content_contains_any)
+        if speaker:
+            folded = [value.lower() for value in speaker]
+            slots = ",".join("?" for _ in folded)
+            conditions.append(
+                "(LOWER(TRIM(json_extract_string(metadata, '$.prme_speaker_v1'))) IN (" + slots + ") "
+                "OR LOWER(TRIM(json_extract_string(metadata, '$.speaker_reference.speaker'))) "
+                "IN (" + slots + "))"
+            )
+            params.extend([*folded, *folded])
+        if evidence_events:
+            conditions.append(
+                "EXISTS (SELECT 1 FROM json_each(evidence_refs) AS cited "
+                "JOIN json_each(?::JSON) AS wanted ON cited.value::VARCHAR = wanted.value::VARCHAR)"
+            )
+            params.append(json.dumps([str(UUID(event_id)) for event_id in evidence_events]))
         if after_id is not None:
             conditions.append("id > ?::UUID")
             params.append(str(UUID(after_id)))

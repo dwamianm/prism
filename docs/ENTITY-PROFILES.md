@@ -66,8 +66,18 @@ run for an owner under a privacy policy.
 Every profile stays within one owner and scope. Omitting `scope` processes each
 scope separately. `Scope.PROJECT` is a scope category, not a named project ID;
 use separate memory packs to isolate different projects for the same owner.
-Profile construction scans the active scope in pages, including older sources
-beyond the newest 5,000 nodes.
+Profile construction reads the active scope in ID-ordered pages, including
+older sources beyond the newest 5,000 nodes. With `entity_names` given, it
+reads only the records that name one of those people, the records stored with
+them as their `speaker`, the claims the graph binds to their entity, and the
+claims taken from their turns, each through a filtered page, instead of paging
+every record in the scope (issue #423). A non-ASCII name keeps the whole-scope
+read, because the database's `LOWER()` need not fold it the same way the
+Unicode-aware matcher does. A background caller can pass a
+`deadline` (`time.monotonic()`); the source read checks it between pages and
+raises `ProfileBuildDeadlineExceeded` before preparing a profile, so the
+previous profile stays in place. The owner-profile refresh and the organizer's
+stale-profile pass pass their own deadlines this way.
 
 Each replacement becomes visible atomically after index preparation. Until it
 commits, the previous profile stays active. Embedding and storage failures raise

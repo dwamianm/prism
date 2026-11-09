@@ -65,6 +65,44 @@ async def test_enumeration_rejects_missing_tenant_and_invalid_page_size(config, 
             await engine.scan_nodes(user_id=user, after_id="not-a-cursor")
 
 
+async def test_scan_nodes_narrows_by_content_speaker_and_evidence(config, user):  # noqa: F811
+    """A filtered page keeps the complete-history order (issue #423)."""
+    from prme.models.speaker import SPEAKER_METADATA_KEY
+
+    async with MemoryEngine.open(config) as engine:
+        event_id = UUID("0f8fad5b-d9cb-469f-a165-70867728950e")
+        turn = MemoryNode(user_id=user, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                          content="A turn that names nobody",
+                          metadata={SPEAKER_METADATA_KEY: "Maya Okafor"})
+        named = MemoryNode(user_id=user, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                           content="Maya Okafor likes the family plan")
+        claim = MemoryNode(user_id=user, node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                           content="Theo is her husband",
+                           metadata={"speaker_reference": {"speaker": "Maya Okafor"}})
+        cited = MemoryNode(user_id=user, node_type=NodeType.FACT, scope=Scope.PERSONAL,
+                           content="Theo is her husband", evidence_refs=[event_id])
+        # A second owner's matching record must never join the page.
+        foreign = MemoryNode(user_id=user + "-other", node_type=NodeType.NOTE,
+                             scope=Scope.PERSONAL, content="Maya Okafor likes another plan",
+                             metadata={SPEAKER_METADATA_KEY: "Maya Okafor"})
+        percent = MemoryNode(user_id=user, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                             content="The plan covers 100% cotton towels")
+        for node in (turn, named, claim, cited, foreign, percent):
+            await engine._graph_store.create_node(node)
+
+        by_content = await engine.scan_nodes(user_id=user, content_contains_any=["maya"])
+        by_speaker = await engine.scan_nodes(user_id=user, speaker=["MAYA OKAFOR"])
+        by_evidence = await engine.scan_nodes(user_id=user, evidence_events=[str(event_id)])
+        literal = await engine.scan_nodes(user_id=user, content_contains_any=["100% cotton"])
+        no_wildcard = await engine.scan_nodes(user_id=user, content_contains_any=["100_ cotton"])
+
+    assert {n.id for n in by_content} == {named.id}
+    assert {n.id for n in by_speaker} == {turn.id, claim.id}
+    assert {n.id for n in by_evidence} == {cited.id}
+    assert {n.id for n in literal} == {percent.id}
+    assert no_wildcard == []
+
+
 def test_sync_client_supports_complete_iteration_and_explicit_pages(config, user):  # noqa: F811
     with MemoryClient(config=config) as client:
         for i in range(5):
