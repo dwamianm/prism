@@ -420,7 +420,9 @@ async def _materialize_summary_node(
         )
         plan = await engine._graph_store.prepare_consolidation(plan)
 
-    return await publish_consolidation_plan(engine, plan, retired=retired), True
+    published = await publish_consolidation_plan(engine, plan, retired=retired)
+    # A converged publication returns the sibling's summary, not this plan's.
+    return published, published.id == plan.node.id
 
 
 async def _create_summary_node(

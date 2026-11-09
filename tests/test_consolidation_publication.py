@@ -106,6 +106,78 @@ async def test_independent_engines_converge_on_one_summary(config, user):  # noq
         assert [node.id for node in await _summaries(first_engine, user)] == [first.id]
 
 
+def test_convergence_requires_an_undeclared_adjacent_sibling():
+    from types import SimpleNamespace
+    from uuid import UUID, uuid4, uuid5
+
+    from prme.storage.consolidation_publication import _converged_publication_id
+
+    key = "4f0d5c88-1e39-4d2d-9c2f-0f4a4d4fbf25"
+    request_hash = "a" * 64
+    sibling = str(uuid5(UUID(key), f"{request_hash}:0"))
+    prior = (sibling, request_hash, key, "0")
+
+    def plan(**overrides):
+        values = {"key": key, "request_hash": request_hash, "generation": 1, "previous": ()}
+        values.update(overrides)
+        return SimpleNamespace(**values)
+
+    assert _converged_publication_id(plan(), [prior]) == sibling
+    assert _converged_publication_id(
+        plan(previous=(SimpleNamespace(id=uuid4()),)), [prior]
+    ) == sibling
+    assert _converged_publication_id(
+        plan(previous=(SimpleNamespace(id=UUID(sibling)),)), [prior]
+    ) is None
+    assert _converged_publication_id(plan(request_hash="b" * 64), [prior]) is None
+    assert _converged_publication_id(plan(key="0" * 8 + "-0000-4000-8000-" + "0" * 12), [prior]) is None
+    assert _converged_publication_id(plan(generation=2), [prior]) is None
+    assert _converged_publication_id(plan(), [prior, prior]) is None
+    assert _converged_publication_id(
+        plan(),
+        [(str(uuid5(UUID(key), f"{request_hash}:9")), request_hash, key, "0")],
+    ) is None
+    assert _converged_publication_id(
+        plan(), [(sibling, request_hash, key, "unknown")]
+    ) is None
+
+
+async def test_a_publication_that_reads_the_lineage_early_converges(
+    config,  # noqa: F811
+    user,  # noqa: F811
+    monkeypatch,
+):
+    """A sibling that publishes between this plan's lineage and generation reads.
+
+    The plan snapshot says there is no prior summary, then the sibling's
+    publication moves the generation. The plan's request is identical to the
+    one the sibling published, so publication must return the sibling's
+    summary instead of raising a stale-lineage error.
+    """
+    async with MemoryEngine.open(config) as first_engine, MemoryEngine.open(config) as second_engine:
+        cluster, _ = await _cluster(first_engine, user)
+        original = second_engine._graph_store.consolidation_generation
+        at_generation_read = asyncio.Event()
+        sibling_published = asyncio.Event()
+
+        async def stalled_generation(key):
+            at_generation_read.set()
+            await asyncio.wait_for(sibling_published.wait(), 10)
+            return await original(key)
+
+        monkeypatch.setattr(
+            second_engine._graph_store, "consolidation_generation", stalled_generation
+        )
+        racing = asyncio.create_task(consolidate_cluster(second_engine, cluster))
+        assert await asyncio.wait_for(at_generation_read.wait(), 10)
+        published = await consolidate_cluster(first_engine, cluster)
+        sibling_published.set()
+        converged = await racing
+
+        assert converged.id == published.id
+        assert [node.id for node in await _summaries(first_engine, user)] == [published.id]
+
+
 async def test_duck_source_mutation_conflicts_with_publication_claim(
     config,  # noqa: F811
     user,  # noqa: F811

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING
+from uuid import UUID, uuid5
 
 import duckdb
 
@@ -458,15 +459,57 @@ async def prepare_postgres(
         return saved
 
 
-def _validate_dependencies(plan, current, prior_ids) -> None:
-    if set(prior_ids) != {str(node.id) for node in plan.previous}:
-        raise StaleConsolidationError("Current consolidation summary changed; rebuild")
-    for expected in plan.sources + plan.previous:
+def _validate_sources(plan, current) -> None:
+    for expected in plan.sources:
         actual = current.get(str(expected.id))
         if actual is not None and plan.privacy_manifest is not None:
             actual = project_manifest_node(actual, plan.privacy_manifest)
         if actual is None or node_checksum(actual) != node_checksum(expected):
             raise StaleConsolidationError("Consolidation dependency changed; rebuild")
+
+
+def _validate_dependencies(plan, current, prior_ids) -> None:
+    if set(prior_ids) != {str(node.id) for node in plan.previous}:
+        raise StaleConsolidationError("Current consolidation summary changed; rebuild")
+    _validate_sources(plan, current)
+    for expected in plan.previous:
+        actual = current.get(str(expected.id))
+        if actual is not None and plan.privacy_manifest is not None:
+            actual = project_manifest_node(actual, plan.privacy_manifest)
+        if actual is None or node_checksum(actual) != node_checksum(expected):
+            raise StaleConsolidationError("Consolidation dependency changed; rebuild")
+
+
+def _converged_publication_id(plan, prior_rows) -> str | None:
+    """Return the sibling summary id when a racing identical publication won.
+
+    The consolidation pipeline reads the lineage and then the generation, so a
+    sibling can publish both in between. The plan then names the same key and
+    request hash at the next generation while its ``previous`` snapshot still
+    predates the sibling. That is convergence, not staleness: the sibling
+    already published exactly this request. A different key, a different
+    request hash, another generation, or an identity that is not the one this
+    record must carry all stay stale.
+    """
+    if len(prior_rows) != 1:
+        return None
+    prior_id, request_hash, key, generation = prior_rows[0]
+    # A plan that already declares this summary as its dependency is advancing
+    # the lineage on purpose, even when it repeats the prior request hash.
+    if str(prior_id) in {str(node.id) for node in plan.previous}:
+        return None
+    if str(request_hash) != plan.request_hash or str(key) != plan.key:
+        return None
+    try:
+        sibling_generation = int(generation)
+    except (TypeError, ValueError):
+        return None
+    if sibling_generation + 1 != plan.generation:
+        return None
+    expected_id = uuid5(UUID(plan.key), f"{plan.request_hash}:{sibling_generation}")
+    if str(prior_id) != str(expected_id):
+        return None
+    return str(prior_id)
 
 
 class ConsolidationStageFence:
@@ -588,7 +631,10 @@ def _commit_duckdb(store, plan):
             metadata = node.metadata or {}
             if metadata.get("summary_publication_kind") == "hierarchical_source_excerpts_v2":
                 prior_rows = conn.execute(
-                    "SELECT id FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
+                    "SELECT id, json_extract_string(metadata,'$.consolidation_request_hash'), "
+                    "json_extract_string(metadata,'$.consolidation_key'), "
+                    "json_extract_string(metadata,'$.consolidation_generation') "
+                    "FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
                     "AND lifecycle_state IN ('tentative','stable') AND ("
                     "(json_extract_string(metadata,'$.consolidation_summary')='true' "
                     "AND json_extract_string(metadata,'$.consolidation_key')=?) OR ("
@@ -606,12 +652,23 @@ def _commit_duckdb(store, plan):
                 ).fetchall()
             else:
                 prior_rows = conn.execute(
-                    "SELECT id FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
+                    "SELECT id, json_extract_string(metadata,'$.consolidation_request_hash'), "
+                    "json_extract_string(metadata,'$.consolidation_key'), "
+                    "json_extract_string(metadata,'$.consolidation_generation') "
+                    "FROM nodes WHERE user_id=? AND scope=? AND node_type='summary' "
                     "AND lifecycle_state IN ('tentative','stable') "
                     "AND json_extract_string(metadata,'$.consolidation_summary')='true' "
                     "AND json_extract_string(metadata,'$.consolidation_key')=?",
                     [node.user_id, node.scope.value, plan.key],
                 ).fetchall()
+            converged = _converged_publication_id(
+                plan, [tuple(value) for value in prior_rows]
+            )
+            if converged is not None:
+                _validate_sources(plan, current)
+                journal_deadline()
+                conn.execute("ROLLBACK")
+                return converged
             _validate_dependencies(plan, current, [str(value[0]) for value in prior_rows])
             # Validate the original snapshots first, then make a real write to
             # every dependency. A writer that committed after this transaction's
@@ -723,7 +780,10 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
         metadata = node.metadata or {}
         if metadata.get("summary_publication_kind") == "hierarchical_source_excerpts_v2":
             prior_rows = await conn.fetch(
-                "SELECT id FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
+                "SELECT id, metadata->>'consolidation_request_hash' AS request_hash, "
+                "metadata->>'consolidation_key' AS consolidation_key, "
+                "metadata->>'consolidation_generation' AS consolidation_generation "
+                "FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
                 "AND lifecycle_state IN ('tentative','stable') AND ("
                 "(metadata->>'consolidation_summary'='true' "
                 "AND metadata->>'consolidation_key'=$3) OR ("
@@ -739,7 +799,10 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
             )
         else:
             prior_rows = await conn.fetch(
-                "SELECT id FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
+                "SELECT id, metadata->>'consolidation_request_hash' AS request_hash, "
+                "metadata->>'consolidation_key' AS consolidation_key, "
+                "metadata->>'consolidation_generation' AS consolidation_generation "
+                "FROM nodes WHERE user_id=$1 AND scope=$2 AND node_type='summary' "
                 "AND lifecycle_state IN ('tentative','stable') "
                 "AND metadata->>'consolidation_summary'='true' "
                 "AND metadata->>'consolidation_key'=$3 FOR UPDATE",
@@ -747,6 +810,22 @@ async def commit_postgres(store: PgGraphStore, plan: ConsolidationPublication) -
                 node.scope.value,
                 plan.key,
             )
+        converged = _converged_publication_id(
+            plan,
+            [
+                (
+                    row["id"],
+                    row["request_hash"],
+                    row["consolidation_key"],
+                    row["consolidation_generation"],
+                )
+                for row in prior_rows
+            ],
+        )
+        if converged is not None:
+            _validate_sources(plan, current)
+            journal_deadline()
+            return converged
         _validate_dependencies(plan, current, [str(row["id"]) for row in prior_rows])
         await store._create_node_on_connection(conn, node)
         vector_sql = await resolve_vector_sql(conn)
