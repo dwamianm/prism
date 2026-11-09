@@ -50,7 +50,7 @@ from uuid import UUID, uuid4
 
 import duckdb
 
-from prme.config import PRMEConfig
+from prme.config import DEFAULT_MAX_PROFILE_TOKENS, PRMEConfig
 from prme.ingestion.errors import MaterializationError, ReingestDisabledError, extraction_failure_code
 from prme.models import (
     Event,
@@ -4549,7 +4549,7 @@ class MemoryEngine:
         user_id: str,
         scope: Scope | None = None,
         entity_names: list[str] | None = None,
-        max_profile_tokens: int = 500,
+        max_profile_tokens: int = DEFAULT_MAX_PROFILE_TOKENS,
         include_speaker_turns: bool = False,
     ) -> int:
         """Build entity knowledge profiles from stored nodes.
@@ -4569,7 +4569,8 @@ class MemoryEngine:
             entity_names: Optional list of entity names to consolidate.
                 If None, auto-detects names from content (proper nouns).
             max_profile_tokens: Maximum complete profile tokens, including source
-                metadata, using the configured packing tokenizer.
+                metadata, using the configured packing tokenizer. The profile
+                records it, so a rebuild keeps the budget it was built with.
             include_speaker_turns: Also take every record stored with the
                 person as their ``speaker``, since an owner says "my
                 husband", not their own name. The profile refresh of
@@ -4864,6 +4865,7 @@ class MemoryEngine:
                     "source_paths": source_paths,
                     "profile_format_version": 2, "tokens_used": profile_tokens,
                     "tokenizer": self._config.packing.tokenizer,
+                    "max_profile_tokens": max_profile_tokens,
                 },
                 evidence_refs=list(dict.fromkeys(ref for node in selected_sources for ref in node.evidence_refs)),
                 confidence=confidence,

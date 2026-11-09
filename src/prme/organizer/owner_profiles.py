@@ -8,7 +8,9 @@ person spoke (``include_speaker_turns``), so a profile is stale when an
 active record newer than it mentions that name or was said by that person
 and is not among its sources. A profile that already left sources out of its
 token budget is not rebuilt: its oldest sources come first, so its text would
-not change.
+not change. A rebuild keeps the token budget the replaced profile recorded, so
+a profile an application built with a larger budget is not silently cut back to
+the default (issue #422).
 
 - :func:`refresh_stale_profiles` runs in the organizer's opportunistic pass:
   it rebuilds each of the owner's stale profiles, newest first, until the
@@ -31,6 +33,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from prme.config import DEFAULT_MAX_PROFILE_TOKENS
 from prme.ingestion.owner_name import carried_owner_entity
 from prme.models.speaker import metadata_speaker
 from prme.organizer.profiles import mentions_entity, run_profile_work
@@ -62,6 +65,27 @@ MIN_PROFILE_SOURCES = 2
 
 def _newest(nodes: list[MemoryNode]) -> MemoryNode:
     return max(nodes, key=lambda node: (node.created_at, str(node.id)))
+
+
+def _profile_budget(profile: MemoryNode | None) -> int:
+    """The token budget to rebuild *profile* with.
+
+    A profile records the ``max_profile_tokens`` it was built with, so a
+    rebuild keeps a larger budget instead of falling back to the default and
+    silently dropping sources the earlier build had included (issue #422).
+    A profile written before that key existed falls back to its
+    ``tokens_used``, which was within its budget, so a rebuild starts from the
+    tokens it used rather than the default. A recorded zero is not a budget a
+    build can publish, so it is treated as unknown.
+    """
+    metadata = (profile.metadata or {}) if profile is not None else {}
+    budget = metadata.get("max_profile_tokens")
+    if type(budget) is int and budget > 0:
+        return budget
+    used = metadata.get("tokens_used")
+    if type(used) is int and used >= 0:
+        return max(DEFAULT_MAX_PROFILE_TOKENS, used)
+    return DEFAULT_MAX_PROFILE_TOKENS
 
 
 async def _bound_claims(engine: MemoryEngine, *, user_id: str, scope: Scope, name: str) -> list[MemoryNode]:
@@ -196,10 +220,19 @@ async def _owner_has_policy(engine: MemoryEngine, user_id: str) -> bool:
     return bool(privacy.selected() or await privacy.owner_records(user_id))
 
 
-async def _rebuild(engine: MemoryEngine, *, user_id: str, scope: Scope, name: str) -> dict | None:
+async def _rebuild(
+    engine: MemoryEngine, *, user_id: str, scope: Scope, name: str, profile: MemoryNode | None,
+) -> dict | None:
+    """Rebuild one profile at the budget it recorded; None when the rebuild failed.
+
+    *profile* is the active profile the rebuild replaces, or None when there is
+    none yet. A caller must pass it rather than rely on a default, so a future
+    caller cannot silently rebuild at the default budget (issue #422).
+    """
     try:
         published = await engine.consolidate_knowledge(
-            user_id=user_id, scope=scope, entity_names=[name], include_speaker_turns=True,
+            user_id=user_id, scope=scope, entity_names=[name],
+            max_profile_tokens=_profile_budget(profile), include_speaker_turns=True,
         )
     except Exception:
         logger.warning("Profile rebuild failed; the previous profile stays", exc_info=True)
@@ -242,7 +275,9 @@ async def refresh_stale_profiles(engine: MemoryEngine, *, user_id: str, deadline
         mentions = await _mentioning(engine, user_id=user_id, scope=profile.scope, name=name)
         if not await _is_stale(engine, profile, mentions) or time.monotonic() >= deadline:
             continue
-        entry = await _rebuild(engine, user_id=user_id, scope=profile.scope, name=name)
+        entry = await _rebuild(
+            engine, user_id=user_id, scope=profile.scope, name=name, profile=profile,
+        )
         if entry is not None:
             rebuilt.append(entry)
     return rebuilt
@@ -273,16 +308,19 @@ async def refresh_owner_profiles(engine: MemoryEngine, *, user_id: str, deadline
         name = owner.content.strip()
         profiles = await profiles_named(engine._graph_store, user_id=user_id, name=name, scopes=[scope])
         mentions = await _mentioning(engine, user_id=user_id, scope=scope, name=name)
+        profile = None
         if profiles:
-            newest = _newest(profiles)
-            if not await _is_stale(engine, newest, mentions):
+            profile = _newest(profiles)
+            if not await _is_stale(engine, profile, mentions):
                 continue
-            name = profile_entity_name(newest) or name
+            name = profile_entity_name(profile) or name
         elif len(mentions) < MIN_PROFILE_SOURCES:
             continue
         if time.monotonic() >= deadline:
             break
-        entry = await _rebuild(engine, user_id=user_id, scope=scope, name=name)
+        entry = await _rebuild(
+            engine, user_id=user_id, scope=scope, name=name, profile=profile,
+        )
         if entry is not None:
             rebuilt.append(entry)
     return rebuilt

@@ -504,8 +504,15 @@ records how many sources each path supplied under `source_paths`.
 
 Rebuilding replaces the profile record (the old one is archived); the records
 it is built from are never changed. Profiles are matched by name and speaker
-with no model call, and publishing a profile embeds its text once. A rebuild
-uses the default 500-token budget.
+with no model call, and publishing a profile embeds its text once. On a store
+without a privacy policy a profile records the token budget it was built with,
+and a rebuild uses that budget, so an application's larger budget is not cut
+back to the default (issue #422). A profile written before the budget was
+recorded is rebuilt at the default 500 tokens, or at the tokens it used when
+that is larger, so the default does not drop a source it already quotes under
+the same packing tokenizer. A
+protected profile's journal projection keeps only its source counts and tokens,
+and the refresh below does not run for an owner under a privacy policy.
 
 On the fast gate (2026-11-05, `deepseek-v4.1-flash:cloud` through Ollama
 0.40.14, every build replaying the extraction cache), the option on left the
@@ -519,7 +526,7 @@ three records and pushed the first-person dependents answer from third to
 fourth, so the member probe fell to 9 of 12 in the top 3.
 
 It stays off although those tiers passed. A profile keeps its oldest sources
-within 500 tokens, and each source carries about 70 tokens of identifiers and
+within its token budget (500 tokens by default), and each source carries about 70 tokens of identifiers and
 times, so an owner's profile is a snapshot of their first few records: after
 54 turns of `chat-v1` it held the first turn and two small facts. A
 first-person question about now ("Where do I work now?") would get that

@@ -40,7 +40,7 @@ from collections.abc import Collection, Coroutine, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 from uuid import UUID
 
-from prme.config import PRMEConfig
+from prme.config import DEFAULT_MAX_PROFILE_TOKENS, PRMEConfig
 from prme.storage.embedding import EmbeddingProvider
 from prme.models.relevance import (
     AnswerCitationRecord,
@@ -1107,7 +1107,7 @@ class MemoryClient:
         user_id: str,
         scope: Scope | None = None,
         entity_names: list[str] | None = None,
-        max_profile_tokens: int = 500,
+        max_profile_tokens: int = DEFAULT_MAX_PROFILE_TOKENS,
     ) -> int:
         """Build scoped profiles under an exact token limit, matching the async API."""
         return self._run(
