@@ -259,7 +259,12 @@ async def initialize_pg_database(
 ) -> VectorSQL:
     """Create all PRME tables, indexes and extensions in PostgreSQL.
 
-    Safe to call multiple times (idempotent via IF NOT EXISTS).
+    Safe to call multiple times (idempotent via IF NOT EXISTS). Calls against
+    one schema are serialized by a transaction-scoped advisory lock, because
+    ``CREATE TABLE IF NOT EXISTS`` is not safe against a concurrent twin: both
+    sessions can see the table missing and the second fails on the catalog's
+    unique index. The lock is keyed to the target schema and taken inside the
+    same transaction that creates the relations, as ``namespace.py`` does.
 
     Args:
         pool: asyncpg connection pool.
@@ -268,7 +273,12 @@ async def initialize_pg_database(
     """
     if type(embedding_dim) is not int or embedding_dim < 1:
         raise ValueError("embedding_dim must be a positive integer")
-    async with pool.acquire() as conn:
+    async with pool.acquire() as conn, conn.transaction():
+        schema = await conn.fetchval("SELECT pg_catalog.current_schema()")
+        await conn.execute(
+            "SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended($1, 0))",
+            schema,
+        )
         # Extensions
         for ext_sql in _EXTENSIONS:
             await conn.execute(ext_sql)
