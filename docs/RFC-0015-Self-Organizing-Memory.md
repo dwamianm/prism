@@ -461,10 +461,59 @@ class JobResult(BaseModel):
     nodes_modified: int
     errors: int
     duration_ms: float
+    status: str  # completed | budget_exhausted | error
+    stopped_on_budget: bool
     details: dict[str, Any]  # Job-specific metrics
 ```
 
-### 5.5 Recommended Trigger Points
+### 5.5 Incremental Runs and Watermarks
+
+An explicit `organize()` call is unchanged: unless a caller sets
+`OrganizerConfig.incremental_enabled`, every job stays full-scope and no
+watermark is written. With the option on, `deduplicate` works from a
+per-scope, per-job watermark stored in `organizer_watermarks`, one row per
+scope and job. A scoped row is keyed by `u:` plus the user id, and the empty
+string is reserved for an unscoped operator run, so an empty user id cannot
+share the operator's row.
+
+A run captures a ceiling before any work and examines only records created or
+updated after the job's last completed run, up to that ceiling.
+`deduplicate` still searches each changed node's neighbors in the vector
+index, so a new copy can merge with an older twin. Records are paged in
+`(updated_at, id)` order, so a run that stops on its budget records the keyset
+position it reached and the next run resumes there.
+
+The watermark advances only after the job's writes have committed. A
+completed run stores the ceiling, less a 60-second overlap, as
+`completed_through`. The overlap re-examines a bounded tail because a node's
+`updated_at` is assigned before its row is inserted, so a concurrent write
+can appear with a stamp just below the ceiling. A stopped or failed run keeps
+`completed_through` and records the processed prefix in `resume_updated_at`
+and `resume_id`; with no processed prefix the previous row stands and the
+window re-runs.
+
+The other jobs stay full-scope. An unchanged scope cannot make them provably
+no-ops: `promote` depends on a node crossing `promotion_age_days`,
+`snapshot_generation` depends on an entity's neighborhood and edges, a node
+can decay below a threshold, a TTL can expire, or a cluster can become
+eligible without any node being written. Only `deduplicate` has a candidate
+set that a node write fully determines.
+
+Changing a job's tuning setting, rebuilding the vector index, or switching the
+active embedding model does not re-examine records the watermark has already
+passed, because deduplicate's candidate set also depends on the index. Run
+with the option off, or clear that scope's row, to re-evaluate existing data
+under the new setting or index. The same applies to a record materialized
+from an event whose timestamp is older than the window: the 60-second overlap
+covers a write that becomes visible soon after its stamp, not one admitted
+much later with an old stamp.
+
+Known limitation: on a privacy-admitted store, `scan_changed_nodes` reads the
+whole admitted scope and sorts it in memory on every page, so an incremental
+page costs a scan of the scope and the nothing-new bound is not met there.
+This is follow-up work.
+
+### 5.6 Recommended Trigger Points
 
 The host application SHOULD call `organize()` at these lifecycle boundaries:
 
@@ -475,7 +524,7 @@ The host application SHOULD call `organize()` at these lifecycle boundaries:
 | Periodic (if host has a scheduler) | All | Full maintenance pass |
 | After bulk import | `deduplicate`, `alias_resolve`, `summarize` | Clean up imported data |
 
-### 5.6 Session End Helper
+### 5.7 Session End Helper
 
 A convenience method for the common "end of conversation" pattern:
 

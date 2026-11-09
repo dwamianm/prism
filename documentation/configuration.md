@@ -222,6 +222,7 @@ decay and no folding), which stored receipts and configurations rely on.
 | `PRME_ORGANIZER__OPPORTUNISTIC_COOLDOWN` | `3600` | Seconds between opportunistic runs |
 | `PRME_ORGANIZER__OPPORTUNISTIC_BUDGET_MS` | `200` | Budget for opportunistic runs |
 | `PRME_ORGANIZER__DEFAULT_ORGANIZE_BUDGET_MS` | `5000` | Default budget for explicit organize() |
+| `PRME_ORGANIZER__INCREMENTAL_ENABLED` | `false` | Run deduplicate over only changed records and resume a budget stop (dwamianm/prism#517) |
 | `PRME_ORGANIZER__PROMOTION_AGE_DAYS` | `7.0` | Days before auto-promotion |
 | `PRME_ORGANIZER__PROMOTION_EVIDENCE_COUNT` | `1` | Min evidence refs for promotion |
 | `PRME_ORGANIZER__ARCHIVE_SALIENCE_THRESHOLD` | `0.10` | Salience below this → archive candidate |

@@ -403,6 +403,143 @@ class DuckPGQGraphStore:
                 exclude_archived_profiles,
             )
 
+    # --- Incremental organizer reads (dwamianm/prism#517) ---
+
+    async def scan_changed_nodes(
+        self,
+        *,
+        user_id: str | None,
+        lifecycle_states: list[LifecycleState],
+        updated_after: datetime | None,
+        updated_at_or_before: datetime,
+        node_type: NodeType | None = None,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[MemoryNode]:
+        def read() -> list[MemoryNode]:
+            nodes = self._scan_changed_nodes_sync(
+                user_id,
+                lifecycle_states,
+                updated_after,
+                updated_at_or_before,
+                node_type,
+                after_id,
+                limit,
+            )
+            return nodes if user_id is None else self._owned_view_sync(nodes, user_id)
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
+    def _scan_changed_nodes_sync(
+        self,
+        user_id: str | None,
+        lifecycle_states: list[LifecycleState],
+        updated_after: datetime | None,
+        updated_at_or_before: datetime,
+        node_type: NodeType | None,
+        after_id: str | None,
+        limit: int,
+    ) -> list[MemoryNode]:
+        """Page a scope in (updated_at, id) order with a keyset cursor."""
+        conditions: list[str] = []
+        params: list = []
+
+        placeholders = ", ".join("?" for _ in lifecycle_states)
+        conditions.append(f"lifecycle_state IN ({placeholders})")
+        params.extend(state.value for state in lifecycle_states)
+
+        if user_id is not None:
+            conditions.append("user_id = ?")
+            params.append(user_id)
+
+        if node_type is not None:
+            conditions.append("node_type = ?")
+            params.append(node_type.value)
+
+        # COALESCE keeps the keyset total for any legacy row without
+        # updated_at. MemoryNode requires updated_at, so such a row still
+        # fails loudly when it is materialized rather than being skipped.
+        conditions.append("COALESCE(updated_at, created_at) <= ?")
+        params.append(updated_at_or_before)
+
+        if updated_after is not None:
+            if after_id is not None:
+                conditions.append(
+                    "(COALESCE(updated_at, created_at) > ? OR "
+                    "(COALESCE(updated_at, created_at) = ? AND id > ?::UUID))"
+                )
+                params.extend([updated_after, updated_after, after_id])
+            else:
+                conditions.append("COALESCE(updated_at, created_at) > ?")
+                params.append(updated_after)
+
+        where_clause = " AND ".join(conditions)
+        query = (
+            f"SELECT * FROM nodes WHERE {where_clause} "
+            "ORDER BY COALESCE(updated_at, created_at) ASC, id ASC LIMIT ?"
+        )
+        params.append(limit)
+
+        rows = self._conn.execute(query, params).fetchall()
+        return [self._row_to_node(row) for row in rows]
+
+    async def get_organizer_watermark(self, *, scope_key: str, job: str):
+        """Read one scope and job's watermark, if it has ever completed."""
+        from prme.organizer.watermarks import OrganizerWatermark
+
+        def read() -> OrganizerWatermark | None:
+            row = self._conn.execute(
+                "SELECT completed_through, resume_updated_at, resume_id "
+                "FROM organizer_watermarks WHERE scope_key = ? AND job = ?",
+                [scope_key, job],
+            ).fetchone()
+            if row is None:
+                return None
+
+            def ensure_tz(value: datetime | None) -> datetime | None:
+                if value is None:
+                    return None
+                return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+            resume_id = None if row[2] is None else str(row[2])
+            return OrganizerWatermark(
+                scope_key=scope_key,
+                job=job,
+                completed_through=ensure_tz(row[0]),
+                resume_updated_at=ensure_tz(row[1]),
+                resume_id=resume_id,
+            )
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
+    async def set_organizer_watermark(
+        self,
+        *,
+        scope_key: str,
+        job: str,
+        completed_through: datetime | None,
+        resume_updated_at: datetime | None = None,
+        resume_id: str | None = None,
+    ) -> None:
+        """Upsert a job's progress for one scope."""
+        def write() -> None:
+            self._conn.execute(
+                "INSERT INTO organizer_watermarks "
+                "(scope_key, job, completed_through, resume_updated_at, resume_id, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, current_timestamp) "
+                "ON CONFLICT (scope_key, job) DO UPDATE SET "
+                "completed_through = excluded.completed_through, "
+                "resume_updated_at = excluded.resume_updated_at, "
+                "resume_id = excluded.resume_id, "
+                "updated_at = excluded.updated_at",
+                [scope_key, job, completed_through, resume_updated_at, resume_id],
+            )
+
+        async with self._conn_lock:
+            await run_to_completion(write)
+
     # --- Node Update ---
 
     async def update_node(self, node_id: str, **updates) -> None:

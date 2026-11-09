@@ -492,6 +492,119 @@ class PgGraphStore:
             count = await conn.fetchval(query, *params)
         return int(count or 0)
 
+    # --- Incremental organizer reads (dwamianm/prism#517) ---
+
+    async def scan_changed_nodes(
+        self,
+        *,
+        user_id: str | None,
+        lifecycle_states: list[LifecycleState],
+        updated_after: datetime | None,
+        updated_at_or_before: datetime,
+        node_type: NodeType | None = None,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[MemoryNode]:
+        """Page a scope in (updated_at, id) order with a keyset cursor."""
+        conditions: list[str] = []
+        params: list = []
+        idx = 1
+
+        placeholders = ", ".join(f"${idx + i}" for i in range(len(lifecycle_states)))
+        conditions.append(f"lifecycle_state IN ({placeholders})")
+        params.extend(state.value for state in lifecycle_states)
+        idx += len(lifecycle_states)
+
+        if user_id is not None:
+            conditions.append(f"user_id = ${idx}")
+            params.append(user_id)
+            idx += 1
+
+        if node_type is not None:
+            conditions.append(f"node_type = ${idx}")
+            params.append(node_type.value)
+            idx += 1
+
+        conditions.append(f"COALESCE(updated_at, created_at) <= ${idx}")
+        params.append(updated_at_or_before)
+        idx += 1
+
+        if updated_after is not None:
+            if after_id is not None:
+                conditions.append(
+                    f"(COALESCE(updated_at, created_at) > ${idx} OR "
+                    f"(COALESCE(updated_at, created_at) = ${idx + 1} AND id > ${idx + 2}::uuid))"
+                )
+                params.extend([updated_after, updated_after, after_id])
+                idx += 3
+            else:
+                conditions.append(f"COALESCE(updated_at, created_at) > ${idx}")
+                params.append(updated_after)
+                idx += 1
+
+        where = " AND ".join(conditions)
+        query = (
+            f"SELECT {_NODE_COLUMNS} FROM nodes WHERE {where} "
+            f"ORDER BY COALESCE(updated_at, created_at) ASC, id ASC LIMIT ${idx}"
+        )
+        params.append(limit)
+
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+            nodes = [record_to_node(row) for row in rows]
+            if user_id is None:
+                return nodes
+            return await self._owned_view(conn, nodes, user_id)
+
+    async def get_organizer_watermark(self, *, scope_key: str, job: str):
+        """Read one scope and job's watermark, if it has ever completed."""
+        from prme.organizer.watermarks import OrganizerWatermark
+
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT completed_through, resume_updated_at, resume_id "
+                "FROM organizer_watermarks WHERE scope_key = $1 AND job = $2",
+                scope_key,
+                job,
+            )
+        if row is None:
+            return None
+        resume_id = None if row["resume_id"] is None else str(row["resume_id"])
+        return OrganizerWatermark(
+            scope_key=scope_key,
+            job=job,
+            completed_through=row["completed_through"],
+            resume_updated_at=row["resume_updated_at"],
+            resume_id=resume_id,
+        )
+
+    async def set_organizer_watermark(
+        self,
+        *,
+        scope_key: str,
+        job: str,
+        completed_through: datetime | None,
+        resume_updated_at: datetime | None = None,
+        resume_id: str | None = None,
+    ) -> None:
+        """Upsert a job's progress for one scope."""
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                "INSERT INTO organizer_watermarks "
+                "(scope_key, job, completed_through, resume_updated_at, resume_id, updated_at) "
+                "VALUES ($1, $2, $3, $4, $5::uuid, now()) "
+                "ON CONFLICT (scope_key, job) DO UPDATE SET "
+                "completed_through = excluded.completed_through, "
+                "resume_updated_at = excluded.resume_updated_at, "
+                "resume_id = excluded.resume_id, "
+                "updated_at = excluded.updated_at",
+                scope_key,
+                job,
+                completed_through,
+                resume_updated_at,
+                resume_id,
+            )
+
     # --- Node Update ---
 
     async def scan_nodes(

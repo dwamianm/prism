@@ -8,7 +8,10 @@ DuckPGQ limitations.
 
 from datetime import datetime
 from uuid import UUID
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from prme.organizer.watermarks import OrganizerWatermark
 
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
@@ -263,6 +266,44 @@ class GraphStore(Protocol):
         Returns:
             Number of matching nodes.
         """
+        ...
+
+    async def scan_changed_nodes(
+        self,
+        *,
+        user_id: str | None,
+        lifecycle_states: list[LifecycleState],
+        updated_after: datetime | None,
+        updated_at_or_before: datetime,
+        node_type: NodeType | None = None,
+        after_id: str | None = None,
+        limit: int = 500,
+    ) -> list[MemoryNode]:
+        """Read the nodes an incremental organizer job may examine.
+
+        Orders by ``(updated_at, id)`` so a caller can page and resume with
+        the last processed node as a keyset cursor. ``updated_after`` and
+        ``after_id`` are the exclusive lower bound; ``updated_at_or_before``
+        is the inclusive run ceiling.
+        """
+        ...
+
+    async def get_organizer_watermark(
+        self, *, scope_key: str, job: str,
+    ) -> "OrganizerWatermark | None":
+        """Read one scope and job's organizer watermark, or None."""
+        ...
+
+    async def set_organizer_watermark(
+        self,
+        *,
+        scope_key: str,
+        job: str,
+        completed_through: datetime | None,
+        resume_updated_at: datetime | None = None,
+        resume_id: str | None = None,
+    ) -> None:
+        """Record a job's progress for one scope."""
         ...
 
     # --- Node Update ---
