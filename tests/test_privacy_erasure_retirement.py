@@ -38,7 +38,9 @@ async def test_ER02_shared_pseudonym_retry_and_wrapping_keys_retire_only_after_l
     try:
         events = await engine.ingest_fast_many(items, user_id=owner, request_id=request_id)
         assert await engine.ingest_fast_many(items, user_id=owner, request_id=request_id) == events
-        assert (await engine.process_pending(user_id=owner)).processed == 2
+        # The default 1 s budget is checked between items, so a loaded runner can stop after the first
+        # and leave the second pending. This test is about what processing does, not how fast it is.
+        assert (await engine.process_pending(user_id=owner, budget_ms=60000)).processed == 2
         records = [await engine._privacy.repository.get(event, user_id=owner) for event in events]
         assert records[0].retry == records[1].retry and records[0].retry is not None
         assert all(record.pseudonym_epoch == epoch for record in records)
