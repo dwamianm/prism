@@ -1,5 +1,5 @@
 {
- "derivation_version": 1,
+ "derivation_version": 2,
  "records": {
   "edges": [
    {
@@ -825,7 +825,7 @@
      "polarity": "positive",
      "predicate": "partner",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-1"
      },
      "replaces_object": null,
@@ -876,7 +876,7 @@
      "polarity": "positive",
      "predicate": "wants",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-4"
      },
      "replaces_object": null,
@@ -928,7 +928,7 @@
      "polarity": "positive",
      "predicate": "needs",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-4"
      },
      "replaces_object": null,
@@ -980,7 +980,7 @@
      "polarity": "positive",
      "predicate": "planning_trip_to",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-1"
      },
      "replaces_object": null,
@@ -1033,7 +1033,7 @@
      "polarity": "positive",
      "predicate": "chose_destinations",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-3"
      },
      "replaces_object": null,
@@ -1078,7 +1078,7 @@
      "polarity": "positive",
      "predicate": "dropped_destination",
      "reingest": {
-      "fingerprint": "84378eb6c1a955ad67755975b6c4aa67b6adb1c09e7155a62aabb86a8d018e19",
+      "fingerprint": "3af31a74016deae475bb6110d0e6c0c7251694d60c340c94a732d1e36ff755a6",
       "source_event_id": "event-3"
      },
      "replaces_object": null,

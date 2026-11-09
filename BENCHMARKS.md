@@ -2212,8 +2212,10 @@ so its claims are one model sample and not the "off" build's).
   as a coordinated subject ("Yes, I have" now reads "Yes, Maya has"), and
   after "and" the name is written only before a verb that reads the same
   for a coordinated subject and a clause ("Jordan and I have" is labeled
-  instead), so the "on" columns above were measured with the earlier rule.
-  The option stays off. Two
+  instead), and the rule was narrowed again (dwamianm/prism#409: quoted
+  speech, abbreviations, set phrases, the noun "mine", the Roman numeral I,
+  and a few verb and case forms), so the "on" columns above were measured with
+  earlier rules and a future flip needs a fresh run. The option stays off. Two
   bounded alternatives were not tried: indexing the claim's original words
   while storing the named text (the rank would be the "off" rank by
   construction, at the cost of an index text separate from the content in the

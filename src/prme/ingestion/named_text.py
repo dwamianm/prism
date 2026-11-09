@@ -23,6 +23,16 @@ so it adds no model call and a recorded extraction replays unchanged:
   sentence is kept whole and the name labels it, as the reader context labels
   a turn: "Maya: I live in Denver with my partner Sam."
 
+Only the plain spellings are the pronoun, so an all-caps word that happens to
+read as one is left alone ("I have ME/CFS" keeps ME/CFS, and "Augusta, ME"
+is unchanged), and a lowercase i is not read as I, so a turn that writes only
+i is left unnamed. A first person inside double quotes, or anywhere in a text
+that carries single-quoted speech, is someone else's speech, a set phrase is
+not a possessive ("Oh my god", "Oh my,"), "mine" after a determiner or noun is
+the noun ("a coal mine"), and a capitalized title or numbered part before the
+I makes it a numeral ("World War I"); each of those keeps the sentence whole
+under the label too.
+
 A first version gave such a claim its statement instead ("Maya lives in
 Denver."). On the chat probe that turned long sentence claims into short
 statements that repeat a question's name and verb, and the answers ranked in
@@ -54,13 +64,13 @@ _AFTER_I = {
 # Past forms that are never a base form, so they read the same after a name.
 _PAST = frozenset("""
 ate became began bent bled bought bound bred broke brought built came caught chose dealt drank drew dreamt drove
-dug fed fell felt fled flew forgot fought found froze gave got grew heard held hid hung kept knelt knew laid lay led
+dug fed fell felt fled flew forgot fought found froze gave got grew heard held hid hung kept knelt knew laid led
 left lent lit lost made meant met mistook overcame overslept paid rang ran rode rose said sang sank sat saw sent
 shook shone shot showed shrank slept slid sold sought spent spoke sprang stole stood struck strove swam swept swung
 taught threw told took tore understood undertook went woke won wore wound wrote withdrew
 """.split())
 # Words ending in "ed" that are a base form, not a past tense.
-_BASE_ED = frozenset("bed bleed breed deed embed exceed feed heed need proceed seed shed shred sled speed succeed wed"
+_BASE_ED = frozenset("bed bleed breed deed embed exceed feed heed need proceed seed shed shred sled speed succeed weed wed"
                      .split())
 # Adverbs that may sit between I and its verb.
 _ADVERBS = frozenset("""
@@ -68,6 +78,20 @@ actually already also always basically currently definitely finally generally ho
 normally now occasionally often only personally probably rarely really recently sometimes still truly typically
 usually
 """.split())
+# An interjection before "my" lets a set phrase start ("Oh my god"), but "Oh my phone" is still a possessive.
+_INTERJECTIONS = frozenset({"oh"})
+# "my god", "my goodness": a set phrase only at the start of a clause ("My god", "Oh, my god").
+_MY_SET_PHRASE_AFTER = frozenset({"god", "gosh", "goodness", "lord", "heavens"})
+# A capitalized word before I that heads a title or a numbered part makes I a numeral ("World War I", "Part I").
+_TITLE_HEADS = frozenset("""
+act amendment annex appendix article book chapter class clause episode exhibit figure grade group level paragraph part
+phase rank rule scene schedule section stage subsection table title type volume war world
+""".split())
+# "mine" is the possessive pronoun after a copula, "of" or a coordinator ("the report is mine", "a friend of
+# mine"); after a determiner or a noun used attributively it is the noun ("a coal mine").
+_MINE_POSSESSIVE_BEFORE = frozenset({"am", "are", "be", "been", "being", "is", "of", "was", "were"})
+_DETERMINERS = frozenset({"a", "an", "the", "this", "that", "these", "those", "my", "your", "his", "her", "its",
+                          "our", "their", "no", "some", "any", "every", "each", "another"})
 # A coordinated subject ("Jordan and I are") keeps its verb; an inverted auxiliary ("Do I need") cannot be rewritten.
 # After a coordinator I may also start a clause ("I left and I am tired"), so there the name is written only before a
 # verb that reads the same both ways: a plural form, a past tense or a form that does not change after a name. A comma
@@ -77,10 +101,17 @@ _PLURAL_FORMS = frozenset({"are", "were", "aren't", "weren't"})
 _AUXILIARIES = frozenset("am are is was were do does did have has had can could will would should may might must shall"
                          .split())
 
-_FIRST_PERSON_RE = re.compile(r"(?<![\w'’])(I(?!\.e\.)|me|my|mine|myself)(?![\w'’])|(?<!\w)I(?=['’](?:m|ve|ll|d)\b)",
-                              re.IGNORECASE)
+# Case-sensitive on purpose: only the plain spellings are the pronoun. An all-caps word that happens to read as
+# one is usually not ("ME/CFS", "Augusta, ME"), and a lowercase i is not read as I.
+_FIRST_PERSON_RE = re.compile(
+    r"(?<![\w'’‘])(I(?!\.e\.)|[Mm]e|[Mm]y|[Mm]ine|[Mm]yself)(?![\w'’])"
+    r"|(?<![\w‘])I(?=['’](?:[mM]|[vV][eE]|[lL][lL]|[dD])\b)")
 _CONTRACTION_RE = re.compile(r"['’](m|ve|ll|d)\b", re.IGNORECASE)
 _WORD_RE = re.compile(r"[A-Za-z][A-Za-z'’]*")
+_QUOTE_CHARS = frozenset('"“”')
+_WORD_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'’")
+# A single quote that opens speech: not between two letters, and before a letter. Contractions sit between letters.
+_SINGLE_QUOTED_SPEECH_RE = re.compile(r"(?<!\w)['‘’](?=[A-Za-z])")
 
 
 def has_first_person(text: str) -> bool:
@@ -93,13 +124,63 @@ def possessive(name: str) -> str:
     return f"{name}'" if name.endswith(("s", "S")) else f"{name}'s"
 
 
+def _previous_word_span(text: str, end: int) -> tuple[str, int] | None:
+    """The word or comma right before ``end`` and where it starts, as written; None at the start of the text.
+
+    Scans backward and copies only the word, so a claim's length does not multiply the work per match.
+    """
+    cursor = end
+    while cursor > 0 and text[cursor - 1].isspace():
+        cursor -= 1
+    if cursor > 0 and text[cursor - 1] == ",":
+        return ",", cursor - 1
+    word_end = cursor
+    while cursor > 0 and text[cursor - 1] in _WORD_CHARS:
+        cursor -= 1
+    if cursor == word_end:
+        return None
+    return text[cursor:word_end], cursor
+
+
 def _previous_word(text: str, end: int) -> str | None:
     """The word or comma right before ``end``, lowercased."""
-    before = text[:end].rstrip()
-    if before.endswith(","):
-        return ","
-    match = re.search(r"[A-Za-z'’]+$", before)
+    span = _previous_word_span(text, end)
+    return span[0].casefold() if span is not None else None
+
+
+def _next_word(text: str, start: int) -> str | None:
+    """The word right after ``start``, lowercased; None when the next thing is not a word."""
+    cursor = start
+    while cursor < len(text) and text[cursor].isspace():
+        cursor += 1
+    match = _WORD_RE.match(text, cursor)
     return match.group(0).casefold() if match else None
+
+
+def _followed_by_punctuation(text: str, end: int) -> bool:
+    cursor = end
+    while cursor < len(text) and text[cursor].isspace():
+        cursor += 1
+    return cursor >= len(text) or text[cursor] in ".,;:!?…"
+
+
+def _possessive_mine(text: str, start: int) -> bool:
+    """Whether this "mine" is the possessive pronoun, not the noun ("a coal mine")."""
+    previous = _previous_word(text, start)
+    if previous is None or previous in _MINE_POSSESSIVE_BEFORE or previous in _COORDINATORS:
+        return True
+    if previous.endswith(("'s", "’s")):
+        return True
+    if previous in _DETERMINERS:
+        return False
+    # "a coal mine", "the gold mine": a determiner two words back heads the noun phrase.
+    span = _previous_word_span(text, start)
+    return _previous_word(text, span[1]) not in _DETERMINERS
+
+
+def _keep_apostrophe(replacement: str, source: str) -> str:
+    """A replacement keeps the apostrophe the user typed."""
+    return replacement.replace("'", "’") if "’" in source else replacement
 
 
 def _past_tense(word: str) -> bool:
@@ -120,12 +201,40 @@ def name_first_person(text: str, name: str) -> str | None:
     """
     out: list[str] = []
     position = 0
+    quote_cursor = 0
+    inside_double_quotes = False
+    single_quoted = _SINGLE_QUOTED_SPEECH_RE.search(text) is not None
+    # Two double-quoted spans, or one nested inside another, defeat a parity toggle on the quote marks.
+    several_quotes = sum(text.count(char) for char in _QUOTE_CHARS) >= 4
     for match in _FIRST_PERSON_RE.finditer(text):
         word = match.group(0)
         lowered = word.casefold()
-        out.append(text[position:match.start()])
+        start = match.start()
+        # Track the double-quote state in one forward pass instead of rescanning the prefix for every match.
+        for index in range(quote_cursor, start):
+            if text[index] in _QUOTE_CHARS:
+                inside_double_quotes = not inside_double_quotes
+        quote_cursor = start
+        if single_quoted or several_quotes or inside_double_quotes:
+            # Someone else is quoted ("My husband said \"I was fired.\"", "He said 'call me later.'").
+            # Writing the name there would put their words in the speaker's mouth, so the sentence is kept
+            # whole and the name labels it.
+            return None
+        out.append(text[position:start])
         position = match.end()
+        span = _previous_word_span(text, start)
+        previous = span[0].casefold() if span is not None else None
         if lowered in {"my", "mine"}:
+            if lowered == "my":
+                # "Oh my," is a set phrase, and "My god" or "Oh my god" is one at the start of a clause.
+                if _followed_by_punctuation(text, match.end()):
+                    return None
+                if ((previous is None or previous == "," or previous in _INTERJECTIONS)
+                        and _next_word(text, match.end()) in _MY_SET_PHRASE_AFTER):
+                    return None
+            elif not _possessive_mine(text, start):
+                # "a coal mine": the noun, not the possessive pronoun.
+                return None
             out.append(possessive(name))
             continue
         if lowered == "me":
@@ -134,7 +243,9 @@ def name_first_person(text: str, name: str) -> str | None:
         if lowered == "myself":
             return None
         # I: decide what follows.
-        previous = _previous_word(text, match.start())
+        if span is not None and span[0][:1].isupper() and previous in _TITLE_HEADS:
+            # "World War I": a title or numbered part before the I makes it a numeral, not a subject.
+            return None
         contraction = _CONTRACTION_RE.match(text, position)
         if contraction is not None:
             key = f"'{contraction.group(1).casefold()}"
@@ -142,6 +253,8 @@ def name_first_person(text: str, name: str) -> str | None:
             # "Jordan and I've" may be a coordinated subject ("have") or a clause ("has").
             if form is None or (previous in _COORDINATORS and key == "'ve"):
                 return None
+            if contraction.group(1).isupper():
+                form = form.upper()
             out.append(f"{name} {form}")
             position = contraction.end()
             continue
@@ -174,8 +287,11 @@ def name_first_person(text: str, name: str) -> str | None:
                 continue
             return None
         if key in _AFTER_I:
-            replacement = _AFTER_I[key]
-            if verb_word[:1].isupper():
+            replacement = _keep_apostrophe(_AFTER_I[key], verb_word)
+            if verb_word.isupper():
+                # "I AM PREGNANT" keeps its emphasis.
+                replacement = replacement.upper()
+            elif verb_word[:1].isupper():
                 replacement = replacement[:1].upper() + replacement[1:]
             out.append(name)
             out.append(text[position:verb_start])

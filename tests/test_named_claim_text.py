@@ -5,6 +5,7 @@ extractor answers from a table of recorded results, written as a hosted benefits
 whose name the application knows but who never introduces herself.
 """
 
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -100,7 +101,45 @@ class TestRewrite:
         ("The report is mine.", "The report is Maya's."),
         ("Send it to me.", "Send it to Maya."),
         ("The plan covers it, i.e. my deductible applies.", "The plan covers it, i.e. Maya's deductible applies."),
-        ("How do i enroll my newborn? I am pregnant.", None),
+        ("How do i enroll my newborn? I am pregnant.", "How do i enroll Maya's newborn? Maya is pregnant."),
+        # Only the plain spellings are the pronoun, so an abbreviation that reads as one is left alone (#409).
+        ("I have ME/CFS.", "Maya has ME/CFS."),
+        ("Augusta, ME is cold.", "Augusta, ME is cold."),
+        # A contraction keeps the apostrophe the user typed, and an all-caps verb keeps its emphasis.
+        ("I can’t swim.", "Maya can’t swim."),
+        ("I AM PREGNANT.", "Maya IS PREGNANT."),
+        ("I'M PREGNANT.", "Maya IS PREGNANT."),
+        # "mine" stays the possessive pronoun after a negation, an adverb, "of" or a coordinator.
+        ("The book is not mine.", "The book is not Maya's."),
+        ("It isn't mine.", "It isn't Maya's."),
+        ("This is really mine.", "This is really Maya's."),
+        ("The money is all mine.", "The money is all Maya's."),
+        ("Mine is blue.", "Maya's is blue."),
+        ("That's mine.", "That's Maya's."),
+        ("A friend of mine called.", "A friend of Maya's called."),
+        ("The blue book is hers and mine.", "The blue book is hers and Maya's."),
+        # A proper noun in an adverbial phrase before I is a subject, not a title.
+        ("In Denver I found a job.", "In Denver Maya found a job."),
+        ("Last Monday I went home.", "Last Monday Maya went home."),
+        ("Yesterday at Northwind I met Sam.", "Yesterday at Northwind Maya met Sam."),
+        ("I told Mom I was tired.", "Maya told Mom Maya was tired."),
+        # A lowercase common noun before I is a relative clause, not a title.
+        ("The class I took was hard.", "The class Maya took was hard."),
+        ("The book I bought was cheap.", "The book Maya bought was cheap."),
+        # Only an interjection at the start of a clause makes "my god" a set phrase.
+        ("Wow my new phone is great.", "Wow Maya's new phone is great."),
+        ("Hey my ride is here.", "Hey Maya's ride is here."),
+        ("Ah my head hurts.", "Ah Maya's head hurts."),
+        ("Oh my phone is dead.", "Oh Maya's phone is dead."),
+        ("I gave my word on it.", "Maya gave Maya's word on it."),
+        # An all-caps contraction keeps its emphasis.
+        ("I'VE BEEN THERE.", "Maya HAS BEEN THERE."),
+        ("I’VE BEEN THERE.", "Maya HAS BEEN THERE."),
+        ("That’s mine.", "That’s Maya's."),
+        ("My 2 kids are here.", "Maya's 2 kids are here."),
+        # A lowercase i is not the pronoun, so the words it is not part of are still rewritten.
+        ("i think so.", "i think so."),
+        ("i lost my keys.", "i lost Maya's keys."),
         ("Jordan is allergic to shellfish.", "Jordan is allergic to shellfish."),
     ])
     def test_the_first_person_becomes_the_name(self, text, expected):
@@ -112,14 +151,48 @@ class TestRewrite:
         # A comma is not a coordinator, and after "and" a verb that changes after a name may start a clause.
         "Kai, I need help.", "Jordan and I have a dog.", "Jordan and I don't eat meat.",
         "My partner Jordan and I've been married for years.", "I left and I've got the keys.",
+        # A quoted first person is someone else's speech, in double or single quotes (#409).
+        'My husband said "I was fired."', 'He said “I’m tired.”',
+        "My husband said 'call me later.'", "He said 'I lost my keys.'", "‘I was fired,’ my husband said.",
+        "He said—'call me later.'", "He said:'call me later.'", "He said ’I lost my keys,’ and left.",
+        'He said "she said "I lost my keys" yesterday."',
+        # A set phrase is not a possessive, with or without a comma.
+        "Oh my god, I won.", "Oh, my god, I won.", "Oh my, that is a lot.", "My, what a surprise.",
+        "My god, I won.",
+        # The noun "mine", the Roman numeral I, and verbs the table cannot tell from a past tense.
+        "My uncle owns a coal mine.", "The mine is closed.",
+        "World War I ended in 1918.", "Part I is long.", "Type I diabetes is common.",
+        "Title I was amended.", "Schedule I was complex.", "Appendix I was updated.",
+        "I lay the book down.",
+        "I weed the garden.",
     ])
     def test_a_sentence_it_cannot_rewrite_safely_is_refused(self, text):
         assert name_first_person(text, "Maya") is None
 
-    def test_the_label_keeps_a_sentence_the_rewrite_refuses(self):
-        assert named_claim_text(HOME, "Maya") == f"Maya: {HOME}"
+    def test_a_long_text_is_rewritten_in_one_pass(self):
+        """Caller-controlled text must stay linear: 20,000 first-person words do not multiply the work (#409 review)."""
+        text = "my " * 20000 + "wallet."
+        started = time.monotonic()
+        assert name_first_person(text, "Maya") is not None
+        assert time.monotonic() - started < 5.0
+
+    @pytest.mark.parametrize("text", [
+        HOME, 'My husband said "I was fired."', 'He said “I’m tired.”', "My husband said 'call me later.'",
+        'He said "she said "I lost my keys" yesterday."',
+        "Oh my god, I won.", "Oh, my god, I won.", "Oh my, that is a lot.",
+        "My uncle owns a coal mine.", "World War I ended in 1918.", "Part I is long.",
+        "I lay the book down.", "I weed the garden.",
+    ])
+    def test_the_label_keeps_a_sentence_the_rewrite_refuses(self, text):
+        assert named_claim_text(text, "Maya") == f"Maya: {text}"
+
+    def test_a_sentence_it_can_rewrite_is_not_labeled(self):
         assert named_claim_text(FAMILY_SENTENCE, "Maya") == "Maya's husband is Theo and Maya's child is Nico."
-        assert named_claim_text("Jordan is here.", "Maya") == "Jordan is here."
+
+    @pytest.mark.parametrize("text", ["Jordan is here.", "Augusta, ME is cold.",
+                                      "She dotted the I's and crossed the T's."])
+    def test_a_text_with_no_first_person_is_left_as_it_is(self, text):
+        assert named_claim_text(text, "Maya") == text
 
     def test_a_name_that_ends_in_s_takes_a_bare_apostrophe(self):
         assert possessive("James") == "James'" and possessive("Maya Lone Star") == "Maya Lone Star's"
@@ -132,6 +205,9 @@ class TestRewrite:
     def test_has_first_person(self):
         assert has_first_person("my plan") and has_first_person("Do I?") and not has_first_person("i.e. the plan")
         assert not has_first_person("Jordan is here.") and not has_first_person("We chose Tokyo.")
+        # An abbreviation and a lowercase i are not the pronoun (#409).
+        assert has_first_person("I have ME/CFS") and not has_first_person("Augusta, ME is cold.")
+        assert not has_first_person("i think so")
 
 
 class TestSpeaker:
