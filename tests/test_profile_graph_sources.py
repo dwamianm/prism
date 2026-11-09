@@ -6,11 +6,13 @@ name matching alone never sees either. The profile reads the HAS_FACT edge
 from the person's entity and the source turn's speaker instead.
 """
 
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from prme import MemoryEngine
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
+from prme.organizer.profiles import build_profile
 from prme.types import EdgeType, NodeType, Scope
 from tests import test_durable_ingestion
 
@@ -20,10 +22,15 @@ user = test_durable_ingestion.user
 BUDGET = 2000
 
 
-async def make_node(engine, owner, node_type, content, *, metadata=None, evidence=None, scope=Scope.PERSONAL):
+async def make_node(
+    engine, owner, node_type, content, *, metadata=None, evidence=None,
+    scope=Scope.PERSONAL, identifier=None, event_time=None,
+):
     node = MemoryNode(
-        user_id=owner, node_type=node_type, scope=scope, content=content,
-        metadata=metadata, evidence_refs=[UUID(value) for value in evidence or ()],
+        id=identifier if identifier is not None else uuid4(),
+        user_id=owner, node_type=node_type, scope=scope,
+        content=content, metadata=metadata, event_time=event_time,
+        evidence_refs=[UUID(value) for value in evidence or ()],
     )
     await engine._graph_store.create_node(node)
     return node
@@ -87,6 +94,43 @@ async def test_a_claim_from_the_persons_turn_reaches_the_profile(config, user):
 
     assert "My husband is Theo and my child is Nico." in profile.content
     assert profile.metadata["source_paths"]["spoken"] == {"available": 1, "included": 1}
+
+
+async def test_one_event_time_keeps_the_turn_over_its_narrower_claim(config, user):
+    """Issue #497: with one budget slot, the turn keeps both facts, not the claim."""
+    at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    turn_text = "OK. My husband is Theo and my child is Nico."
+    async with MemoryEngine.open(config) as engine:
+        await engine.store(turn_text, user_id=user, speaker="Maya Okafor", event_time=at)
+        entity = await make_node(
+            engine, user, NodeType.ENTITY, "Maya Okafor", metadata={"entity_type": "person"},
+        )
+        claim = await make_node(
+            engine, user, NodeType.FACT, "Nico is child of Maya Okafor.",
+            # The lowest id sorts before the turn under the old id tie-break.
+            identifier=UUID(int=0), event_time=at,
+            metadata={"subject": "Nico", "predicate": "is_child_of", "object": "Maya Okafor"},
+        )
+        await bind_subject(engine, user, entity, claim)
+        turn = next(
+            node for node in await engine.query_nodes(user_id=user, node_type=NodeType.NOTE)
+            if node.content == turn_text
+        )
+        # Only the header and the turn fit.
+        budget = build_profile(
+            "Maya Okafor", [turn], token_budget=10_000,
+            tokenizer=engine._config.packing.tokenizer,
+        )[2]
+
+        assert await engine.consolidate_knowledge(
+            user_id=user, scope=Scope.PERSONAL, entity_names=["Maya Okafor"],
+            max_profile_tokens=budget, include_speaker_turns=True,
+        ) == 1
+        profile = await active_profile(engine, user, "Maya Okafor")
+
+    assert profile.metadata["source_count_available"] == 3
+    assert profile.metadata["source_node_ids"] == [str(turn.id)]
+    assert "Theo" in profile.content
 
 
 async def test_one_users_first_person_claims_never_reach_another_users_profile(config):
