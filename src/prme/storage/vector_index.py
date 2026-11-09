@@ -468,20 +468,26 @@ class VectorIndex:
         against takeover throughout the native write. Calls without a fence are
         an unmanaged component API; this method does not publish a graph node.
         """
-        embedding = PreparedEmbedding.model_validate_json(embedding.model_dump_json())
-        if not user_id:
-            raise ValueError("Prepared embedding requires an owner")
-        if fence is not None:
-            if fence.conn is not self._conn or fence.conn_lock is not self._conn_lock:
-                raise ValueError("Stage fence and vector index must share their connection and lock")
-            fence.verify_embedding(embedding, user_id)
-        expected = (self._provider.model_name, self._provider.model_version, self._provider.dimension)
-        if ((embedding.model, embedding.version, embedding.dimension) != expected
-                or embedding.dimension != self._index.ndim):
-            raise EmbeddingVersionMismatchError("Prepared embedding differs from the configured index")
-        vector = np.asarray(embedding.values, dtype=np.float32)
-        if not np.any(vector):
-            raise ValueError("Prepared embedding underflows to a zero float32 vector")
+        def prepared(embedding) -> tuple[PreparedEmbedding, np.ndarray]:
+            # The embedded text can be a whole entity profile, so validating the
+            # copy and converting it runs on a worker rather than on the loop.
+            owned = PreparedEmbedding.model_validate_json(embedding.model_dump_json())
+            if not user_id:
+                raise ValueError("Prepared embedding requires an owner")
+            if fence is not None:
+                if fence.conn is not self._conn or fence.conn_lock is not self._conn_lock:
+                    raise ValueError("Stage fence and vector index must share their connection and lock")
+                fence.verify_embedding(owned, user_id)
+            expected = (self._provider.model_name, self._provider.model_version, self._provider.dimension)
+            if ((owned.model, owned.version, owned.dimension) != expected
+                    or owned.dimension != self._index.ndim):
+                raise EmbeddingVersionMismatchError("Prepared embedding differs from the configured index")
+            vector = np.asarray(owned.values, dtype=np.float32)
+            if not np.any(vector):
+                raise ValueError("Prepared embedding underflows to a zero float32 vector")
+            return owned, vector
+
+        embedding, vector = await run_to_completion(prepared, embedding)
         async with self._write_lock:
             async with self._conn_lock:
                 if fence is not None:

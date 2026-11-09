@@ -1,5 +1,6 @@
 """Whole-source entity mention excerpts with explicit provenance and token limits."""
 import asyncio
+import contextvars
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -47,9 +48,12 @@ async def run_profile_work(function: Callable[P, T], *args: P.args, **kwargs: P.
     """Run CPU-bound profile work off the caller's event loop.
 
     Token counting releases the GIL; ``mentions_entity`` bounds each regex call.
+    The step runs in a copy of the caller's context, like ``asyncio.to_thread``,
+    so protected-diagnostics redaction and journal deadlines follow it.
     """
+    context = contextvars.copy_context()
     return await asyncio.get_running_loop().run_in_executor(
-        _profile_executor(), partial(function, *args, **kwargs))
+        _profile_executor(), partial(context.run, function, *args, **kwargs))
 
 
 # Characters one regex call may compare, about 2 ms. The regex engine holds the

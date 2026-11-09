@@ -4,7 +4,7 @@ import json
 from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 from typing_extensions import TypedDict
 
 from prme.models.derivation import PreparedEmbedding, canonical_hash, node_checksum
@@ -81,6 +81,13 @@ class ProfilePublication(BaseModel):
         default=None, exclude_if=lambda value: value is None
     )
 
+    # The request hash serializes the whole profile and its sources, so it is
+    # computed once and remembered. A private attribute is left out of the
+    # model's dump, and so out of its persisted checksum, but not out of
+    # equality. The cache is safe because each boundary copies the plan through
+    # JSON and no caller edits its nested nodes after it is warmed.
+    _request_hash: str | None = PrivateAttr(default=None)
+
     @property
     def entity_name(self) -> str:
         assert self.node.metadata is not None
@@ -112,13 +119,15 @@ class ProfilePublication(BaseModel):
 
     @property
     def request_hash(self) -> str:
-        return profile_request_hash(
-            self.node,
-            self.sources,
-            self.previous,
-            self.generation,
-            (self.embedding.model, self.embedding.version, self.embedding.dimension),
-        )
+        if self._request_hash is None:
+            self._request_hash = profile_request_hash(
+                self.node,
+                self.sources,
+                self.previous,
+                self.generation,
+                (self.embedding.model, self.embedding.version, self.embedding.dimension),
+            )
+        return self._request_hash
 
     @property
     def checksum(self) -> str:
