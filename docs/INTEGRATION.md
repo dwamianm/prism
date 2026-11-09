@@ -694,7 +694,9 @@ Query nodes with flexible filters. Defaults to active lifecycle states
 or `scopes`, `session_ids`, `lifecycle_states`, `valid_at`, `min_confidence`,
 `min_salience`, `content_contains_any`, `created_before`, `oldest_first` and
 `limit`. Use the plural `lifecycle_states`; there is no `offset` argument.
-Pass the owner explicitly in application queries.
+Pass the owner explicitly in application queries. `exclude_archived_profiles=True`
+leaves archived entity profile SUMMARY nodes out of the page and out of
+`count_nodes()` with the same option, before the limit is applied.
 
 ---
 

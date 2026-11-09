@@ -51,6 +51,15 @@ from prme.types import (
 
 logger = logging.getLogger(__name__)
 
+# The opt-in archived-profile exclusion, shared by the listing and the count
+# so the two cannot drift. The JSON type check matches only a boolean marker,
+# as the Python facade and the rest of the codebase read it (issue #432).
+ARCHIVED_PROFILE_EXCLUSION_SQL = (
+    "NOT (node_type = 'summary' AND lifecycle_state = 'archived' "
+    "AND COALESCE(jsonb_typeof(metadata -> 'entity_profile'), '') = 'boolean' "
+    "AND metadata ->> 'entity_profile' = 'true')"
+)
+
 # Shared with the DuckDB-side portability code (prme.storage.graph_rows).
 
 # Node columns qualified with the "n." alias for queries that join
@@ -350,6 +359,7 @@ class PgGraphStore:
         content_contains_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
+        exclude_archived_profiles: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with flexible filters."""
@@ -419,6 +429,12 @@ class PgGraphStore:
             params.append(created_before)
             idx += 1
 
+        if exclude_archived_profiles:
+            # A profile publication archives the previous SUMMARY node and
+            # keeps its metadata, so a newest-first read across lifecycle
+            # states turns into a run of retired profiles (issue #432).
+            conditions.append(ARCHIVED_PROFILE_EXCLUSION_SQL)
+
         where = " AND ".join(conditions) if conditions else "1=1"
         order_direction = "ASC" if oldest_first else "DESC"
         query = (
@@ -441,6 +457,7 @@ class PgGraphStore:
         *,
         user_id: str | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
+        exclude_archived_profiles: bool = False,
     ) -> int:
         """Count nodes matching the filters via SELECT COUNT(*).
 
@@ -463,6 +480,10 @@ class PgGraphStore:
             conditions.append(f"user_id = ${idx}")
             params.append(user_id)
             idx += 1
+
+        if exclude_archived_profiles:
+            # Matches query_nodes() so the count sees the same page.
+            conditions.append(ARCHIVED_PROFILE_EXCLUSION_SQL)
 
         where = " AND ".join(conditions)
         query = f"SELECT COUNT(*) FROM nodes WHERE {where}"

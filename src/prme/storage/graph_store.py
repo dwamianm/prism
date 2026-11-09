@@ -202,6 +202,7 @@ class GraphStore(Protocol):
         content_contains_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
+        exclude_archived_profiles: bool = False,
         limit: int = 100,
     ) -> list[MemoryNode]:
         """Query nodes with filters.
@@ -229,6 +230,10 @@ class GraphStore(Protocol):
                 default descending. Combined with ``created_before`` this lets
                 age-gated scans drain the oldest eligible nodes first instead
                 of repeatedly re-examining the newest window.
+            exclude_archived_profiles: Leave out archived entity profile
+                SUMMARY nodes (``metadata.entity_profile``) so a newest-first
+                page is not a run of retired profiles. Applied inside the
+                query, before the limit. Defaults to ``False``.
             limit: Maximum results to return.
 
         Returns:
@@ -241,6 +246,7 @@ class GraphStore(Protocol):
         *,
         user_id: str | None = None,
         lifecycle_states: list[LifecycleState] | None = None,
+        exclude_archived_profiles: bool = False,
     ) -> int:
         """Count nodes matching the filters without materializing them.
 
@@ -249,6 +255,10 @@ class GraphStore(Protocol):
             lifecycle_states: Filter by lifecycle states. Defaults to
                 active states (TENTATIVE, STABLE, CONTESTED), matching
                 query_nodes().
+            exclude_archived_profiles: Leave out archived entity profile
+                SUMMARY nodes (``metadata.entity_profile``), matching
+                query_nodes(). Applied inside the count query. Defaults to
+                ``False``.
 
         Returns:
             Number of matching nodes.

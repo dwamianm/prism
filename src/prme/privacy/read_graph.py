@@ -6,7 +6,17 @@ from collections import defaultdict
 
 from prme.ingestion.admitted_statements import project_admitted_edge
 from prme.privacy.policy import PrivacyDenied
-from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, NodeType, Scope
+from prme.types import ACTIVE_LIFECYCLE_STATES, EdgeType, LifecycleState, NodeType, Scope
+
+
+def _is_excluded_profile(node, exclude_archived_profiles: bool) -> bool:
+    """Whether an opt-in listing filter leaves this node out (issue #432)."""
+    return bool(
+        exclude_archived_profiles
+        and node.node_type is NodeType.SUMMARY
+        and node.lifecycle_state is LifecycleState.ARCHIVED
+        and (node.metadata or {}).get("entity_profile") is True
+    )
 
 
 class AdmittedGraphView:
@@ -107,7 +117,8 @@ class AdmittedGraphView:
     async def query_nodes(self, *, user_id=None, node_type=None, scope=None, scopes=None,
                           session_ids=None, lifecycle_states=None, valid_at=None,
                           min_confidence=None, min_salience=None, content_contains_any=None,
-                          created_before=None, oldest_first=False, limit=100):
+                          created_before=None, oldest_first=False,
+                          exclude_archived_profiles=False, limit=100):
         self._owner(user_id)
         if scope is not None and scopes is not None:
             raise ValueError("scope and scopes are mutually exclusive")
@@ -116,6 +127,8 @@ class AdmittedGraphView:
         matches = []
         async for page in self._all_nodes(scope=scope, node_type=node_type, lifecycle_states=lifecycle_states):
             for node in page:
+                if _is_excluded_profile(node, exclude_archived_profiles):
+                    continue
                 if scopes is not None and node.scope not in {Scope(item) for item in scopes}:
                     continue
                 if session_ids is not None and node.session_id not in session_ids:
@@ -137,11 +150,18 @@ class AdmittedGraphView:
         matches.sort(key=lambda item: item.created_at, reverse=not oldest_first)
         return await self.context.disclose(matches[:limit])
 
-    async def count_nodes(self, *, user_id=None, lifecycle_states=None):
+    async def count_nodes(self, *, user_id=None, lifecycle_states=None,
+                          exclude_archived_profiles=False):
         self._owner(user_id)
         count = 0
         async for page in self._all_nodes(lifecycle_states=lifecycle_states):
-            count += len(page)
+            if exclude_archived_profiles:
+                count += sum(
+                    not _is_excluded_profile(node, True)
+                    for node in page
+                )
+            else:
+                count += len(page)
         return await self.context.disclose(count)
 
     async def get_event_nodes(self, event_id, *, user_id):
