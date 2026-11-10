@@ -14,13 +14,22 @@ from pydantic import BaseModel, Field
 
 
 class JobResult(BaseModel):
-    """Result of a single organizer job execution."""
+    """Result of a single organizer job execution.
+
+    ``status`` is ``completed`` for a run that reached the end of its work,
+    ``budget_exhausted`` for one that stopped on the time budget and recorded
+    a resume point, and ``error`` when the job failed. An incremental run
+    counts ``nodes_processed`` as nodes examined; a full-scope job keeps its
+    existing per-job definition of that count.
+    """
 
     job: str
     nodes_processed: int = 0
     nodes_modified: int = 0
     errors: int = 0
     duration_ms: float = 0.0
+    status: str = "completed"
+    stopped_on_budget: bool = False
     details: dict[str, Any] = Field(default_factory=dict)
 
 

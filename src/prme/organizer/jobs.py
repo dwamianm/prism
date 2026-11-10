@@ -15,6 +15,11 @@ from typing import TYPE_CHECKING
 from prme.config import OrganizerConfig
 from prme.organizer.decay import compute_effective_confidence, compute_effective_salience
 from prme.organizer.models import JobResult
+from prme.organizer.watermarks import (
+    INCREMENTAL_JOBS,
+    IncrementalWindow,
+    scope_key,
+)
 from prme.types import ACTIVE_LIFECYCLE_STATES, LifecycleState, NodeType
 
 if TYPE_CHECKING:
@@ -43,6 +48,89 @@ ALL_JOBS: list[str] = [
 # an explicitly selected unscoped operator job; ordinary maintenance never tunes.
 DEFAULT_JOBS: tuple[str, ...] = tuple(name for name in ALL_JOBS if name != "feedback_apply")
 
+# Nodes one incremental page may materialize. Pages keep a bounded run from
+# loading a whole 10,000-node scope, and a keyset cursor resumes between pages
+# and between runs.
+_INCREMENTAL_PAGE_SIZE = 500
+
+# A completed run leaves the next window's lower bound this far behind its
+# ceiling. A node's updated_at is assigned when the model is built, before its
+# row is inserted, so a concurrent write can become visible with a stamp just
+# below the ceiling. The overlap re-examines that bounded tail (idempotently)
+# instead of skipping such a record forever.
+_WATERMARK_OVERLAP = timedelta(seconds=60)
+
+
+async def _run_incremental(
+    job_name: str,
+    handler,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+    user_id: str | None,
+) -> JobResult:
+    """Run a change-driven job over the window its watermark allows.
+
+    The run ceiling is captured before any work. The watermark is written
+    after the job's own writes have committed: a completed run advances
+    ``completed_through`` to a point one overlap behind the ceiling, a run
+    that stopped on the budget records the keyset position it reached so the
+    next run resumes there, and a failed run records only its processed
+    prefix instead of advancing past work it did not finish.
+    """
+    scope = scope_key(user_id)
+    ceiling = datetime.now(timezone.utc)
+    watermark = await engine.get_organizer_watermark(scope_key=scope, job=job_name)
+
+    prior_completed = watermark.completed_through if watermark is not None else None
+    resume = watermark.resume_cursor if watermark is not None else None
+    if resume is not None:
+        updated_after, after_id = resume
+    else:
+        updated_after = prior_completed
+        after_id = None
+
+    window = IncrementalWindow(
+        scope_key=scope,
+        job=job_name,
+        ceiling=ceiling,
+        updated_after=updated_after,
+        after_id=after_id,
+    )
+
+    result = await handler(
+        job_name, engine, config, budget_ms, user_id, window=window,
+    )
+    cursor = result.details.pop("_resume", None)
+
+    if result.status == "error" or result.stopped_on_budget:
+        # Do not advance past a window that did not finish. Keep any prefix
+        # that was processed before the failure or the stop so the retry
+        # starts there; with no prefix the previous watermark stands.
+        if cursor is not None:
+            resume_updated_at, resume_id = cursor
+            if isinstance(resume_updated_at, str):
+                resume_updated_at = datetime.fromisoformat(resume_updated_at)
+            await engine.set_organizer_watermark(
+                scope_key=scope,
+                job=job_name,
+                completed_through=prior_completed,
+                resume_updated_at=resume_updated_at,
+                resume_id=resume_id,
+            )
+    else:
+        await engine.set_organizer_watermark(
+            scope_key=scope,
+            job=job_name,
+            completed_through=ceiling - _WATERMARK_OVERLAP,
+        )
+
+    result.details["incremental"] = {
+        "window_start": updated_after.isoformat() if updated_after is not None else None,
+        "window_end": ceiling.isoformat(),
+    }
+    return result
+
 
 async def run_job(
     job_name: str,
@@ -65,7 +153,9 @@ async def run_job(
             jobs also reject cross-owner merges on unscoped runs (issue #66).
 
     Returns:
-        JobResult with execution details.
+        JobResult with execution details. With
+        ``OrganizerConfig.incremental_enabled``, the change-driven jobs run
+        over their watermark window instead of the whole scope.
 
     Raises:
         ValueError: If job_name is not a recognized job.
@@ -88,6 +178,11 @@ async def run_job(
     if handler is None:
         raise ValueError(f"Unknown organizer job: {job_name!r}")
 
+    if config.incremental_enabled and job_name in INCREMENTAL_JOBS:
+        return await _run_incremental(
+            job_name, handler, engine, config, budget_ms, user_id,
+        )
+
     return await handler(job_name, engine, config, budget_ms, user_id)
 
 
@@ -106,6 +201,10 @@ async def _job_promote(
     eligible nodes rather than re-scanning the newest window (which would
     starve older nodes once the tentative backlog exceeds the query limit).
     Processes until budget is exhausted.
+
+    This job stays full-scope: eligibility is driven by age crossing
+    ``promotion_age_days``, which no write records, so an update window would
+    never revisit a node that only grew old enough.
     """
     start = time.monotonic()
     now = datetime.now(timezone.utc)
@@ -438,13 +537,24 @@ async def _job_deduplicate(
     config: OrganizerConfig,
     budget_ms: float,
     user_id: str | None = None,
+    window: IncrementalWindow | None = None,
 ) -> JobResult:
     """Find and merge duplicate memory nodes (issue #11).
 
     Uses vector similarity and exact content matching to identify
     duplicates, then merges them by archiving the lower-quality node
     and creating a SUPERSEDES edge for audit trail.
+
+    With ``window`` (incremental mode) it examines only nodes created or
+    updated since the last completed run. Each changed node is still searched
+    against its neighbors in the vector index, so a new copy finds an older
+    twin, and the run records a keyset position when the budget stops.
     """
+    if window is not None:
+        return await _deduplicate_incremental(
+            job_name, engine, config, budget_ms, user_id, window,
+        )
+
     from prme.organizer.deduplication import find_duplicates, merge_duplicates
 
     start = time.monotonic()
@@ -476,6 +586,143 @@ async def _job_deduplicate(
             "merge_policy": "exact_content_provenance_validity_v1",
         },
     )
+
+
+async def _deduplicate_incremental(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+    user_id: str | None,
+    window: IncrementalWindow,
+) -> JobResult:
+    """Deduplicate one incremental page at a time, merging before advancing.
+
+    The scan half of the job budget examines changed nodes; each is searched
+    against the vector index so a new copy can merge with an older twin. A
+    page's candidates are merged before the keyset cursor moves past them, so
+    a stop leaves the unexamined nodes for the next run.
+    """
+    from prme.organizer.deduplication import find_duplicates_in_page, merge_duplicates
+    from prme.privacy.journals import generation_search
+
+    start = time.monotonic()
+
+    try:
+        index = await generation_search(engine, user_id=user_id)
+    except Exception:
+        logger.warning("Deduplication job failed", exc_info=True)
+        return JobResult(
+            job=job_name,
+            errors=1,
+            duration_ms=round((time.monotonic() - start) * 1000.0, 2),
+            status="error",
+            details={"error": "index_unavailable"},
+        )
+
+    scan_budget_ms = budget_ms / 2
+    updated_after = window.updated_after
+    after_id = window.after_id
+    processed = 0
+    merged_count = 0
+    duplicates_found = 0
+    errors = 0
+    stopped = False
+    failed = False
+    last_cursor: tuple[datetime, str] | None = None
+
+    while True:
+        try:
+            nodes = await engine.scan_changed_nodes(
+                user_id=user_id,
+                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+                updated_after=updated_after,
+                after_id=after_id,
+                updated_at_or_before=window.ceiling,
+                limit=_INCREMENTAL_PAGE_SIZE,
+            )
+        except Exception:
+            logger.warning("Incremental deduplication scan failed", exc_info=True)
+            errors += 1
+            failed = True
+            break
+
+        if not nodes:
+            break
+
+        examined = []
+        for node in nodes:
+            if (time.monotonic() - start) * 1000.0 >= scan_budget_ms:
+                stopped = True
+                break
+            examined.append(node)
+
+        if examined:
+            remaining_ms = max(
+                1.0, scan_budget_ms - (time.monotonic() - start) * 1000.0,
+            )
+            try:
+                duplicates, completed, search_failed = await find_duplicates_in_page(
+                    engine,
+                    config,
+                    examined,
+                    index=index,
+                    budget_ms=remaining_ms,
+                    user_id=user_id,
+                )
+                duplicates_found += len(duplicates)
+                merged_count += await merge_duplicates(
+                    engine, duplicates, **({"user_id": user_id} if user_id else {}),
+                )
+                # Only the searched prefix may move the cursor. A page whose
+                # neighbor search ran out of budget or failed is searched
+                # again, and a failure is reported as an error so it is not
+                # mistaken for a budget stop.
+                if search_failed:
+                    failed = True
+                    errors += 1
+                elif completed < len(examined):
+                    stopped = True
+                done = examined[:completed]
+                processed += len(done)
+                if done:
+                    last_cursor = (
+                        done[-1].updated_at or done[-1].created_at,
+                        str(done[-1].id),
+                    )
+            except Exception:
+                logger.warning(
+                    "Incremental deduplication failed for a page", exc_info=True,
+                )
+                errors += 1
+                failed = True
+
+        # A stop or a failure must not advance the cursor past this page.
+        if stopped or failed:
+            break
+        updated_after = nodes[-1].updated_at or nodes[-1].created_at
+        after_id = str(nodes[-1].id)
+        if len(nodes) < _INCREMENTAL_PAGE_SIZE:
+            break
+
+    result = JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=merged_count,
+        errors=errors,
+        duration_ms=round((time.monotonic() - start) * 1000.0, 2),
+        status="error" if failed else ("budget_exhausted" if stopped else "completed"),
+        stopped_on_budget=stopped,
+        details={
+            "duplicates_found": duplicates_found,
+            "nodes_merged": merged_count,
+            "pairs_not_applied": duplicates_found - merged_count,
+            "merge_policy": "exact_content_provenance_validity_v1",
+        },
+    )
+    if (stopped or failed) and last_cursor is not None:
+        result.details["_resume"] = [last_cursor[0].isoformat(), last_cursor[1]]
+    return result
 
 
 async def _job_alias_resolve(
@@ -534,6 +781,11 @@ async def _job_snapshot_generation(
     Queries all active ENTITY nodes and generates an EntitySnapshot for each.
     Snapshots are ephemeral (not persisted) but this job logs how many were
     generated for observability. A future iteration may cache snapshots.
+
+    This job stays full-scope: a snapshot is built from the entity's
+    neighborhood and edges, and creating an edge does not update either
+    endpoint's ``updated_at``, so an update window would miss an unchanged
+    entity whose relations changed.
     """
     from prme.retrieval.snapshots import generate_entity_snapshot
 

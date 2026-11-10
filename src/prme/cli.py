@@ -616,10 +616,13 @@ async def cmd_organize(args: argparse.Namespace) -> None:
                 print()
                 for name, jr in result.per_job.items():
                     print(f"  [{name}]")
+                    print(f"    Status:    {jr.status}")
                     print(f"    Processed: {jr.nodes_processed}")
                     print(f"    Modified:  {jr.nodes_modified}")
                     print(f"    Errors:    {jr.errors}")
                     print(f"    Duration:  {jr.duration_ms:.1f} ms")
+                    if jr.stopped_on_budget and jr.nodes_processed:
+                        print("    Stopped on the budget; the next run resumes here")
     finally:
         await engine.close()
 

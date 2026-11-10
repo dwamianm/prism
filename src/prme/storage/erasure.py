@@ -679,6 +679,24 @@ async def _purge_sql_step(repository, intent):
                     await session.execute(f"DELETE FROM {table} WHERE node_id=$1", node)
             if "consolidation_stage_fences" in tables:
                 await session.execute("UPDATE consolidation_stage_fences SET epoch=epoch+1 WHERE plan_id=$1", node)
+            if "organizer_watermarks" in tables:
+                # An unscoped run's resume cursor may name a node of any owner.
+                # Clear it rather than retain an erased identity; the run then
+                # re-scans that scope's window.
+                await session.execute(
+                    "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL "
+                    "WHERE resume_id=$1",
+                    node,
+                )
+        if "organizer_watermarks" in tables:
+            # A watermark row names its scope in plaintext, so the erased
+            # owner's rows must not survive the purge. The key encoding lives
+            # in one place so this delete cannot drift from the writer.
+            from prme.organizer.watermarks import scope_key as _scope_key
+            await session.execute(
+                "DELETE FROM organizer_watermarks WHERE scope_key=$1",
+                _scope_key(str(intent.owner_id)),
+            )
         for event_id in event_ids:
             await session.execute("DELETE FROM edges WHERE provenance_event_id=$1 AND user_id=$2", str(event_id), str(intent.owner_id))
         for kind, identifier in targets:

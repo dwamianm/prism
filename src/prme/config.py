@@ -627,6 +627,16 @@ class OrganizerConfig(_ProjectSettings):
         default=5000,
         description="Default time budget for explicit organize() calls",
     )
+    incremental_enabled: bool = Field(
+        default=False,
+        description=(
+            "Run the change-driven deduplicate job over only the records "
+            "created or changed since its last completed run, and resume a "
+            "budget-stopped run where it stopped (dwamianm/prism#517). Off "
+            "keeps every job full-scope and writes no watermarks, so a single "
+            "organize() call behaves exactly as before."
+        ),
+    )
     promotion_age_days: float = Field(
         default=7.0,
         description="Min age in days before auto-promotion [HYPOTHESIS]",

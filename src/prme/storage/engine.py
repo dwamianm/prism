@@ -3145,6 +3145,44 @@ class MemoryEngine:
         graph = await self._ordinary_graph(kwargs.get("user_id"))
         return await graph.query_nodes(**kwargs)
 
+    async def scan_changed_nodes(self, **kwargs) -> list[MemoryNode]:
+        """Read the page an incremental organizer job may examine.
+
+        Honors a protected store's admission projection, like ``query_nodes``.
+        See ``GraphStore.scan_changed_nodes``.
+        """
+        graph = await self._ordinary_graph(kwargs.get("user_id"))
+        return await graph.scan_changed_nodes(**kwargs)
+
+    async def get_organizer_watermark(self, *, scope_key: str, job: str):
+        """Read one scope and job's organizer watermark, or None.
+
+        Watermarks are operational metadata (a timestamp and a node id), so
+        they are read from the graph store directly rather than through the
+        protected read projection.
+        """
+        return await self._graph_store.get_organizer_watermark(
+            scope_key=scope_key, job=job,
+        )
+
+    async def set_organizer_watermark(
+        self,
+        *,
+        scope_key: str,
+        job: str,
+        completed_through,
+        resume_updated_at=None,
+        resume_id: str | None = None,
+    ) -> None:
+        """Record a job's progress for one scope."""
+        await self._graph_store.set_organizer_watermark(
+            scope_key=scope_key,
+            job=job,
+            completed_through=completed_through,
+            resume_updated_at=resume_updated_at,
+            resume_id=resume_id,
+        )
+
     async def _ordinary_graph(self, user_id: str | None, *, scopes=None, records=None):
         """Resolve the read facade without changing the engine's storage handles."""
         if user_id is None:

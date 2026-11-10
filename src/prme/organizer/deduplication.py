@@ -84,9 +84,8 @@ async def find_duplicates(
         List of DuplicateCandidate pairs within one user and scope.
     """
     from prme.privacy.journals import generation_search
-    index = await generation_search(engine, user_id=user_id)
     start = time.monotonic()
-    threshold = config.dedup_similarity_threshold
+    index = await generation_search(engine, user_id=user_id)
 
     # Fetch active nodes
     nodes = await engine.query_nodes(
@@ -94,6 +93,72 @@ async def find_duplicates(
         lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
         limit=batch_size,
     )
+    candidates, _completed, _search_failed = await _find_duplicates_in_nodes(
+        engine,
+        config,
+        nodes,
+        index=index,
+        budget_ms=budget_ms,
+        started_at=start,
+        stop_on_search_error=False,
+    )
+    return candidates
+
+
+async def find_duplicates_in_page(
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    nodes: list[MemoryNode],
+    *,
+    index=None,
+    budget_ms: float = 5000.0,
+    user_id: str | None = None,
+) -> tuple[list[DuplicateCandidate], int, bool]:
+    """Find duplicates among one page of changed nodes and their neighbors.
+
+    Incremental counterpart of :func:`find_duplicates` (dwamianm/prism#517).
+    The caller supplies the nodes created or changed since the last run; each
+    is still searched against the vector index, so a new copy finds an older
+    twin that is not on the page. The second value is how many leading nodes
+    were fully searched, which is how far the caller may advance its cursor.
+    The third value is whether a neighbor search failed, which the caller
+    reports as an error so the run is not mistaken for a budget stop.
+    """
+    if index is None:
+        from prme.privacy.journals import generation_search
+        index = await generation_search(engine, user_id=user_id)
+    return await _find_duplicates_in_nodes(
+        engine,
+        config,
+        nodes,
+        index=index,
+        budget_ms=budget_ms,
+        stop_on_search_error=True,
+    )
+
+
+async def _find_duplicates_in_nodes(
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    nodes: list[MemoryNode],
+    *,
+    index,
+    budget_ms: float,
+    started_at: float | None = None,
+    stop_on_search_error: bool = False,
+) -> tuple[list[DuplicateCandidate], int, bool]:
+    """Propose duplicate pairs among, and against the neighbors of, *nodes*.
+
+    Returns the candidates, how many leading input nodes were fully searched,
+    and whether a search failed. An incremental caller advances its keyset
+    cursor only over the searched prefix and stops at the first failure, so a
+    page whose budget ran out or whose search failed is searched again rather
+    than skipped. The full-scope caller keeps its earlier behavior and skips a
+    node whose search raised.
+    """
+    start = time.monotonic() if started_at is None else started_at
+    search_failed = False
+    threshold = config.dedup_similarity_threshold
 
     # Track already-paired IDs to avoid duplicates in output
     seen_pairs: set[tuple[str, str]] = set()
@@ -114,10 +179,11 @@ async def find_duplicates(
             for j in range(i + 1, len(group)):
                 if not compatible_admitted_pair(compatible_provenance, group[i], group[j]):
                     continue
-                # Budget check
+                # Budget check. The exact phase has not finished, so no input
+                # node counts as fully searched.
                 elapsed_ms = (time.monotonic() - start) * 1000.0
                 if elapsed_ms >= budget_ms:
-                    return candidates
+                    return candidates, 0, False
 
                 a_id = str(group[i].id)
                 b_id = str(group[j].id)
@@ -129,6 +195,7 @@ async def find_duplicates(
                     )
 
     # Phase 2: Semantic similarity via vector search
+    completed = 0
     for node in nodes:
         elapsed_ms = (time.monotonic() - start) * 1000.0
         if elapsed_ms >= budget_ms:
@@ -136,7 +203,10 @@ async def find_duplicates(
 
         node_id = str(node.id)
 
-        # Search for similar vectors
+        # Search for similar vectors. A failed search stops the incremental
+        # prefix rather than counting the node as examined, so this node is
+        # retried on the next run instead of being skipped; the full-scope
+        # path keeps its earlier behavior and skips it for this run.
         try:
             results = await index.search(
                 node.content,
@@ -146,7 +216,11 @@ async def find_duplicates(
             )
         except Exception:
             logger.debug("Vector search failed for node %s", node_id, exc_info=True)
+            if stop_on_search_error:
+                search_failed = True
+                break
             continue
+        completed += 1
 
         for result in results:
             other_id = result["node_id"]
@@ -175,7 +249,7 @@ async def find_duplicates(
                 DuplicateCandidate(node_id, other_id, score, "semantic")
             )
 
-    return candidates
+    return candidates, completed, search_failed
 
 
 # ---------------------------------------------------------------------------

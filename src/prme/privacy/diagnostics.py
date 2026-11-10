@@ -182,6 +182,8 @@ def project_organize(value):
             nodes_modified=job.nodes_modified,
             errors=job.errors,
             duration_ms=job.duration_ms,
+            status=job.status if job.status in {"completed", "budget_exhausted", "error"} else "completed",
+            stopped_on_budget=job.stopped_on_budget,
         )
         for name, job in value.per_job.items()
     }

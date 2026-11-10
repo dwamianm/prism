@@ -1,6 +1,6 @@
 """ER02 provider-state subchecks use real native custody and HMAC consumers."""
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import json
 from uuid import UUID, uuid4
 
@@ -8,6 +8,7 @@ import pytest
 
 from prme.privacy import CategoryAction, PrivacyDenied
 from prme.privacy.erasure import ErasureRequest
+from prme.organizer.watermarks import scope_key
 from prme.privacy.keys import KeyBoundary
 from prme.privacy.local_keys import public_registry
 from prme.privacy.retry_commitments import NativeRetryCommitter
@@ -50,9 +51,30 @@ async def test_ER02_shared_pseudonym_retry_and_wrapping_keys_retire_only_after_l
         assert all(entry.managed_lineages == (lineage,) for entry in custody.inventory() if entry.version in versions)
         retained = (await engine.get_event_nodes(events[1], user_id=owner))[0]
         assert "person.two@example.com" not in retained.content and "PSEUDONYM" in retained.content
+        [first_node] = await engine.get_event_nodes(events[0], user_id=owner)
+        watermark_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(owner), job="deduplicate", completed_through=watermark_at,
+        )
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(None),
+            job="deduplicate",
+            completed_through=watermark_at,
+            resume_updated_at=watermark_at,
+            resume_id=str(first_node.id),
+        )
         await engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=(UUID(events[0]),)), user_id=owner)
         [status] = await engine.process_erasures(user_id=owner, budget_ms=60000)
         assert status.state == "live_purged" and status.failure is None, status
+        # The organizer watermark must not outlive the erased owner, and an
+        # unscoped resume cursor must not retain the erased node id (#517).
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key(owner), job="deduplicate",
+        ) is None
+        unscoped = await engine.get_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate",
+        )
+        assert unscoped is not None and unscoped.resume_cursor is None
         assert versions <= {entry.version for entry in custody.inventory() if entry.state == "ready"}
         assert (await engine.get_event_nodes(events[1], user_id=owner))[0].content == retained.content
         await engine.request_erasure(ErasureRequest(request_id=uuid4(), event_ids=(UUID(events[1]),)), user_id=owner)
@@ -147,3 +169,4 @@ async def test_ER02_shared_custody_store_survives_pending_retirement(tmp_path, l
     finally:
         await survivor.close()
         await engine.close()
+

@@ -150,6 +150,34 @@ class AdmittedGraphView:
         matches.sort(key=lambda item: item.created_at, reverse=not oldest_first)
         return await self.context.disclose(matches[:limit])
 
+    async def scan_changed_nodes(self, *, user_id=None, lifecycle_states,
+                                 updated_after=None, updated_at_or_before,
+                                 node_type=None, after_id=None, limit=500):
+        """Incremental organizer page, projected and disclosed like a read."""
+        self._owner(user_id)
+        if limit <= 0:
+            return []
+        matches = []
+        async for page in self._all_nodes(node_type=node_type, lifecycle_states=lifecycle_states):
+            for node in page:
+                stamp = node.updated_at or node.created_at
+                if stamp > updated_at_or_before:
+                    continue
+                # No lower bound means the whole window up to the ceiling, the
+                # same as the SQL backends' absent window predicate.
+                in_window = updated_after is None
+                if updated_after is not None:
+                    if after_id is not None:
+                        in_window = stamp > updated_after or (
+                            stamp == updated_after and str(node.id) > after_id
+                        )
+                    else:
+                        in_window = stamp > updated_after
+                if in_window:
+                    matches.append(node)
+        matches.sort(key=lambda item: (item.updated_at or item.created_at, str(item.id)))
+        return await self.context.disclose(matches[:limit])
+
     async def count_nodes(self, *, user_id=None, lifecycle_states=None,
                           exclude_archived_profiles=False):
         self._owner(user_id)

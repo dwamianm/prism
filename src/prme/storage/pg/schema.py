@@ -26,7 +26,7 @@ _RUNTIME_TABLES = {
     "events", "nodes", "edges", "operations", "event_materializations", "event_extractions",
     "profile_publication_heads", "profile_work", "profile_preparation_heads",
     "lexical_documents", "derivation_artifact_owners", "derivation_registered_plans",
-    "profile_registered_plans", "consolidation_publication_heads",
+    "profile_registered_plans", "consolidation_publication_heads", "organizer_watermarks",
     "consolidation_registered_plans", "consolidation_stage_fences",
     "privacy_admissions", "privacy_rotation_jobs", "prme_runtime_schema",
 }
@@ -230,6 +230,20 @@ _OPERATIONS_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_operations_created_at ON operations(created_at)",
 ]
 
+# One row per scope and job (dwamianm/prism#517). scope_key is "u:" plus the
+# user id, or the empty string for an unscoped operator run
+# (prme.organizer.watermarks.scope_key).
+_ORGANIZER_WATERMARKS_TABLE = """\
+CREATE TABLE IF NOT EXISTS organizer_watermarks (
+    scope_key VARCHAR NOT NULL,
+    job VARCHAR NOT NULL,
+    completed_through TIMESTAMPTZ,
+    resume_updated_at TIMESTAMPTZ,
+    resume_id UUID,
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (scope_key, job)
+)"""
+
 _LEXICAL_DOCUMENTS_TABLE = """\
 CREATE TABLE IF NOT EXISTS lexical_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -359,6 +373,9 @@ async def initialize_pg_database(
         await conn.execute(_OPERATIONS_TABLE)
         for idx in _OPERATIONS_INDEXES:
             await conn.execute(idx)
+
+        # Organizer watermarks (dwamianm/prism#517)
+        await conn.execute(_ORGANIZER_WATERMARKS_TABLE)
 
         # Lexical documents
         await conn.execute(_LEXICAL_DOCUMENTS_TABLE)

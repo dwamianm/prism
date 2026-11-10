@@ -228,6 +228,24 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
         "ON operations(created_at)"
     )
 
+    # --- Organizer watermarks table (dwamianm/prism#517) ---
+    # One row per scope and job. scope_key is "u:" plus the user id, or the
+    # empty string for an unscoped operator run (prme.organizer.watermarks).
+    # The row records the ceiling of the last completed run and, while a run
+    # is budget-stopped, the keyset position it reached so the next run
+    # resumes instead of starting over.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS organizer_watermarks (
+            scope_key VARCHAR NOT NULL,
+            job VARCHAR NOT NULL,
+            completed_through TIMESTAMPTZ,
+            resume_updated_at TIMESTAMPTZ,
+            resume_id UUID,
+            updated_at TIMESTAMPTZ DEFAULT current_timestamp,
+            PRIMARY KEY (scope_key, job)
+        )
+    """)
+
 
 def _migrate_events_scope(conn: duckdb.DuckDBPyConnection) -> None:
     """Add scope column to events table if missing (auto-migration).
