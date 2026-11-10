@@ -203,6 +203,7 @@ class GraphStore(Protocol):
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        content_equals_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
         exclude_archived_profiles: bool = False,
@@ -226,6 +227,10 @@ class GraphStore(Protocol):
             content_contains_any: Case-insensitive substring filters --
                 matches nodes whose content contains ANY of the given
                 strings (pushed into SQL as LIKE clauses).
+            content_equals_any: Case-insensitive whole-content filters --
+                matches nodes whose trimmed, lowercased content equals ANY
+                of the given trimmed, lowercased strings. An empty list
+                applies no filter.
             created_before: Only return nodes created at or before this time
                 (``created_at <= created_before``). Pushes age-based cutoffs
                 into SQL so the limit applies after filtering.

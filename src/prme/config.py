@@ -630,11 +630,12 @@ class OrganizerConfig(_ProjectSettings):
     incremental_enabled: bool = Field(
         default=False,
         description=(
-            "Run the change-driven deduplicate job over only the records "
-            "created or changed since its last completed run, and resume a "
-            "budget-stopped run where it stopped (dwamianm/prism#517). Off "
-            "keeps every job full-scope and writes no watermarks, so a single "
-            "organize() call behaves exactly as before."
+            "Run the change-driven deduplicate and alias_resolve jobs over "
+            "only the records created or changed since their last completed "
+            "run, and resume a budget-stopped run where it stopped "
+            "(dwamianm/prism#517, #523). Off keeps every job full-scope and "
+            "writes no watermarks, so a single organize() call behaves exactly "
+            "as before."
         ),
     )
     promotion_age_days: float = Field(

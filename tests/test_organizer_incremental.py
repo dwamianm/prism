@@ -1,11 +1,13 @@
-"""Incremental organizer runs, watermarks and resumable budget stops (#517).
+"""Incremental organizer runs, watermarks and resumable budget stops (#517, #523).
 
-Three properties are checked on the converted job:
+Three properties are checked on each converted job, deduplicate and
+alias_resolve:
 
 * a second run over an unchanged scope changes no memory;
 * a run stopped by the budget records where it stopped and the next run
   resumes there instead of starting over;
-* an incremental run and a full run end with the same store on the same input.
+* an incremental run and a full run end with the same store on the same input
+  for a pair whose two endpoints are both in the full job's newest-100 page.
 
 The option is off by default, so a test also checks that a default
 ``organize()`` writes no watermark and behaves as before.
@@ -28,7 +30,7 @@ from prme.organizer import jobs as jobs_module
 from prme.organizer.jobs import run_job
 from prme.organizer.watermarks import INCREMENTAL_JOBS, scope_key
 from prme.storage.engine import MemoryEngine
-from prme.types import LifecycleState, NodeType, Scope
+from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 
 USER = "incremental-user"
@@ -85,6 +87,18 @@ async def _store_many(engine, contents, *, user_id=USER, valid_from=None):
             node_type=NodeType.FACT,
             scope=Scope.PERSONAL,
             valid_from=valid_from,
+        ))
+    return ids
+
+
+async def _store_entities(engine, names, *, user_id=USER):
+    ids = []
+    for name in names:
+        ids.append(await engine.store(
+            name,
+            user_id=user_id,
+            node_type=NodeType.ENTITY,
+            scope=Scope.PERSONAL,
         ))
     return ids
 
@@ -262,6 +276,30 @@ class TestScanChangedNodes:
         assert len(nodes) == 2
 
     @pytest.mark.asyncio
+    async def test_query_nodes_matches_whole_content_case_insensitively(self, engine):
+        await _store_entities(engine, ["JavaScript", " javascript ", "JS"])
+
+        matches = await engine.query_nodes(
+            user_id=USER,
+            node_type=NodeType.ENTITY,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            content_equals_any=["javascript"],
+        )
+        assert sorted(node.content for node in matches) == [" javascript ", "JavaScript"]
+
+        missing = await engine.query_nodes(
+            user_id=USER,
+            content_equals_any=["vaScript"],
+        )
+        assert missing == []
+
+        # An empty list applies no filter, matching content_contains_any().
+        unfiltered = await engine.query_nodes(user_id=USER, content_equals_any=[])
+        assert sorted(node.content for node in unfiltered) == [
+            " javascript ", "JS", "JavaScript",
+        ]
+
+    @pytest.mark.asyncio
     async def test_protected_view_honors_an_absent_lower_bound(self, engine):
         """The admission facade must agree with the SQL stores (#517 review)."""
         from prme.privacy.read_graph import AdmittedGraphView
@@ -288,6 +326,39 @@ class TestScanChangedNodes:
         )
         assert len(nodes) == 2
 
+    @pytest.mark.asyncio
+    async def test_protected_view_matches_whole_content(self, engine):
+        """The name lookup must behave the same through the admitted view."""
+        from prme.privacy.read_graph import AdmittedGraphView
+
+        class _Context:
+            user_id = USER
+
+            async def project_node(self, node):
+                return node
+
+            async def disclose(self, value):
+                return value
+
+            async def check(self):
+                return None
+
+        await _store_entities(engine, ["JavaScript", " javascript ", "JS"])
+        view = AdmittedGraphView(engine._graph_store, _Context())
+        nodes = await view.query_nodes(
+            user_id=USER,
+            node_type=NodeType.ENTITY,
+            content_equals_any=["JAVASCRIPT"],
+        )
+        assert sorted(node.content for node in nodes) == [" javascript ", "JavaScript"]
+
+        unfiltered = await view.query_nodes(
+            user_id=USER, node_type=NodeType.ENTITY, content_equals_any=[],
+        )
+        assert sorted(node.content for node in unfiltered) == [
+            " javascript ", "JS", "JavaScript",
+        ]
+
 
 class TestConvergence:
     @pytest.mark.asyncio
@@ -302,6 +373,108 @@ class TestConvergence:
 
         states = await _all_states(engine)
         assert sorted(state.value for state in states.values()) == ["superseded", "tentative"]
+
+    @pytest.mark.asyncio
+    async def test_second_alias_resolve_run_changes_nothing(self, engine):
+        await _store_entities(engine, ["JavaScript", "js", "PostgreSQL", "postgresql"])
+
+        first = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert first.per_job["alias_resolve"].nodes_modified == 2
+
+        second = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert second.per_job["alias_resolve"].nodes_modified == 0
+
+        states = await _all_states(engine)
+        assert sorted(states.values()).count(LifecycleState.TENTATIVE) == 2
+        assert sorted(states.values()).count(LifecycleState.SUPERSEDED) == 2
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_pages_changed_entities(self, engine, monkeypatch):
+        monkeypatch.setattr(jobs_module, "_INCREMENTAL_PAGE_SIZE", 2)
+        names = ["JavaScript", "js", "PostgreSQL", "postgresql", "TypeScript", "ts"]
+        await _store_entities(engine, names)
+
+        result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        job = result.per_job["alias_resolve"]
+        assert job.status == "completed"
+        assert job.nodes_processed == len(names)
+        assert job.nodes_modified == 3
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_finds_a_twin_outside_the_window(self, engine, monkeypatch):
+        """The name lookup, not the page, is what supplies the older twin."""
+        monkeypatch.setattr(jobs_module, "_WATERMARK_OVERLAP", timedelta(0))
+
+        await _store_entities(engine, ["JavaScript", "alpha"])
+        first = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert first.per_job["alias_resolve"].nodes_modified == 0
+
+        # The first run's ceiling is now the lower bound, so "JavaScript" is
+        # outside the second window and only "js" is examined.
+        await _store_entities(engine, ["js"])
+        second = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert second.per_job["alias_resolve"].nodes_processed == 1
+        assert second.per_job["alias_resolve"].nodes_modified == 1
+
+        states = await _all_states(engine)
+        assert sorted(states.values()).count(LifecycleState.SUPERSEDED) == 1
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_links_a_semantic_twin_outside_the_window(
+        self, engine, monkeypatch,
+    ):
+        monkeypatch.setattr(jobs_module, "_WATERMARK_OVERLAP", timedelta(0))
+
+        await _store_entities(engine, ["Beta Name"])
+        await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        await _store_entities(engine, ["Alpha Name"])
+
+        by_name = {
+            node.content: str(node.id)
+            for node in await engine.query_nodes(
+                user_id=USER, lifecycle_states=list(LifecycleState), limit=100,
+            )
+        }
+        index = engine._vector_index
+        original_search = index.search
+
+        async def semantic_search(content, *args, **kwargs):
+            if content == "Alpha Name":
+                return [{"node_id": by_name["Beta Name"], "score": 0.93}]
+            return await original_search(content, *args, **kwargs)
+
+        monkeypatch.setattr(index, "search", semantic_search)
+
+        second = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert second.per_job["alias_resolve"].nodes_modified == 1
+
+        endpoints = [by_name["Alpha Name"], by_name["Beta Name"]]
+        edges = await engine._graph_store.get_edges(
+            node_ids=endpoints, edge_type=EdgeType.RELATES_TO,
+        )
+        assert len(edges) == 1
+
+        # A re-proposal of the same identity does not add a second link.
+        monkeypatch.setattr(jobs_module, "_WATERMARK_OVERLAP", timedelta(seconds=60))
+        third = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert third.per_job["alias_resolve"].nodes_modified == 0
+        edges = await engine._graph_store.get_edges(
+            node_ids=endpoints, edge_type=EdgeType.RELATES_TO,
+        )
+        assert len(edges) == 1
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_finds_a_twin_on_a_later_page(self, engine, monkeypatch):
+        monkeypatch.setattr(jobs_module, "_INCREMENTAL_PAGE_SIZE", 2)
+        await _store_entities(engine, ["JavaScript", "alpha", "js"])
+
+        result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        job = result.per_job["alias_resolve"]
+        assert job.status == "completed"
+        assert job.nodes_modified == 1
+
+        states = await _all_states(engine)
+        assert sorted(states.values()).count(LifecycleState.SUPERSEDED) == 1
 
     @pytest.mark.asyncio
     async def test_multi_page_scan_advances_and_completes(self, engine, monkeypatch):
@@ -349,6 +522,75 @@ class TestResume:
 
         states = await _all_states(engine)
         assert set(states.values()) == {LifecycleState.TENTATIVE}
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_makes_progress_with_a_tiny_budget(self, engine, monkeypatch):
+        """A budget smaller than one entity's work still leaves a cursor."""
+        await _store_entities(engine, ["Alpha", "Beta", "Gamma"])
+        index = engine._vector_index
+        original_search = index.search
+
+        async def slow_search(*args, **kwargs):
+            await asyncio.sleep(0.02)
+            return await original_search(*args, **kwargs)
+
+        monkeypatch.setattr(index, "search", slow_search)
+
+        result = await engine.organize(
+            user_id=USER, jobs=["alias_resolve"], budget_ms=1,
+        )
+        job = result.per_job["alias_resolve"]
+        assert job.status == "budget_exhausted"
+        assert job.nodes_processed == 1
+
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark.resume_cursor is not None
+
+        resumed = await engine.organize(
+            user_id=USER, jobs=["alias_resolve"], budget_ms=5000,
+        )
+        assert resumed.per_job["alias_resolve"].status == "completed"
+        assert resumed.per_job["alias_resolve"].nodes_processed == 2
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_budget_stop_resumes(self, engine, monkeypatch):
+        names = [
+            "JavaScript", "js", "PostgreSQL", "postgresql",
+            "TypeScript", "ts", "Python", "py",
+        ]
+        await _store_entities(engine, names)
+        monkeypatch.setattr(jobs_module, "_INCREMENTAL_PAGE_SIZE", 2)
+
+        index = engine._vector_index
+        original_search = index.search
+
+        async def slow_search(*args, **kwargs):
+            await asyncio.sleep(0.02)
+            return await original_search(*args, **kwargs)
+
+        monkeypatch.setattr(index, "search", slow_search)
+
+        stopped = await engine.organize(user_id=USER, jobs=["alias_resolve"], budget_ms=120)
+        job = stopped.per_job["alias_resolve"]
+        assert job.status == "budget_exhausted"
+        assert 0 < job.nodes_processed < len(names)
+
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark.resume_cursor is not None
+
+        resumed = await engine.organize(user_id=USER, jobs=["alias_resolve"], budget_ms=5000)
+        assert resumed.per_job["alias_resolve"].status == "completed"
+
+        converged = await engine.organize(user_id=USER, jobs=["alias_resolve"], budget_ms=5000)
+        assert converged.per_job["alias_resolve"].nodes_modified == 0
+
+        states = await _all_states(engine)
+        assert sorted(states.values()).count(LifecycleState.TENTATIVE) == 4
+        assert sorted(states.values()).count(LifecycleState.SUPERSEDED) == 4
 
     @pytest.mark.asyncio
     async def test_failed_page_does_not_move_the_cursor_past_it(self, engine, monkeypatch):
@@ -416,6 +658,133 @@ class TestFailure:
         assert watermark.resume_cursor is None
 
     @pytest.mark.asyncio
+    async def test_alias_name_lookup_failure_is_reported_and_retried(self, engine, monkeypatch):
+        await _store_entities(engine, ["JavaScript", "js"])
+        original_query_nodes = engine.query_nodes
+
+        async def failing_lookup(*args, **kwargs):
+            if kwargs.get("content_equals_any"):
+                raise RuntimeError("name lookup failed")
+            return await original_query_nodes(*args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(engine, "query_nodes", failing_lookup)
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+
+        job = result.per_job["alias_resolve"]
+        assert job.status == "error"
+        assert job.errors >= 1
+
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark is None or watermark.completed_through is None
+        assert watermark is None or watermark.resume_cursor is None
+
+        retried = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert retried.per_job["alias_resolve"].status == "completed"
+        assert retried.per_job["alias_resolve"].nodes_modified == 1
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_failure_does_not_advance_the_watermark(
+        self, engine, monkeypatch,
+    ):
+        await _store_entities(engine, ["JavaScript", "js"])
+
+        async def failing_merge(*args, **kwargs):
+            raise RuntimeError("merge failed")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._graph_store, "merge_nodes", failing_merge)
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+
+        job = result.per_job["alias_resolve"]
+        assert job.status == "error"
+        assert job.errors >= 1
+        assert job.nodes_modified == 0
+
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark is None or watermark.completed_through is None
+        assert watermark is None or watermark.resume_cursor is None
+
+        retried = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert retried.per_job["alias_resolve"].status == "completed"
+        assert retried.per_job["alias_resolve"].nodes_modified == 1
+
+    @pytest.mark.asyncio
+    async def test_alias_failure_after_a_completed_page_keeps_its_cursor(
+        self, engine, monkeypatch,
+    ):
+        """Page 2 fails; the resume cursor stays at the end of page 1."""
+        monkeypatch.setattr(jobs_module, "_INCREMENTAL_PAGE_SIZE", 2)
+        await _store_entities(
+            engine, ["JavaScript", "js", "PostgreSQL", "postgresql"],
+        )
+        by_content = {
+            node.content: str(node.id)
+            for node in await engine.query_nodes(
+                user_id=USER, lifecycle_states=list(LifecycleState), limit=100,
+            )
+        }
+
+        original_merge = engine._graph_store.merge_nodes
+        calls = [0]
+
+        async def failing_second_merge(*args, **kwargs):
+            calls[0] += 1
+            if calls[0] == 2:
+                raise RuntimeError("merge failed on page 2")
+            return await original_merge(*args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._graph_store, "merge_nodes", failing_second_merge)
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+
+        job = result.per_job["alias_resolve"]
+        assert job.status == "error"
+        assert job.errors >= 1
+        assert job.nodes_modified == 1
+
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark.resume_cursor is not None
+        _, resume_id = watermark.resume_cursor
+        assert resume_id == by_content["js"]
+
+        retried = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert retried.per_job["alias_resolve"].status == "completed"
+        assert retried.per_job["alias_resolve"].nodes_modified == 1
+
+        states = await _all_states(engine)
+        assert sorted(states.values()).count(LifecycleState.SUPERSEDED) == 2
+
+    @pytest.mark.asyncio
+    async def test_alias_neighbor_search_failure_is_reported_and_retried(
+        self, engine, monkeypatch,
+    ):
+        await _store_entities(engine, ["Alpha", "Beta"])
+        index = engine._vector_index
+
+        async def broken_search(*args, **kwargs):
+            raise RuntimeError("embedding rejected")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(index, "search", broken_search)
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+
+        job = result.per_job["alias_resolve"]
+        assert job.status == "error"
+        assert job.errors >= 1
+        assert job.nodes_processed == 0
+
+        retried = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert retried.per_job["alias_resolve"].status == "completed"
+        assert retried.per_job["alias_resolve"].nodes_processed == 2
+
+    @pytest.mark.asyncio
     async def test_failed_neighbor_search_is_reported_and_retried(self, engine, monkeypatch):
         await _store_many(engine, ["alpha", "beta", "gamma"])
         index = engine._vector_index
@@ -461,6 +830,35 @@ class TestEquivalence:
         assert full_snapshot == incremental_snapshot
         assert [state for _content, state in full_snapshot].count(
             LifecycleState.TENTATIVE.value
+        ) == 2
+
+    @pytest.mark.asyncio
+    async def test_incremental_and_full_alias_resolve_agree(self, tmp_path):
+        full = await _fresh_engine(tmp_path / "full-alias", incremental=False)
+        try:
+            await _store_entities(full, ["JavaScript", "js", "alpha"])
+            await _store_entities(full, ["PostgreSQL", "postgresql"])
+            await full.organize(user_id=USER, jobs=["alias_resolve"])
+            full_snapshot = await _content_states(full)
+        finally:
+            await full.close()
+
+        incremental = await _fresh_engine(tmp_path / "incremental-alias")
+        try:
+            await _store_entities(incremental, ["JavaScript", "alpha"])
+            await incremental.organize(user_id=USER, jobs=["alias_resolve"])
+            await _store_entities(incremental, ["js", "PostgreSQL", "postgresql"])
+            await incremental.organize(user_id=USER, jobs=["alias_resolve"])
+            incremental_snapshot = await _content_states(incremental)
+        finally:
+            await incremental.close()
+
+        assert full_snapshot == incremental_snapshot
+        assert [state for _content, state in full_snapshot].count(
+            LifecycleState.TENTATIVE.value
+        ) == 3
+        assert [state for _content, state in full_snapshot].count(
+            LifecycleState.SUPERSEDED.value
         ) == 2
 
 
@@ -550,6 +948,18 @@ class TestTenancy:
         other = await _all_states(engine, "other-user")
         assert sorted(other.values()) == [LifecycleState.TENTATIVE, LifecycleState.TENTATIVE]
 
+    @pytest.mark.asyncio
+    async def test_scoped_incremental_alias_scan_excludes_another_owner(self, engine):
+        await _store_entities(engine, ["JavaScript", "js"])
+        await _store_entities(engine, ["JavaScript", "js"], user_id="other-user")
+
+        result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        assert result.per_job["alias_resolve"].nodes_modified == 1
+
+        assert sorted((await _all_states(engine)).values()).count(LifecycleState.TENTATIVE) == 1
+        other = await _all_states(engine, "other-user")
+        assert sorted(other.values()) == [LifecycleState.TENTATIVE, LifecycleState.TENTATIVE]
+
 
 class TestDefaultUnchanged:
     @pytest.mark.asyncio
@@ -631,7 +1041,9 @@ class TestNothingNewIsFast:
 # ---------------------------------------------------------------------------
 
 
-async def _fresh_engine(directory: Path) -> MemoryEngine:
+async def _fresh_engine(
+    directory: Path, *, incremental: bool = True,
+) -> MemoryEngine:
     directory.mkdir(parents=True, exist_ok=True)
     lexical_path = directory / "lexical_index"
     lexical_path.mkdir()
@@ -640,7 +1052,7 @@ async def _fresh_engine(directory: Path) -> MemoryEngine:
         vector_path=str(directory / "vectors.usearch"),
         lexical_path=str(lexical_path),
         organizer=OrganizerConfig(
-            incremental_enabled=True,
+            incremental_enabled=incremental,
             opportunistic_enabled=False,
         ),
     ))

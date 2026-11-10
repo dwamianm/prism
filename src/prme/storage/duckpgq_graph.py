@@ -322,6 +322,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        content_equals_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
         exclude_archived_profiles: bool = False,
@@ -343,6 +344,8 @@ class DuckPGQGraphStore:
             min_salience: Minimum salience threshold.
             content_contains_any: Case-insensitive substring filters
                 (matches content containing ANY of the strings).
+            content_equals_any: Case-insensitive whole-content filters
+                (matches trimmed, lowercased content equal to ANY value).
             created_before: Only return nodes with created_at <= this value.
             oldest_first: Order by created_at ASC instead of the default DESC.
             exclude_archived_profiles: Leave out archived entity profile
@@ -365,6 +368,7 @@ class DuckPGQGraphStore:
                 min_confidence,
                 min_salience,
                 content_contains_any,
+                content_equals_any,
                 created_before,
                 oldest_first,
                 exclude_archived_profiles,
@@ -1308,6 +1312,7 @@ class DuckPGQGraphStore:
         min_confidence: float | None,
         min_salience: float | None,
         content_contains_any: list[str] | None,
+        content_equals_any: list[str] | None,
         created_before: datetime | None,
         oldest_first: bool,
         exclude_archived_profiles: bool,
@@ -1372,6 +1377,13 @@ class DuckPGQGraphStore:
             params.extend(
                 f"%{self._escape_like(p.lower())}%" for p in content_contains_any
             )
+
+        if content_equals_any is not None and content_equals_any:
+            equals_placeholders = ", ".join(["?" for _ in content_equals_any])
+            conditions.append(
+                f"LOWER(TRIM(content)) IN ({equals_placeholders})"
+            )
+            params.extend(p.strip().lower() for p in content_equals_any)
 
         if created_before is not None:
             conditions.append("created_at <= ?")

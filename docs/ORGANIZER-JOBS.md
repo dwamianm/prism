@@ -11,7 +11,11 @@ and what the job costs on PostgreSQL at 240, 1,000 and 10,000 nodes.
 budget. Every job except `index_compaction` reads at most 500 nodes per pass
 (100 for `deduplicate` and `alias_resolve`), and `index_compaction` bounds its
 stale query to 500 rows. A pass is bounded maintenance, not a complete corpus
-scan. The processed counts in the timing table show that bound.
+scan. The processed counts in the timing table show that bound. With
+`OrganizerConfig.incremental_enabled`, `deduplicate` and `alias_resolve` page
+their changed records instead; the full-scope `alias_resolve` still examines
+only the newest 100 active entities, so it cannot re-evaluate an older scope in
+one pass.
 
 ## Jobs and scheduled-run status
 
@@ -127,9 +131,10 @@ That second phase is what makes the total independent of `budget_ms`.
 
 Nothing is lost when a run is cut short: every merge is committed on its own
 and the merged node is superseded, so the next run re-finds only what is still
-active. A later change that gives each job a per-scope watermark and a
-resumable stop is dwamianm/prism#517; it will let `deduplicate` record where it
-stopped and continue on the next run. This audit records the behavior and does
+active. The per-scope watermark and resumable stop added in dwamianm/prism#517 (and
+extended to `alias_resolve` in dwamianm/prism#523) let these jobs record where
+they stopped and continue on the next run when
+`OrganizerConfig.incremental_enabled` is on. This audit records the behavior and does
 not change the merge policy.
 
 The local timing table above adds a 240-node row so one provider measures all

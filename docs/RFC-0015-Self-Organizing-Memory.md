@@ -470,18 +470,22 @@ class JobResult(BaseModel):
 
 An explicit `organize()` call is unchanged: unless a caller sets
 `OrganizerConfig.incremental_enabled`, every job stays full-scope and no
-watermark is written. With the option on, `deduplicate` works from a
-per-scope, per-job watermark stored in `organizer_watermarks`, one row per
-scope and job. A scoped row is keyed by `u:` plus the user id, and the empty
-string is reserved for an unscoped operator run, so an empty user id cannot
-share the operator's row.
+watermark is written. With the option on, `deduplicate` and `alias_resolve`
+work from a per-scope, per-job watermark stored in `organizer_watermarks`,
+one row per scope and job. A scoped row is keyed by `u:` plus the user id, and
+the empty string is reserved for an unscoped operator run, so an empty user id
+cannot share the operator's row.
 
 A run captures a ceiling before any work and examines only records created or
 updated after the job's last completed run, up to that ceiling.
 `deduplicate` still searches each changed node's neighbors in the vector
-index, so a new copy can merge with an older twin. Records are paged in
-`(updated_at, id)` order, so a run that stops on its budget records the keyset
-position it reached and the next run resumes there.
+index, so a new copy can merge with an older twin. `alias_resolve` looks up
+each changed entity by its alias-equivalent names, and also searches it in the
+vector index. An older name twin is found whether or not it is on the page; a
+semantic twin is found only when it ranks in the changed entity's top-10
+neighbors. Records are paged in `(updated_at, id)` order, so a run that stops
+on its budget records the keyset position it reached and the next run resumes
+there.
 
 The watermark advances only after the job's writes have committed. A
 completed run stores the ceiling, less a 60-second overlap, as
@@ -496,17 +500,26 @@ The other jobs stay full-scope. An unchanged scope cannot make them provably
 no-ops: `promote` depends on a node crossing `promotion_age_days`,
 `snapshot_generation` depends on an entity's neighborhood and edges, a node
 can decay below a threshold, a TTL can expire, or a cluster can become
-eligible without any node being written. Only `deduplicate` has a candidate
-set that a node write fully determines.
+eligible without any node being written. Only `deduplicate` and
+`alias_resolve` have a candidate set a node write fully determines. An
+entity's name is immutable after creation, and creating an entity or changing
+its lifecycle writes `updated_at`, so a newly eligible alias pair always has
+an endpoint in the window. That write determines eligibility, not discovery:
+the name lookup returns a bounded page of matches, and the vector search keeps
+its top-10 bound, so a pair that neither endpoint ranks can be missed.
 
-Changing a job's tuning setting, rebuilding the vector index, or switching the
-active embedding model does not re-examine records the watermark has already
-passed, because deduplicate's candidate set also depends on the index. Run
-with the option off, or clear that scope's row, to re-evaluate existing data
-under the new setting or index. The same applies to a record materialized
-from an event whose timestamp is older than the window: the 60-second overlap
-covers a write that becomes visible soon after its stamp, not one admitted
-much later with an old stamp.
+Changing a job's tuning setting, rebuilding the vector index, switching the
+active embedding model, or adding a known abbreviation does not re-examine
+records the watermark has already passed, because both jobs' candidate sets
+also depend on the index or on the alias table. With the option off, the
+full-scope `alias_resolve` run examines only the newest 100 active entities,
+so it re-evaluates an older scope only in pages. Clearing that scope's row
+while the option is on starts a paged whole-scope incremental run, which is
+how an older scope is re-evaluated today; paging the option-off full scan is
+follow-up work. The same applies to a record materialized from an event whose
+timestamp is older than the window: the 60-second overlap covers a write that
+becomes visible soon after its stamp, not one admitted much later with an old
+stamp.
 
 `summarize` stays full-scope as well, for a reason of its own
 (dwamianm/prism#523). Its output is one summary per day, week and month, and
@@ -534,10 +547,20 @@ An incremental form would need a summary-membership read and a cascade through
 the three levels; that is the alternative a future design should weigh before
 adding period-transition history.
 
-Known limitation: on a privacy-admitted store, `scan_changed_nodes` reads the
+Known limitation: on a privacy-admitted store,
+Known limitations: on a privacy-admitted store, `scan_changed_nodes` reads the
 whole admitted scope and sorts it in memory on every page, so an incremental
-page costs a scan of the scope and the nothing-new bound is not met there.
-This is follow-up work.
+page costs a scan of the scope, and the `alias_resolve` name lookup repeats
+that whole-scope read once per changed entity. Pushing the exact-content
+filter into the admitted scan and paging the full alias scan are follow-up
+work. The `alias_resolve` name lookup also returns at most 500 matches per
+changed entity; a twin beyond that bound is not found until its own write
+enters a window.
+
+The option now covers both jobs. An install that already set
+`OrganizerConfig.incremental_enabled` for `deduplicate` gets incremental
+`alias_resolve` after the upgrade without another opt-in; its first alias run
+has no watermark and examines the whole scope once.
 
 ### 5.6 Recommended Trigger Points
 

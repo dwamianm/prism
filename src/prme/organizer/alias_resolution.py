@@ -146,6 +146,77 @@ def _is_case_variation(name_a: str, name_b: str) -> bool:
     return a_stripped != b_stripped and a_stripped.lower() == b_stripped.lower()
 
 
+def _alias_name_forms(name: str) -> set[str]:
+    """The names the string alias rules pair with *name*.
+
+    Used by the incremental scan to ask the store for the unchanged twin of a
+    changed entity by name: the name itself, its canonical form when it is an
+    abbreviation, and the canonical form's known abbreviations.
+    """
+    key = name.strip().lower()
+    canonical = _REVERSE_ALIASES.get(key, key)
+    forms = {key, canonical}
+    forms.update(KNOWN_ALIASES.get(canonical, ()))
+    forms.update(KNOWN_ALIASES.get(key, ()))
+    return forms
+
+
+def _string_alias_candidate(
+    node_a: MemoryNode, node_b: MemoryNode,
+) -> AliasCandidate | None:
+    """The string alias candidate for one pair, or None when names differ."""
+    if _is_abbreviation_match(node_a.content, node_b.content):
+        return AliasCandidate(str(node_a.id), str(node_b.id), "abbreviation", 0.95)
+    if _is_case_variation(node_a.content, node_b.content):
+        return AliasCandidate(str(node_a.id), str(node_b.id), "case_variation", 0.90)
+    return None
+
+
+async def _semantic_alias_candidates(
+    engine: MemoryEngine,
+    index,
+    entity: MemoryNode,
+    threshold: float,
+    seen_pairs: set[tuple[str, str]],
+) -> list[AliasCandidate]:
+    """Semantic alias candidates for one entity, searched in the vector index.
+
+    The durable twin is rechecked because an index may lag graph updates or be
+    supplied by a custom backend. A search or read error is left to the caller
+    so the full-scope run can skip the entity and the incremental run can stop
+    its resumable prefix instead of marking the entity examined.
+    """
+    entity_id = str(entity.id)
+    results = await index.search(
+        entity.content,
+        entity.user_id,
+        k=10,
+        scope=[entity.scope.value],
+    )
+
+    candidates: list[AliasCandidate] = []
+    for result in results:
+        other_id = result["node_id"]
+        score = result["score"]
+
+        if other_id == entity_id:
+            continue
+        if score < threshold:
+            continue
+
+        pair_key = (min(entity_id, other_id), max(entity_id, other_id))
+        if pair_key in seen_pairs:
+            continue
+
+        other_node = await engine.get_node(other_id, user_id=entity.user_id)
+        if other_node is None or not compatible_admitted_pair(alias_pair_allowed, entity, other_node):
+            continue
+
+        seen_pairs.add(pair_key)
+        candidates.append(AliasCandidate(entity_id, other_id, "semantic", score))
+    return candidates
+
+
 async def find_aliases(
     engine: MemoryEngine,
     config: OrganizerConfig,
@@ -206,19 +277,11 @@ async def find_aliases(
             if pair_key in seen_pairs:
                 continue
 
-            name_a = entities[i].content
-            name_b = entities[j].content
-
-            if _is_abbreviation_match(name_a, name_b):
-                seen_pairs.add(pair_key)
-                candidates.append(
-                    AliasCandidate(a_id, b_id, "abbreviation", 0.95)
-                )
-            elif _is_case_variation(name_a, name_b):
-                seen_pairs.add(pair_key)
-                candidates.append(
-                    AliasCandidate(a_id, b_id, "case_variation", 0.90)
-                )
+            candidate = _string_alias_candidate(entities[i], entities[j])
+            if candidate is None:
+                continue
+            seen_pairs.add(pair_key)
+            candidates.append(candidate)
 
     # Phase 2: Semantic similarity via vector search
     for entity in entities:
@@ -226,46 +289,146 @@ async def find_aliases(
         if elapsed_ms >= budget_ms:
             break
 
-        entity_id = str(entity.id)
-
         try:
-            results = await index.search(
-                entity.content,
-                entity.user_id,
-                k=10,
-                scope=[entity.scope.value],
+            candidates.extend(
+                await _semantic_alias_candidates(
+                    engine, index, entity, threshold, seen_pairs,
+                )
             )
         except Exception:
             logger.debug(
-                "Vector search failed for entity %s", entity_id, exc_info=True
+                "Vector search failed for entity %s", str(entity.id), exc_info=True
             )
             continue
 
-        for result in results:
-            other_id = result["node_id"]
-            score = result["score"]
+    return candidates
 
+
+# Names one incremental lookup may return for a changed entity. The full scan
+# also bounds its work, so this is a page bound, not a completeness claim.
+_ALIAS_NAME_LOOKUP_LIMIT = 500
+
+
+async def find_aliases_in_page(
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    entities: list[MemoryNode],
+    *,
+    index=None,
+    budget_ms: float = 5000.0,
+    user_id: str | None = None,
+    seen_pairs: set[tuple[str, str]] | None = None,
+) -> tuple[list[AliasCandidate], int, bool]:
+    """Find aliases among one page of changed entities and their twins.
+
+    Incremental counterpart of :func:`find_aliases` (dwamianm/prism#523). The
+    caller supplies the ENTITY nodes created or changed since the last run.
+    Each is looked up by its equivalent names, so an older name twin that is
+    not on the page is still found, and searched in the vector index for
+    semantic aliases.
+
+    Returns the candidates, how many leading entities were fully examined
+    (which is how far the caller may advance its keyset cursor), and whether a
+    lookup or neighbor search failed. A failure stops the resumable prefix
+    instead of counting the entity as examined, so the caller reports an error
+    rather than a budget stop.
+    """
+    from prme.privacy.journals import generation_search
+
+    if index is None:
+        index = await generation_search(engine, user_id=user_id)
+    if seen_pairs is None:
+        seen_pairs = set()
+    return await _find_aliases_in_page(
+        engine,
+        config,
+        entities,
+        index=index,
+        budget_ms=budget_ms,
+        seen_pairs=seen_pairs,
+    )
+
+
+async def _find_aliases_in_page(
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    entities: list[MemoryNode],
+    *,
+    index,
+    budget_ms: float,
+    seen_pairs: set[tuple[str, str]],
+) -> tuple[list[AliasCandidate], int, bool]:
+    start = time.monotonic()
+    threshold = config.alias_similarity_threshold
+    candidates: list[AliasCandidate] = []
+
+    # Phase 1: each changed entity asks the store for entities that share an
+    # alias-equivalent name. The unchanged twin is found by name, not by
+    # position in the page, so a new string alias pair is not missed just
+    # because the twin is on another page. The semantic phase keeps the
+    # index's top-k bound.
+    name_checked = 0
+    for entity in entities:
+        # Make progress even when the caller's remaining budget is smaller
+        # than one entity's work, so a stop leaves a resumable cursor instead
+        # of repeating the same page forever.
+        if name_checked > 0 and (time.monotonic() - start) * 1000.0 >= budget_ms:
+            break
+
+        entity_id = str(entity.id)
+        try:
+            partners = await engine.query_nodes(
+                user_id=entity.user_id,
+                scope=entity.scope,
+                node_type=NodeType.ENTITY,
+                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+                content_equals_any=sorted(_alias_name_forms(entity.content)),
+                limit=_ALIAS_NAME_LOOKUP_LIMIT,
+            )
+        except Exception:
+            logger.debug(
+                "Name lookup failed for entity %s", entity_id, exc_info=True,
+            )
+            return candidates, 0, True
+
+        for other in partners:
+            other_id = str(other.id)
             if other_id == entity_id:
                 continue
-
-            if score < threshold:
+            # Names alone do not authorize combining owners or scopes.
+            if not compatible_admitted_pair(alias_pair_allowed, entity, other):
                 continue
 
             pair_key = (min(entity_id, other_id), max(entity_id, other_id))
             if pair_key in seen_pairs:
                 continue
 
-            # Verify the durable node is an ENTITY in the same namespace
-            other_node = await engine.get_node(other_id, user_id=entity.user_id)
-            if other_node is None or not compatible_admitted_pair(alias_pair_allowed, entity, other_node):
+            candidate = _string_alias_candidate(entity, other)
+            if candidate is None:
                 continue
-
             seen_pairs.add(pair_key)
-            candidates.append(
-                AliasCandidate(entity_id, other_id, "semantic", score)
-            )
+            candidates.append(candidate)
+        name_checked += 1
 
-    return candidates
+    # Phase 2: semantic neighbors for the entities whose name lookup finished.
+    completed = 0
+    for entity in entities[:name_checked]:
+        if completed > 0 and (time.monotonic() - start) * 1000.0 >= budget_ms:
+            break
+        try:
+            candidates.extend(
+                await _semantic_alias_candidates(
+                    engine, index, entity, threshold, seen_pairs,
+                )
+            )
+        except Exception:
+            logger.debug(
+                "Vector search failed for entity %s", str(entity.id), exc_info=True,
+            )
+            return candidates, completed, True
+        completed += 1
+
+    return candidates, completed, False
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +442,9 @@ _MERGE_CONFIDENCE_THRESHOLD = 0.90
 async def resolve_aliases(
     engine: MemoryEngine,
     aliases: list[AliasCandidate],
-    *, user_id: str | None = None,
+    *,
+    user_id: str | None = None,
+    failure_count: list[int] | None = None,
 ) -> int:
     """Resolve alias relationships between entity nodes.
 
@@ -293,6 +458,10 @@ async def resolve_aliases(
     Args:
         engine: The MemoryEngine for storage operations.
         aliases: List of AliasCandidate pairs from find_aliases().
+        user_id: When given, only this user's entities may be read or changed.
+        failure_count: When given, receives the number of pairs whose
+            resolution raised. The incremental caller uses it to keep the page
+            resumable instead of advancing past a pair that was not retried.
 
     Returns:
         Count of aliases resolved (merged or linked).
@@ -373,6 +542,8 @@ async def resolve_aliases(
                 )
 
         except Exception:
+            if failure_count is not None:
+                failure_count[0] += 1
             logger.warning(
                 "Failed to resolve alias pair (%s, %s)",
                 alias.entity_a_id,

@@ -117,6 +117,7 @@ class AdmittedGraphView:
     async def query_nodes(self, *, user_id=None, node_type=None, scope=None, scopes=None,
                           session_ids=None, lifecycle_states=None, valid_at=None,
                           min_confidence=None, min_salience=None, content_contains_any=None,
+                          content_equals_any=None,
                           created_before=None, oldest_first=False,
                           exclude_archived_profiles=False, limit=100):
         self._owner(user_id)
@@ -124,6 +125,10 @@ class AdmittedGraphView:
             raise ValueError("scope and scopes are mutually exclusive")
         if limit <= 0:
             return []
+        equals_set = (
+            None if not content_equals_any
+            else {value.strip().lower() for value in content_equals_any}
+        )
         matches = []
         async for page in self._all_nodes(scope=scope, node_type=node_type, lifecycle_states=lifecycle_states):
             for node in page:
@@ -145,6 +150,8 @@ class AdmittedGraphView:
                 if content_contains_any is not None and not any(
                     value.casefold() in node.content.casefold() for value in content_contains_any
                 ):
+                    continue
+                if equals_set is not None and node.content.strip().lower() not in equals_set:
                     continue
                 matches.append(node)
         matches.sort(key=lambda item: item.created_at, reverse=not oldest_first)

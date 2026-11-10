@@ -357,6 +357,7 @@ class PgGraphStore:
         min_confidence: float | None = None,
         min_salience: float | None = None,
         content_contains_any: list[str] | None = None,
+        content_equals_any: list[str] | None = None,
         created_before: datetime | None = None,
         oldest_first: bool = False,
         exclude_archived_profiles: bool = False,
@@ -422,6 +423,11 @@ class PgGraphStore:
             params.append(
                 [f"%{self._escape_like(p.lower())}%" for p in content_contains_any]
             )
+            idx += 1
+
+        if content_equals_any is not None and content_equals_any:
+            conditions.append(f"LOWER(TRIM(content)) = ANY(${idx}::text[])")
+            params.append([p.strip().lower() for p in content_equals_any])
             idx += 1
 
         if created_before is not None:
