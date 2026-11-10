@@ -4,6 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
+<<<<<<< Updated upstream
 PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.16.1); design specs live in `docs/`.
 
 ## Architecture
@@ -20,11 +21,30 @@ Four storage layers behind a unified retrieval API. The default backend is local
 - **Append-only**: Events must never be overwritten or deleted except by policy-based archival. Conflicting assertions must not silently overwrite prior ones — use supersedence. Note: store-time supersedence is gated behind `enable_store_supersedence` (default `False`, `src/prme/config.py`); with the default, `store()` does not supersede. Retrieval can present chronological markers and unresolved conflicts; recency alone is not treated as proof of truth or graph-level supersedence. Predicate matching in the supersedence detector is exact-match plus three hardcoded equivalence classes (`src/prme/ingestion/supersedence.py`); fresh v14 ingestion additionally permits the bounded `switched_to` replacement of positive `uses`/`use` facts; arbitrary paraphrased predicates are not superseded.
 - **Deterministic**: Given identical event logs and config, retrieval results must be reproducible. Scoring weights must be configurable and versioned.
 - **Portable artifact**: The memory pack — `memory.duckdb` (event store + graph tables), `vectors.usearch` (USearch index), `lexical_index/` (Tantivy directory), and `manifest.json` (encryption/version metadata) — must be copyable, encryptable, and rebuildable. Derived indexes can be regenerated from the durable graph with `prme rebuild`. That directory layout is the default; the opt-in single-file pack (a `.prme` file) is one DuckDB database holding the same tables plus `vector_snapshot` and a `prme_manifest` row (`src/prme/storage/pack_manifest.py`), uses native DuckDB encryption instead of Fernet (PRME also turns on DuckDB's `temp_file_encryption`, which is off by default), is shrunk with `prme compact` and is created from a directory pack with `prme migrate` (both in `src/prme/storage/pack_tools.py`; RFC-0014, single-file pack amendment). Making the single file the default is a separate decision (issue #247).
+=======
+PRME (Portable Relational Memory Engine) is a local-first, embeddable memory substrate for LLM-powered systems. It combines event sourcing, graph-based relational modeling, hybrid retrieval, and organizer-driven memory reorganization (opportunistic and on-demand; see Organizer). The system is implemented (current release v0.9.0); design specs live in `docs/`.
+
+## Architecture
+
+Four storage layers behind a unified retrieval API. The default backend is local DuckDB-based; a PostgreSQL backend (`src/prme/storage/pg/`) is also wired and selected when `database_url` is set.
+
+- **Event Store (DuckDB)** — Append-only immutable event log. All derived structures must be rebuildable from this log.
+- **Graph Store (DuckDB)** — Typed nodes (Entity, Event, Fact, Decision, Preference, Task, Summary) and typed edges with temporal validity windows (`valid_from`/`valid_to`), confidence scores, and provenance references. Implemented in `src/prme/storage/duckpgq_graph.py` using DuckDB tables with recursive CTEs for traversal (DuckPGQ SQL/PGQ is not available on the supported DuckDB build, so recursive CTEs are the only code path — there is no Kùzu dependency).
+- **Vector Index (USearch HNSW)** — Approximate nearest neighbor search via the `usearch` library (`src/prme/storage/vector_index.py`), persisted to `vectors.usearch`, with versioned embeddings (model name, version, dimension tracked per embedding).
+- **Lexical Index (Tantivy)** — BM25 full-text search via `tantivy-py` (`src/prme/storage/lexical_index.py`), persisted to a `lexical_index/` directory, over event content, facts, and summaries.
+
+## Key Design Constraints
+
+- **Append-only**: Events must never be overwritten or deleted except by policy-based archival. Conflicting assertions must not silently overwrite prior ones — use supersedence. Note: store-time supersedence is gated behind `enable_store_supersedence` (default `False`, `src/prme/config.py`); with the default, `store()` does not supersede and conflict resolution relies on retrieval-time `[LATEST]`/recency markers in the context formatter rather than graph-level supersedence edges. Predicate matching in the supersedence detector is exact-match plus three hardcoded equivalence classes (`src/prme/ingestion/supersedence.py`); paraphrased predicates are not currently superseded.
+- **Deterministic**: Given identical event logs and config, retrieval results must be reproducible. Scoring weights must be configurable and versioned.
+- **Portable artifact**: The memory pack — `memory.duckdb` (event store + graph tables), `vectors.usearch` (USearch index), `lexical_index/` (Tantivy directory), and `manifest.json` (encryption/version metadata) — must be copyable, encryptable, and rebuildable. Derived indexes can be regenerated from the durable graph with `prme rebuild`.
+>>>>>>> Stashed changes
 
 ## Hybrid Retrieval Pipeline
 
 Query → intent classification + entity extraction + time detection → candidate generation (graph neighborhood, stable facts, vector similarity, lexical, recent high-salience) → deterministic re-ranking → context packing into memory bundles (entity snapshots, stable facts, recent decisions, active tasks, provenance refs).
 
+<<<<<<< Updated upstream
 `knowledge_at` is a timezone-aware ingestion cutoff over current graph and index
 state. It is not exact historical replay. Responses expose
 `metadata.historical_coverage` and inject the same boundary into packed model
@@ -123,10 +143,15 @@ unit tables, preserves the exact `I` or `we` subject, returns the exact plan and
 assumptions, and does not scan on an unsupported shape. Ordinary `retrieve()`
 never auto-routes to aggregation.
 
+=======
+## Memory Object Lifecycle
+
+>>>>>>> Stashed changes
 Objects progress through: Tentative → Stable → Superseded → Archived. Each object carries: id, type, scope (personal/project/org), confidence, salience, validity window, evidence references, and supersedence pointer.
 
 ## Organizer
 
+<<<<<<< Updated upstream
 The organizer (`src/prme/organizer/`, RFC-0015) provides maintenance jobs that handle: salience/confidence recalculation, promotion/demotion of assertions, summarization, deduplication/entity alias resolution, policy-based archival with TTL enforcement, tombstone and index compaction sweeps, and snapshot generation. `ALL_JOBS` registers only implemented jobs; proposed work such as the unvalidated centrality boost is not exposed as runnable maintenance.
 
 Despite the name "scheduled," there is **no built-in cron or daemon scheduler**. Jobs run in two ways: (1) an opportunistic in-process pass triggered during retrieve/ingest, gated by a cooldown (`opportunistic_cooldown`, default 3600s) and a per-pass time budget (`opportunistic_budget_ms`, default 200ms); and (2) explicit invocation via `prme organize` (optionally `--user-id`, `--jobs`, and `--budget-ms`). Continuous scheduling, if needed, must be driven by an external cron/timer calling `prme organize`.
@@ -249,6 +274,17 @@ unreplayed.
 Plans (epic plans, per-issue plans, their results and validation scripts) live in `memory_bank/plans/<yyyy-mm-topic>/`, not in `docs/`. They moved from `docs/plans/` on 2026-11-02; records of past runs (CHANGELOG entries, results JSON, review notes) still name the old path.
 
 Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0018). See `docs/INDEX.md` for the full listing. Key RFCs include:
+=======
+The organizer (`src/prme/organizer/`, RFC-0015) provides maintenance jobs that handle: salience/confidence recalculation, promotion/demotion of assertions, summarization, deduplication/entity alias resolution, policy-based archival with TTL enforcement, tombstone and index compaction sweeps, and snapshot generation. `ALL_JOBS` currently registers twelve jobs (some are full implementations, some stubs pending future RFCs).
+
+Despite the name "scheduled," there is **no built-in cron or daemon scheduler**. Jobs run in two ways: (1) an opportunistic in-process pass triggered during retrieve/ingest, gated by a cooldown (`opportunistic_cooldown`, default 3600s) and a per-pass time budget (`opportunistic_budget_ms`, default 200ms); and (2) explicit invocation via `prme organize` (optionally `--user-id`, `--jobs`, and `--budget-ms`). Continuous scheduling, if needed, must be driven by an external cron/timer calling `prme organize`.
+
+**Multi-tenant stores must pass a user scope.** `organize(user_id=...)` confines every job to that user's nodes. An unscoped run is correct for a single-tenant store and is still the default, but `deduplicate`, `alias_resolve`, and `consolidate` compare nodes to each other, so a shared store should be maintained as a loop over tenants. `feedback_apply` is the exception: scoring weights are engine-global, so it ignores the scope and reports `"scope": "global"`.
+
+## RFCs
+
+Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-0015). See `docs/INDEX.md` for the full listing. Key RFCs include:
+>>>>>>> Stashed changes
 
 - **RFC-0000** — Suite overview
 - **RFC-0001** — Core data model
@@ -257,6 +293,7 @@ Design specifications live in `docs/` as numbered RFCs (RFC-0000 through RFC-001
 - **RFC-0005** — Hybrid retrieval pipeline
 - **RFC-0014** — Portability, sync, and federation
 - **RFC-0015** — Self-organizing memory (organizer execution model)
+<<<<<<< Updated upstream
 - **RFC-0016** — Durable derivation commits (normal ingestion uses durable extraction jobs, extraction/plan journaling, idempotent index staging and fenced atomic graph commit; explicit plan revision and fenced retired-stage collection are supported; ambiguous or unmanaged legacy staging is retained)
 
 Always consult the relevant RFC before implementing or modifying a subsystem.
@@ -485,6 +522,19 @@ does not implement hosted grants or malicious-local-code isolation. Normal unbou
   use matching settings. Do not use a later `SET threads` to silently reconfigure
   an already-open engine. This does not cap embedding/index threads or memory.
 - **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests are skipped locally without a database. CI runs them against a live PostgreSQL service on Python 3.11–3.13.
+=======
+
+Always consult the relevant RFC before implementing or modifying a subsystem.
+
+## Configuration Surface
+
+Config is defined as Pydantic models in `src/prme/config.py` and `src/prme/retrieval/config.py` (loaded from `PRME_`-prefixed env vars, `.env`, or direct args). The surface is large (roughly 100 fields across both files). Several parameter defaults are explicitly tagged `[HYPOTHESIS]` in their descriptions — these are reasoned but not yet benchmark-validated and may change. Treat `[HYPOTHESIS]` knobs as provisional and prefer not to depend on their exact values. Notable defaults to be aware of: `enable_store_supersedence=False`, `enable_surprise_gating=False`, and `enable_reranker=False` (the cross-encoder reranker has not improved benchmark scores in practice).
+
+## Storage Backends
+
+- **DuckDB (default)** — local-first; no `database_url` set.
+- **PostgreSQL** — used when `database_url` is set; implemented in `src/prme/storage/pg/`. Its test suite (`tests/test_pg_*.py`) is skipped unless `PRME_TEST_DATABASE_URL` points at a live database, so those tests do not run in the default local/CI environment.
+>>>>>>> Stashed changes
 
 ## MVP Phases (delivered)
 
@@ -508,6 +558,7 @@ Core workflow:
 ## Github
 
 - Do not make any Codex attributions to git commits
+<<<<<<< Updated upstream
 
 ## Coding memory research (shelved)
 
@@ -525,3 +576,5 @@ Keep secrets and whole transcripts out of captured notes.
 
 Keep raw coding-trial outputs in ignored `benchmarks/coding/runs/`; retain only
 reports and compact manifests, metrics and checksum indexes in tracked results.
+=======
+>>>>>>> Stashed changes
