@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `query_nodes()` and `count_nodes()` can leave archived entity profiles out of a page (dwamianm/prism#432). Every profile rebuild archives the previous SUMMARY node and keeps its `metadata.entity_profile` marker, so a newest-first read across lifecycle states became a run of retired profiles and a user's older memories fell out of a fixed-size page. The new optional `exclude_archived_profiles` argument applies inside the query on both DuckDB and PostgreSQL, so the limit and the count see only kept nodes. `GET /v1/nodes` and `GET /v1/stats` accept it as a query parameter, and both now take a repeatable `state` parameter so a caller can request the multi-state page the filter applies to. The filter is by lifecycle state, not by replacement: a profile archived without a newer profile is left out too. The default read and count are unchanged, and a caller that does not ask for the filter gets exactly what it gets today.
 
+### Changed
+
+- The `summarize` organizer job stays full-scope, and its reason is now recorded (dwamianm/prism#523). Its output is one top-N summary per day, week and month over that period's active membership, so a node-change window cannot name a period a node has left: `update_node` accepts `event_time`, and a hard delete leaves no node row to scan. The vacated period is recoverable from the summary that recorded its sources (and from the publication journal), which is a different read from the node window. The `_job_summarize` docstring and RFC-0015 section 5.5 record the reason, the full-run limits (a period below its minimum and a budget-truncated scan), and the alternative a future incremental design should weigh, so a later change does not assume `OrganizerConfig.incremental_enabled` covers the job.
+
 ## [0.17.0a4] - 2026-11-09
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

@@ -23,6 +23,7 @@ import pytest
 import pytest_asyncio
 
 from prme.config import OrganizerConfig, PRMEConfig
+from prme.models.nodes import MemoryNode
 from prme.organizer import jobs as jobs_module
 from prme.organizer.jobs import run_job
 from prme.organizer.watermarks import INCREMENTAL_JOBS, scope_key
@@ -47,6 +48,11 @@ async def engine():
             organizer=OrganizerConfig(
                 incremental_enabled=True,
                 opportunistic_enabled=False,
+                # Pin the summarization thresholds the summarize test below
+                # builds its periods with, so a later default flip does not
+                # change what that test proves.
+                summarization_daily_min_events=5,
+                summarization_max_items_per_summary=10,
             ),
         ))
         yield eng
@@ -458,6 +464,77 @@ class TestEquivalence:
         ) == 2
 
 
+class TestSummarizeStaysFullScope:
+    """summarize stays full-scope, and the docstring records why (#523).
+
+    Its unit of work is a time period with a top-N selection over that period's
+    active membership, and a node-change window cannot name a period a node has
+    left: ``update_node`` can change ``event_time``, and a hard delete leaves no
+    node row. The summary that recorded the sources still names the old period,
+    which is a different read from the node window.
+    """
+
+    @pytest.mark.asyncio
+    async def test_summarize_is_not_an_incremental_job(self, engine):
+        assert "summarize" not in INCREMENTAL_JOBS
+        await _store_many(engine, [f"summarize input {i}" for i in range(5)])
+
+        result = await engine.organize(user_id=USER, jobs=["summarize"], budget_ms=60000)
+
+        job = result.per_job["summarize"]
+        assert job.status == "completed"
+        assert "incremental" not in job.details
+        assert await _watermark_rows(engine) == []
+
+    @pytest.mark.asyncio
+    async def test_event_time_move_changes_both_periods(self, engine):
+        """A source that leaves a day changes that day and its new day."""
+        day_a = datetime(2026, 3, 2, 12, tzinfo=timezone.utc)
+        day_b = datetime(2026, 3, 3, 12, tzinfo=timezone.utc)
+        contents_a = [f"day-a-{i}" for i in range(6)]
+        contents_b = [f"day-b-{i}" for i in range(5)]
+
+        ids_a = [
+            (await engine.store_with_receipt(
+                content, user_id=USER, node_type=NodeType.FACT,
+                scope=Scope.PERSONAL, event_time=day_a + timedelta(minutes=i),
+            )).node_id
+            for i, content in enumerate(contents_a)
+        ]
+        for i, content in enumerate(contents_b):
+            await engine.store_with_receipt(
+                content, user_id=USER, node_type=NodeType.FACT,
+                scope=Scope.PERSONAL, event_time=day_b + timedelta(minutes=i),
+            )
+
+        await engine.organize(user_id=USER, jobs=["summarize"], budget_ms=60000)
+
+        before_move = await engine._graph_store.get_node(str(ids_a[-1]))
+        old_a = await _active_daily_summary(engine, "2026-03-02")
+        assert str(ids_a[-1]) in old_a.metadata["source_node_ids"]
+
+        # The move writes the new event time and a new updated_at. The node
+        # window finds the node, but its row names only the new day.
+        await engine._graph_store.update_node(
+            str(ids_a[-1]), event_time=day_b + timedelta(hours=1),
+        )
+        moved = await engine._graph_store.get_node(str(ids_a[-1]))
+        assert moved.updated_at > before_move.updated_at
+
+        # Until the next run, the old day's summary is the only record that
+        # names the vacated period.
+        still_old_a = await _active_daily_summary(engine, "2026-03-02")
+        assert str(ids_a[-1]) in still_old_a.metadata["source_node_ids"]
+
+        await engine.organize(user_id=USER, jobs=["summarize"], budget_ms=60000)
+
+        after_a = await _active_daily_summary(engine, "2026-03-02")
+        after_b = await _active_daily_summary(engine, "2026-03-03")
+        assert str(ids_a[-1]) not in after_a.metadata["source_node_ids"]
+        assert "day-a-5" not in after_a.content
+        assert "day-a-5" in after_b.content
+
+
 class TestTenancy:
     @pytest.mark.asyncio
     async def test_scoped_incremental_scan_excludes_another_owner(self, engine):
@@ -574,3 +651,21 @@ async def _content_states(engine: MemoryEngine) -> list[tuple[str, str]]:
         user_id=USER, lifecycle_states=list(LifecycleState), limit=1000,
     )
     return sorted((node.content, node.lifecycle_state.value) for node in nodes)
+
+
+async def _active_daily_summary(engine: MemoryEngine, period_key: str) -> MemoryNode:
+    nodes = await engine.query_nodes(
+        user_id=USER,
+        node_type=NodeType.SUMMARY,
+        lifecycle_states=[LifecycleState.STABLE],
+        limit=200,
+    )
+    matches = [
+        node for node in nodes
+        if (node.metadata or {}).get("summarization_level") == "daily"
+        and (node.metadata or {}).get("period_key") == period_key
+    ]
+    assert len(matches) == 1, [
+        (str(node.id), node.metadata) for node in matches
+    ]
+    return matches[0]

@@ -32,7 +32,12 @@ from datetime import datetime
 # and edges, and creating an edge does not touch either endpoint's updated_at.
 # Time-driven jobs (decay_sweep, archive, tombstone_sweep) and whole-corpus
 # jobs (summarize, consolidate, alias_resolve, index_compaction,
-# feedback_apply) stay full-scope as well.
+# feedback_apply) stay full-scope as well. summarize's candidate set is
+# periods, not nodes: update_node can change event_time, which moves a node
+# between periods, and a hard delete leaves no node row, so a change window
+# over node rows cannot name a period a node has left. The old period is
+# recoverable from the summary that recorded its sources
+# (dwamianm/prism#523; see _job_summarize).
 INCREMENTAL_JOBS: frozenset[str] = frozenset({"deduplicate"})
 
 # Scoped keys are prefixed so an empty user id cannot share the row an
