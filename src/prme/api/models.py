@@ -330,6 +330,7 @@ class RetrievalFilters(BaseModel):
     include_cross_scope: bool = True
     exclude_node_types: list[NodeType] | None = None
     source_types: list[SourceType] | None = None
+    include_node_types: list[NodeType] | None = None
 
 
 class RetrieveRequest(BaseModel):

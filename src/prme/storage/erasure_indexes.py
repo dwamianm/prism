@@ -16,6 +16,7 @@ import weakref
 
 from prme.privacy.policy import PrivacyDenied
 from prme.storage._threading import run_to_completion
+from prme.index_policy import unindexed_summary_sql
 
 _ENGINES: dict[str, weakref.WeakSet] = {}
 
@@ -42,7 +43,17 @@ def native_fence(conn):
 def reconcile_vector(index, reader):
     import numpy as np
     live = {}
-    reader.execute("SELECT m.vector_key,m.embedding_dim,p.vector_data FROM vector_metadata m LEFT JOIN vector_payloads p ON p.vector_key=m.vector_key ORDER BY m.vector_key")
+    # A hierarchical summary keeps its durable vector but default retrieval
+    # does not search it, so the native index does not receive its key
+    # (dwamianm/prism#534). A metadata row with no graph node is still
+    # reconciled as before.
+    reader.execute(
+        "SELECT m.vector_key,m.embedding_dim,p.vector_data FROM vector_metadata m "
+        "LEFT JOIN vector_payloads p ON p.vector_key=m.vector_key "
+        "LEFT JOIN nodes n ON n.id=TRY_CAST(m.node_id AS UUID) "
+        f"WHERE n.id IS NULL OR NOT {unindexed_summary_sql('n')} "
+        "ORDER BY m.vector_key"
+    )
     current = {int(key) for key in np.asarray(index._index.keys)}
     while rows := reader.fetchmany(128):
         for key, dimension, payload in rows:
@@ -357,8 +368,14 @@ async def rebuild_protected(engine, *, user_id, batch_size):
                         derived = await _derived_node(session, node)
                     if not vectors:
                         raise PrivacyDenied("privacy_unavailable")
-                    if has_lexical_document(node.node_type.value, derived=bool(derived)):
+                    if has_lexical_document(
+                        node.node_type.value, derived=bool(derived), metadata=node.metadata,
+                    ):
                         await engine._lexical_index.replace_many(((cursor, node.content, user_id, node.node_type.value, node.scope.value),))
+                    else:
+                        # A hierarchical summary keeps no lexical document
+                        # (dwamianm/prism#534); drop an older one.
+                        await engine._lexical_index.delete_by_node_id(cursor)
                     counts["nodes_indexed"] += 1
         # Real native reconstruction from current durable numeric payloads.
         vector = engine._vector_index

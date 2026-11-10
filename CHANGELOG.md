@@ -19,6 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   PostgreSQL: `organizer_watermarks` gains `stalled_id` and `stalled_attempts`, which are part of the runtime schema fingerprint. A deployment that opens its stores with `initialize=False` refuses to open until the privileged schema bootstrap runs again; an open with `initialize=True` (the default of `MemoryEngine.open` and `MemoryWorkspace.open_postgres`) adds the columns itself.
 
+- The `summarize` organizer job no longer pushes probe answers out of the top 3
+  (dwamianm/prism#534). A hierarchical daily, weekly or monthly summary is no
+  longer added to the Tantivy lexical index or the native USearch vector index
+  that default retrieval reads, so it cannot outrank the source that answers a
+  narrow question and it no longer changes the BM25 corpus statistics of other
+  candidates. Its vector keeps its durable metadata, payload and staged text
+  for recovery, embedding coverage and privacy migration, but it is not
+  searchable. The summaries stay stored and readable through the node routes,
+  the summary lineage and `GET /v1/nodes` with a summary type filter.
+  `retrieve()` and `MemoryClient.retrieve()` gain `include_node_types`, a node
+  type allowlist and the explicit opt-in that reads these summaries from the
+  graph; the HTTP retrieve `filters` object and the MCP `memory_retrieve` tool
+  accept it too. `prme rebuild`, the open of a single-file pack and the
+  protected rebuild apply the same rule. A summary written by the `consolidate`
+  job is unchanged, because that job retires the sources it represents. On the
+  three probe packs the top 3 answer counts with `summarize` on against off are
+  member-v1 10/12 against 10/12 (was 8/12), chat-v1 14/18 against 14/18 and
+  defects-v1 7/7 against 7/7, with every probe rank identical to the off side.
+  A directory pack built before this release keeps its older summary documents
+  until the next `summarize` run, `prme rebuild` or, for a single-file pack,
+  the next open. Questions about a period, such as "what happened last week",
+  do not use these summaries yet; that path is separate follow-up work.
+
 ## [0.17.0a5] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

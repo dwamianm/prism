@@ -14,6 +14,8 @@ from collections.abc import Callable
 
 import asyncpg
 
+from prme.index_policy import unindexed_summary_sql
+
 logger = logging.getLogger(__name__)
 
 # Distinct query terms a search uses, in query order. Each term costs one
@@ -156,7 +158,13 @@ class PgLexicalIndex:
             placeholders = ", ".join(f"${len(params) + 1 + i}" for i in range(len(scope)))
             filters.append(f"scope IN ({placeholders})")
             params.extend(scope)
-        nodes_where = " AND ".join(["n.user_id = $1", *(f"n.{f}" for f in filters)])
+        # A hierarchical summary keeps its node row but default retrieval does
+        # not match it in the lexical search (dwamianm/prism#534).
+        nodes_where = " AND ".join([
+            "n.user_id = $1",
+            *(f"n.{f}" for f in filters),
+            f"NOT {unindexed_summary_sql('n', dialect='postgres')}",
+        ])
         docs_where = " AND ".join(["d.user_id = $1", *(f"d.{f}" for f in filters)])
         params.append(limit)
         limit_idx = len(params)

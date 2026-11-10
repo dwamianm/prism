@@ -20,6 +20,7 @@ from prme.models.owner_reference import OWNER_REFERENCE_STATUS
 from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
 from prme.retrieval.models import QueryAnalysis, RetrievalCandidate
+from prme.index_policy import is_unindexed_summary
 from prme.types import EdgeType, LifecycleState, NodeType, Scope
 
 if TYPE_CHECKING:
@@ -318,6 +319,10 @@ async def _generate_graph_candidates(
                 continue
             if neighbor.user_id != user_id:
                 continue
+            # A hierarchical summary is not part of default retrieval
+            # (dwamianm/prism#534), so it must not take a graph slot either.
+            if is_unindexed_summary(neighbor.node_type.value, neighbor.metadata):
+                continue
             proximity = _HOP_PROXIMITY.get(depth, 0.4)
 
             # Scope filter: skip neighbors outside requested scopes.
@@ -493,11 +498,64 @@ async def _generate_pinned_candidates(
     seen_ids: set[str] = set()
     for node in [*pinned_nodes, *task_nodes]:
         nid = str(node.id)
-        if nid not in seen_ids:
-            seen_ids.add(nid)
-            pinned.append(node)
+        if nid in seen_ids:
+            continue
+        # A pinned hierarchical summary stays out of default retrieval
+        # (dwamianm/prism#534).
+        if is_unindexed_summary(node.node_type.value, node.metadata):
+            continue
+        seen_ids.add(nid)
+        pinned.append(node)
 
     return pinned
+
+
+async def generate_summary_candidates(
+    analysis: QueryAnalysis,
+    graph_store: GraphStore,
+    user_id: str,
+    config: PackingConfig,
+    *,
+    scope: list[Scope] | None = None,
+) -> list[RetrievalCandidate]:
+    """Read hierarchical summaries from the graph for an explicit summary request.
+
+    The default search indexes do not hold these summaries
+    (dwamianm/prism#534), so ``include_node_types`` naming SUMMARY reads them
+    from the graph instead. A summary matches when its content contains at
+    least one question word; it is ranked on the lexical channel by the share
+    of distinct question words it contains, normalized across the matches.
+    This is a bounded opt-in path, not the default ranking.
+    """
+    terms = _seed_terms(analysis.query)
+    if not terms:
+        return []
+    nodes = await graph_store.query_nodes(
+        user_id=user_id,
+        node_type=NodeType.SUMMARY,
+        scopes=scope or None,
+        lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+        content_contains_any=terms,
+        limit=config.graph_max_candidates,
+    )
+    wanted = set(terms)
+    matches = [
+        {"node": node, "score": len(wanted & set(_SEED_WORD_RE.findall(node.content.lower()))) / len(wanted)}
+        for node in nodes
+        if is_unindexed_summary(node.node_type.value, node.metadata)
+    ]
+    if not matches:
+        return []
+    normalized = normalize_bm25_scores(matches)
+    return [
+        RetrievalCandidate(
+            node=item["node"],
+            paths=["SUMMARY"],
+            path_count=1,
+            lexical_score=item["normalized_score"],
+        )
+        for item in normalized
+    ]
 
 
 def merge_candidates(

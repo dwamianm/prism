@@ -13,12 +13,14 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 
 import tantivy
 from prme.models.derivation import DerivationPlan
 from prme.models.profile import ProfilePublication
 from prme.storage._threading import run_to_completion
+from prme.index_policy import is_unindexed_summary, unindexed_summary_sql
 
 from prme.storage.derivation_staging import DuckDBStageFence
 from prme.types import NodeType
@@ -45,18 +47,33 @@ _WRITER_HEAP = 50_000_000
 # ingestion write path asks has_lexical_document(), and rebuild_indexes()
 # and the startup load of a single-file pack select their documents with
 # LEXICAL_DOCUMENT_SQL, so all three build the same index.
+#
+# A hierarchical summary from the summarize job gets no lexical document
+# either (dwamianm/prism#534): its text quotes source passage after source
+# passage, so it would outrank the source that answers a narrow question and
+# change BM25 statistics for every other candidate. That is a property of the
+# node, not of how it was derived, so it is checked separately below.
 _DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT = frozenset({NodeType.ENTITY.value})
 
 
-def has_lexical_document(node_type: str, *, derived: bool) -> bool:
+def has_lexical_document(
+    node_type: str,
+    *,
+    derived: bool,
+    metadata: Mapping[str, Any] | None = None,
+) -> bool:
     """Whether a node of ``node_type`` gets a lexical document.
 
     ``derived`` means a journaled derivation, such as ``ingest()``
     extraction, created the node and reserved its identity in
     ``derivation_artifact_owners``. A protected store's direct ``store()``
     plan reserves its node too, but that node is not derived
-    (``derived_artifact_sql``).
+    (``derived_artifact_sql``). ``metadata`` identifies a hierarchical
+    summary, whose lexical document the default index leaves out
+    (dwamianm/prism#534).
     """
+    if is_unindexed_summary(node_type, metadata):
+        return False
     return not (derived and node_type in _DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT)
 
 
@@ -81,9 +98,12 @@ def derived_artifact_sql(node_id: str) -> str:
 
 # has_lexical_document() as a SQL condition on a row of the ``nodes`` table.
 LEXICAL_DOCUMENT_SQL = (
-    "NOT (nodes.node_type IN ("
+    "NOT ("
+    + "(nodes.node_type IN ("
     + ", ".join(f"'{node_type}'" for node_type in sorted(_DERIVED_TYPES_WITHOUT_LEXICAL_DOCUMENT))
     + ") AND " + derived_artifact_sql("CAST(nodes.id AS VARCHAR)") + ")"
+    + " OR " + unindexed_summary_sql("nodes")
+    + ")"
 )
 
 

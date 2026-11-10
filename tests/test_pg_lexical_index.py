@@ -62,6 +62,28 @@ async def test_search_nodes(lexical_index, graph_store):
     assert any("full-text" in r["content"].lower() or "search" in r["content"].lower() for r in results)
 
 
+async def test_hierarchical_summary_is_not_lexically_searchable(lexical_index, graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    summary = MemoryNode(
+        user_id=uid, node_type=NodeType.SUMMARY, scope=Scope.PERSONAL,
+        content="Daily summary: the launch moved to Friday",
+        metadata={
+            "consolidation_summary": True,
+            "consolidation_key": str(uuid.uuid4()),
+            "summary_publication_kind": "hierarchical_source_excerpts_v2",
+            "summary_publication_key": str(uuid.uuid4()),
+            "summarization_level": "daily",
+            "summary_format": "source-excerpts-v1",
+            "period_key": "2026-01-02",
+            "source_count": 2,
+            "source_node_ids": [str(uuid.uuid4()), str(uuid.uuid4())],
+        },
+    )
+    await graph_store.create_node(summary)
+
+    assert await lexical_index.search("launch Friday", uid, limit=5) == []
+
+
 async def test_index_non_node_content(lexical_index):
     """Non-node content should be indexed in lexical_documents table."""
     uid = f"user-{uuid.uuid4().hex[:8]}"

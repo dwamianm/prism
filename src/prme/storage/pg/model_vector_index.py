@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 import asyncpg
 
 from prme.storage.embedding import EmbeddingProvider, encode_texts
+from prme.index_policy import unindexed_summary_sql
 from prme.storage.multi_model import ACTIVE_STATES, ModelIdentity, StoredModel
 from prme.storage.pg.vector_index import PgVectorIndex
 from prme.storage.pg.vector_sql import VectorSQL
@@ -313,6 +314,10 @@ class PgModelVectorIndex(PgVectorIndex):
                 written += int(result.split()[-1])
         return written
 
+    async def exclude_from_search(self, node_id: str) -> int:
+        """PostgreSQL searches filter hierarchical summaries in SQL, so nothing to remove."""
+        return 0
+
     async def delete_by_node_id(self, node_id: str) -> int:
         """Remove this model's vector for a retired node; returns 1 when one was removed."""
         async with self._pool.acquire() as conn:
@@ -367,6 +372,9 @@ class PgModelVectorIndex(PgVectorIndex):
         conditions = [
             "n.user_id = $1",
             f"n.lifecycle_state IN ({_STATE_PLACEHOLDERS})",
+            # A hierarchical summary keeps its stored vector but default
+            # retrieval does not search it (dwamianm/prism#534).
+            "NOT " + unindexed_summary_sql("n", dialect="postgres"),
         ]
         params: list = [user_id]
         idx = 2
@@ -435,7 +443,10 @@ class PgModelVectorIndex(PgVectorIndex):
                 for r in rows]
 
     def _expected(self, user_id: str | None, first: int) -> tuple[str, list]:
-        sql = (f"FROM nodes n WHERE n.lifecycle_state IN ({_STATE_PLACEHOLDERS}) AND n.content ~ '\\S'")
+        sql = (
+            f"FROM nodes n WHERE n.lifecycle_state IN ({_STATE_PLACEHOLDERS}) AND n.content ~ '\\S'"
+            + " AND NOT " + unindexed_summary_sql("n", dialect="postgres")
+        )
         params: list = []
         if user_id is not None:
             sql += f" AND n.user_id = ${first}"

@@ -234,15 +234,32 @@ class MultiModelVectorIndex:
         await self._write_extras("index", node_id, lambda extra: extra.index(node_id, content, user_id, replace=replace))
         return key
 
-    async def stage(self, embedding: Any, *, user_id: str, fence: Any = None) -> int:
-        """Stage the active model's prepared vector, then write the additional models' (DuckDB ingestion)."""
+    async def stage(
+        self, embedding: Any, *, user_id: str, fence: Any = None, searchable: bool = True,
+    ) -> int:
+        """Stage the active model's prepared vector, then write the additional models' (DuckDB ingestion).
+
+        With ``searchable=False`` no model's search index receives the vector
+        (dwamianm/prism#534); the active model still keeps its durable
+        metadata, payload and staged text.
+        """
         await self.require_usable()
-        key = await self._active.stage(embedding, user_id=user_id, fence=fence)
-        await self._write_extras(
-            "stage", str(embedding.node_id),
-            lambda extra: extra.index(str(embedding.node_id), embedding.content, user_id, replace=True),
-        )
+        key = await self._active.stage(embedding, user_id=user_id, fence=fence, searchable=searchable)
+        if searchable:
+            await self._write_extras(
+                "stage", str(embedding.node_id),
+                lambda extra: extra.index(str(embedding.node_id), embedding.content, user_id, replace=True),
+            )
         return key
+
+    async def exclude_from_search(self, node_id: str) -> int:
+        """Remove a node's vectors from every open model's native index, keeping metadata."""
+        removed = 0
+        for index in self.indexes:
+            exclude = getattr(index, "exclude_from_search", None)
+            if exclude is not None:
+                removed += await exclude(node_id)
+        return removed
 
     async def write_additional(self, embeddings: list[Any], *, user_id: str) -> None:
         """Dual-write memories a transaction already published with the active model's vector (PostgreSQL)."""

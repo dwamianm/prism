@@ -132,6 +132,24 @@ async def test_filters_cover_primary_context_hints_limits_and_receipts(config, u
         assert empty.results == [] and empty.cross_scope_hints == [] and not empty.bundle.rendered_context
 
 
+async def test_include_node_types_is_an_allowlist_and_names_the_receipt(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        await seed(engine, user)
+        response = await engine.retrieve(
+            "plan coverage", user_id=user, scope=Scope.PERSONAL,
+            include_node_types={NodeType.PREFERENCE},
+        )
+        assert response.results
+        assert all(candidate.node.node_type == NodeType.PREFERENCE for candidate in response.results)
+        assert all(candidate.node.node_type == NodeType.PREFERENCE for candidate in response.cross_scope_hints)
+        assert response.filter_metadata.include_node_types == ["preference"]
+        receipt = await engine.get_retrieval_receipt(str(response.metadata.request_id), user_id=user)
+        assert receipt.execution.parameters["include_node_types"] == ["preference"]
+        assert any(
+            item.reason == "node_type_not_included:note" for item in response.excluded
+        )
+
+
 @pytest.mark.parametrize("stage,setting", [
     ("expand_session_context", "session_context_window"),
     ("project_evidence_context", "evidence_projection_top_k"),

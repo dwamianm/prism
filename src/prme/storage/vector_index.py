@@ -20,6 +20,7 @@ from usearch.index import Index
 from prme.models.derivation import PreparedEmbedding
 from prme.storage._threading import run_to_completion
 from prme.storage.derivation_staging import DuckDBStageFence
+from prme.index_policy import unindexed_summary_sql
 from prme.storage.profile_work import ProfileStageFence
 from prme.models.profile import ProfilePublication
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
@@ -242,11 +243,21 @@ class VectorIndex:
         # for every page. A separate cursor keeps its result alive while legacy
         # backfill writes use the main connection. Both are startup-only here.
         with self._conn.cursor() as reader:
+            # A hierarchical summary keeps its durable vector but stays out
+            # of the native index (dwamianm/prism#534), so skip its metadata
+            # here and let the orphan sweep below remove an older searchable
+            # copy. Metadata with no graph node is still reconciled.
+            conditions = [
+                f"(n.id IS NULL OR NOT {unindexed_summary_sql('n')})",
+            ]
+            if self._scoped:
+                conditions.append("vm.embedding_model = ? AND vm.embedding_version = ?")
             reader.execute(
                 "SELECT vm.vector_key, vm.embedding_dim, vp.vector_key IS NOT NULL "
                 "FROM vector_metadata vm LEFT JOIN vector_payloads vp "
-                "ON vm.vector_key = vp.vector_key"
-                + (" WHERE vm.embedding_model = ? AND vm.embedding_version = ?" if self._scoped else "")
+                "ON vm.vector_key = vp.vector_key "
+                "LEFT JOIN nodes n ON n.id = TRY_CAST(vm.node_id AS UUID) "
+                "WHERE " + " AND ".join(conditions)
                 + " ORDER BY vm.vector_key",
                 list(self._model_params()),
             )
@@ -297,10 +308,10 @@ class VectorIndex:
         # corresponding nextval advance. Rebase once at startup, beyond both
         # durable keys and the sequence's recorded position. Otherwise the
         # first new vector after a process exit can collide with a saved key.
-        if self._scoped:
-            # The sequence serves every model, so the rebase clears the keys of all of them.
-            max_key = max(max_key, self._conn.execute(
-                "SELECT COALESCE(MAX(vector_key), 0) FROM vector_metadata").fetchone()[0])
+        # The read covers every metadata row, including a hierarchical
+        # summary's non-searchable one, which the loop above skips.
+        max_key = max(max_key, self._conn.execute(
+            "SELECT COALESCE(MAX(vector_key), 0) FROM vector_metadata").fetchone()[0])
         start, last = self._conn.execute(
             "SELECT start_value, last_value FROM duckdb_sequences() "
             "WHERE sequence_name = 'vector_key_seq' AND schema_name = current_schema() "
@@ -459,7 +470,14 @@ class VectorIndex:
 
         return key
 
-    async def stage(self, embedding: PreparedEmbedding, *, user_id: str, fence: DuckDBStageFence | ProfileStageFence | None = None) -> int:
+    async def stage(
+        self,
+        embedding: PreparedEmbedding,
+        *,
+        user_id: str,
+        fence: DuckDBStageFence | ProfileStageFence | None = None,
+        searchable: bool = True,
+    ) -> int:
         """Durably stage a saved embedding without inference or replacement.
 
         Repeating identical input reuses its key, including after a native
@@ -467,6 +485,14 @@ class VectorIndex:
         data. Managed ingestion supplies a fence that holds its work generation
         against takeover throughout the native write. Calls without a fence are
         an unmanaged component API; this method does not publish a graph node.
+
+        With ``searchable=False`` the vector keeps its durable metadata,
+        payload and staged text but is not added to the native index, and an
+        older searchable copy of the same vector is removed from it. A
+        hierarchical summary from the summarize job is staged this way
+        (dwamianm/prism#534): retrieval must not rank it, while
+        ``rebuild_protected``, embedding coverage and privacy migration still
+        expect a vector for every active node.
         """
         def prepared(embedding) -> tuple[PreparedEmbedding, np.ndarray]:
             # The embedded text can be a whole entity profile, so validating the
@@ -488,16 +514,25 @@ class VectorIndex:
             return owned, vector
 
         embedding, vector = await run_to_completion(prepared, embedding)
+        # Keep the default call positional so a test that wraps ``_do_stage``
+        # with ``*args`` keeps working; only the non-searchable path names the
+        # new option.
+        options = {} if searchable else {"searchable": False}
         async with self._write_lock:
             async with self._conn_lock:
                 if fence is not None:
                     def guarded():
                         with fence.hold():
-                            return self._do_stage(embedding, user_id, vector)
+                            return self._do_stage(embedding, user_id, vector, **options)
                     return await run_to_completion(guarded)
-                return await run_to_completion(self._do_stage, embedding, user_id, vector)
+                return await run_to_completion(
+                    self._do_stage, embedding, user_id, vector, **options,
+                )
 
-    def _do_stage(self, embedding: PreparedEmbedding, user_id: str, vector: np.ndarray) -> int:
+    def _do_stage(
+        self, embedding: PreparedEmbedding, user_id: str, vector: np.ndarray,
+        *, searchable: bool = True,
+    ) -> int:
         node_id = str(embedding.node_id)
         rows = self._conn.execute(
             "SELECT vm.vector_key, vm.user_id, vm.embedding_model, vm.embedding_version, "
@@ -512,11 +547,15 @@ class VectorIndex:
             if len(rows) != 1 or tuple(rows[0][1:]) != expected:
                 raise ValueError("Prepared embedding conflicts with existing vector identity")
             key = rows[0][0]
-            if not self._index.contains(key):
+            if not searchable:
+                self._remove_native_key(key)
+            elif not self._index.contains(key):
                 self._add_vector(key, vector)
             return key
-        return self._do_index(node_id, embedding.content, user_id, vector,
-                              prepared=embedding)
+        return self._do_index(
+            node_id, embedding.content, user_id, vector, prepared=embedding,
+            **({} if searchable else {"searchable": False}),
+        )
 
     def _do_index(
         self,
@@ -526,6 +565,7 @@ class VectorIndex:
         vector: np.ndarray,
         *,
         prepared: PreparedEmbedding | None = None,
+        searchable: bool = True,
     ) -> int:
         """Synchronous insert + (debounced) save (runs in thread pool).
 
@@ -563,7 +603,8 @@ class VectorIndex:
             self._conn.execute("ROLLBACK")
             raise
 
-        self._add_vector(key, vector)
+        if searchable:
+            self._add_vector(key, vector)
         return key
 
     def _add_vector(self, key: int, vector: np.ndarray) -> None:
@@ -571,6 +612,22 @@ class VectorIndex:
         self._index.add(key, vector)
         self._snapshot_dirty = True
         self._count_unsaved_changes(1)
+
+    def _remove_native_key(self, key: int) -> None:
+        """Remove one durable vector from the native index, keeping its metadata.
+
+        Used when a vector becomes non-searchable (dwamianm/prism#534). The
+        removal is saved immediately so a reopened pack reads the same index.
+        """
+        if not self._index.contains(key):
+            return
+        self._index.remove(key)
+        self._snapshot_dirty = True
+        if self._index_path is None:
+            self._count_unsaved_changes(1)
+        else:
+            self._save_snapshot()
+            self._unsaved_inserts = 0
 
     def _count_unsaved_changes(self, count: int) -> None:
         """Count native index changes and save the snapshot on the interval.
@@ -609,6 +666,35 @@ class VectorIndex:
         async with self._write_lock:
             async with self._conn_lock:
                 return await run_to_completion(guarded)
+
+    async def exclude_from_search(self, node_id: str) -> int:
+        """Remove a node's vectors from the native index, keeping their metadata.
+
+        The durable vector stays for recovery, embedding coverage and privacy
+        migration; only default retrieval stops seeing it (dwamianm/prism#534).
+        Returns how many native keys were removed.
+        """
+        async with self._write_lock:
+            async with self._conn_lock:
+                return await run_to_completion(self._do_exclude, node_id)
+
+    def _do_exclude(self, node_id: str) -> int:
+        """Synchronous native removal with immediate persistence (runs in thread pool)."""
+        suffix = self._model_filter()
+        params = [node_id, *self._model_params()]
+        rows = self._conn.execute(
+            "SELECT vector_key FROM vector_metadata WHERE node_id = ?" + suffix, params,
+        ).fetchall()
+        removed = 0
+        for (key,) in rows:
+            if self._index.contains(key):
+                self._index.remove(key)
+                self._snapshot_dirty = True
+                removed += 1
+        if removed:
+            self._save_snapshot()
+            self._unsaved_inserts = 0
+        return removed
 
     async def delete_by_node_id(self, node_id: str) -> int:
         """Remove all vectors for a node from USearch and DuckDB metadata.
@@ -962,10 +1048,16 @@ class VectorIndex:
         return [StoredModel(ModelIdentity(name, version, int(dim)), int(count)) for name, version, dim, count in rows]
 
     def _expected_nodes(self, user_id: str | None) -> tuple[str, list]:
-        """The nodes that should have a vector: active ones with text to embed, as ``rebuild_indexes()`` takes them."""
+        """The nodes that should have a searchable vector: active text nodes, as ``rebuild_indexes()`` takes them.
+
+        A hierarchical summary from the summarize job is left out: its vector
+        stays durable but is not searchable (dwamianm/prism#534), so coverage
+        and reembed do not expect one.
+        """
         sql = (
             "FROM nodes n WHERE COALESCE(n.lifecycle_state, 'tentative') IN ("
             + ", ".join("?" for _ in ACTIVE_STATES) + ") AND regexp_matches(n.content, '\\S')"
+            + " AND NOT " + unindexed_summary_sql("n")
         )
         params: list = list(ACTIVE_STATES)
         if user_id is not None:

@@ -12,8 +12,30 @@ from prme.organizer.summarization import (
     _create_summary_node, _group_nodes_by_day, _group_scoped,
     generate_daily_summaries, roll_up_weekly, roll_up_monthly, SummarizationLevel,
 )
+from prme.index_policy import is_unindexed_summary
 from prme.types import EpistemicType, NodeType, Scope
 from tests.test_durable_ingestion import config, user  # noqa: F401
+
+
+def test_index_policy_distinguishes_summary_kinds():
+    assert is_unindexed_summary(
+        "summary", {"summary_publication_kind": "hierarchical_source_excerpts_v2"},
+    )
+    assert is_unindexed_summary(
+        "summary",
+        {"summarization_level": "weekly", "summary_format": "source-excerpts-v1",
+         "period_key": "2024-W02"},
+    )
+    # A consolidation summary retires the sources it represents, so it stays
+    # indexed. So does a knowledge profile, and a summary with no metadata.
+    assert not is_unindexed_summary(
+        "summary", {"consolidation_key": "k", "consolidation_format_version": 2},
+    )
+    assert not is_unindexed_summary("summary", {"entity_profile": True})
+    assert not is_unindexed_summary("summary", None)
+    assert not is_unindexed_summary(
+        "fact", {"summary_publication_kind": "hierarchical_source_excerpts_v2"},
+    )
 
 
 def test_unscoped_groups_are_separate_for_each_user_and_scope():
@@ -44,9 +66,18 @@ async def test_summary_preserves_scope_full_qualifiers_and_historical_rollup_tim
         assert (await roll_up_monthly(engine, cfg, 10000, user_id=user)).nodes_modified == 2
         summaries = await engine.query_nodes(user_id=user, node_type=NodeType.SUMMARY)
         assert len(summaries) == 8
-        hits = await engine._lexical_index.search("workflow", user, node_type="summary", limit=100,
-                                                  scope=[Scope.PERSONAL.value])
-        assert len(hits) == 4
+        # The summarize job's summaries stay out of the default indexes
+        # (dwamianm/prism#534); an explicit node-type request reads them from
+        # the graph instead.
+        response = await engine.retrieve(
+            "workflow", user_id=user, scope=Scope.PERSONAL,
+            include_node_types=[NodeType.SUMMARY], limit=100,
+        )
+        assert sum(result.node.node_type == NodeType.SUMMARY for result in response.results) == 4
+        assert not any(
+            is_unindexed_summary(result.node.node_type.value, result.node.metadata)
+            for result in (await engine.retrieve("workflow", user_id=user, scope=Scope.PERSONAL, limit=100)).results
+        )
         for node in summaries:
             assert node.epistemic_type == EpistemicType.INFERRED
             assert node.scope in (Scope.PERSONAL, Scope.PROJECT)
@@ -59,6 +90,50 @@ async def test_summary_preserves_scope_full_qualifiers_and_historical_rollup_tim
                 assert node.metadata["period_key"] == "2024-W02"
             if node.metadata["summarization_level"] == "monthly":
                 assert node.metadata["period_key"] == "2024-01"
+
+
+async def test_summarize_summaries_stay_out_of_the_default_indexes(config, user):  # noqa: F811
+    async with MemoryEngine.open(config) as engine:
+        day = datetime(2024, 1, 9, tzinfo=timezone.utc)
+        for index in range(2):
+            await engine._graph_store.create_node(MemoryNode(
+                user_id=user, scope=Scope.PERSONAL, node_type=NodeType.FACT,
+                content=f"The workflow detail {index}", event_time=day,
+            ))
+        result = await generate_daily_summaries(
+            engine, OrganizerConfig(summarization_daily_min_events=1), 10000, user_id=user,
+        )
+        assert result.nodes_modified == 1
+        summaries = await engine.query_nodes(user_id=user, node_type=NodeType.SUMMARY)
+        summary_ids = {str(node.id) for node in summaries}
+        assert summary_ids
+
+        # The lexical index has no document, and the native vector index has
+        # no entry, but the vector itself is still durable for recovery.
+        assert await engine._lexical_index.search(
+            "workflow", user, node_type="summary", limit=100,
+        ) == []
+        vector_hits = await engine._vector_index.search("workflow", user, k=100)
+        assert not summary_ids & {hit["node_id"] for hit in vector_hits}
+        if engine._conn is not None:
+            keys = [
+                row[0]
+                for row in engine._conn.execute(
+                    "SELECT vector_key FROM vector_metadata WHERE node_id IN "
+                    f"({', '.join('?' for _ in summary_ids)})",
+                    list(summary_ids),
+                ).fetchall()
+            ]
+            assert keys
+            assert not any(engine._vector_index._index.contains(key) for key in keys)
+
+        if engine._conn is not None:
+            await engine.rebuild_indexes()
+            assert await engine._lexical_index.search(
+                "workflow", user, node_type="summary", limit=100,
+            ) == []
+            vector_hits = await engine._vector_index.search("workflow", user, k=100)
+            assert not summary_ids & {hit["node_id"] for hit in vector_hits}
 
 
 async def test_summary_creation_rejects_mixed_scope_before_any_write(config, user):  # noqa: F811

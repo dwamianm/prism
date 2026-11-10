@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from uuid import UUID, uuid4, uuid5
 
+from prme.index_policy import unindexed_summary_sql
 from prme.privacy.erasure import ErasureIntent, ErasureRequest, ErasureStatus, LedgerHead
 from prme.privacy.policy import PrivacyDenied
 from prme.privacy.records import PrivacyRecord
@@ -952,7 +953,18 @@ async def _verify_purge(coordinator, intent):
                 if rows and rows[0]["op_type"] != "PRIVACY_ERASED":
                     raise PrivacyDenied("privacy_invalid_result")
         if "vector_metadata" in tables:
-            valid_keys = {row["vector_key"] for row in await session.fetch("SELECT vector_key FROM vector_metadata")}
+            # The native index holds every durable vector except a
+            # hierarchical summary's, which stays durable but is not
+            # searchable (dwamianm/prism#534). The coverage check compares
+            # the native keys with this same set.
+            valid_keys = {
+                row["vector_key"]
+                for row in await session.fetch(
+                    "SELECT vm.vector_key FROM vector_metadata vm "
+                    "LEFT JOIN nodes n ON n.id = TRY_CAST(vm.node_id AS UUID) "
+                    f"WHERE n.id IS NULL OR NOT {unindexed_summary_sql('n')}"
+                )
+            }
         else:
             valid_keys = None
     if valid_keys is not None:

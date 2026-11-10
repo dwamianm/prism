@@ -110,6 +110,7 @@ from prme.storage.duckpgq_graph import DuckPGQGraphStore
 from prme.storage.embedding import EmbeddingProvider, create_embedding_provider, validate_embedding_provider, encode_texts
 from prme.storage.encryption import EncryptionError
 from prme.storage.event_store import EventStore
+from prme.index_policy import unindexed_summary_sql
 from prme.storage.lexical_index import (
     LEXICAL_DOCUMENT_SQL,
     LexicalIndex,
@@ -198,6 +199,9 @@ _INDEXED_STATES = tuple(state.value for state in ACTIVE_LIFECYCLE_STATES)
 _INDEXED_NODES_SQL = (
     f"SELECT id, content, user_id, node_type, scope, {LEXICAL_DOCUMENT_SQL} FROM nodes "
     f"WHERE COALESCE(lifecycle_state, 'tentative') IN ({', '.join('?' for _ in _INDEXED_STATES)}) "
+    # A hierarchical summary gets neither a vector nor a lexical document
+    # (dwamianm/prism#534); its text is read through the graph instead.
+    f"AND NOT {unindexed_summary_sql('nodes')} "
     "ORDER BY id"
 )
 
@@ -2710,6 +2714,7 @@ class MemoryEngine:
         max_per_evidence: int | None = None,
         exclude_node_types: Collection[NodeType] | None = None,
         source_types: Collection[SourceType] | None = None,
+        include_node_types: Collection[NodeType] | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         min_fidelity: RepresentationLevel | None = None,
@@ -2767,6 +2772,11 @@ class MemoryEngine:
                 packed context and supplementary hints, before result limiting.
             source_types: Optional provenance allowlist. None allows all source
                 types; an empty collection allows none. Applies in either mode.
+            include_node_types: Optional node-type allowlist and the explicit
+                opt-in for summaries the default indexes leave out. Without it
+                a hierarchical ``summarize`` summary is not a primary result;
+                naming SUMMARY reads those summaries from the graph instead
+                (dwamianm/prism#534). An empty collection keeps nothing.
             weights: Override default scoring weights.
             ranking_multipliers: Explicit request-only adjustment for full-pipeline
                 trials; does not activate or persist a learned profile.
@@ -2796,9 +2806,10 @@ class MemoryEngine:
             NotImplementedError: If no retrieval pipeline is configured.
         """
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
-        from prme.retrieval.filtering import normalize_type_filters
+        from prme.retrieval.filtering import normalize_include_types, normalize_type_filters
 
         exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
+        include_node_types = normalize_include_types(include_node_types)
         scope = normalize_scope(scope)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
@@ -2875,6 +2886,7 @@ class MemoryEngine:
                 max_per_source=max_per_source,
                 max_per_evidence=max_per_evidence,
                 exclude_node_types=exclude_node_types, source_types=source_types,
+                include_node_types=include_node_types,
                 weights=weights,
                 ranking_multipliers=ranking_multipliers,
                 ranking_profile=profile_application,

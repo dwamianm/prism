@@ -113,6 +113,8 @@ def consume(client: MemoryClient) -> None:
     assert_type(client.retrieve("preferences", user_id="alice",
                                 exclude_node_types={NodeType.NOTE, NodeType.ENTITY},
                                 source_types={SourceType.USER_STATED}), RetrievalResponse)
+    assert_type(client.retrieve("summaries", user_id="alice",
+                                include_node_types={NodeType.SUMMARY}), RetrievalResponse)
     response = client.retrieve("Rust", user_id="alice")
     assert_type(response.bundle.value_bindings(), tuple[RetrievedValueBinding, ...])
     resolution = response.bundle.resolve_tool_arguments(
