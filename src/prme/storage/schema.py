@@ -229,11 +229,13 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
     )
 
     # --- Organizer watermarks table (dwamianm/prism#517) ---
-    # One row per scope and job. scope_key is "u:" plus the user id, or the
-    # empty string for an unscoped operator run (prme.organizer.watermarks).
-    # The row records the ceiling of the last completed run and, while a run
-    # is budget-stopped, the keyset position it reached so the next run
-    # resumes instead of starting over.
+    # One row per scope and job. scope_key is "u:" plus the user id exactly as
+    # given (ownership is an exact match), or the empty string for an unscoped
+    # operator run (prme.organizer.watermarks). The row records the ceiling of
+    # the last completed run and, while a run is budget-stopped, the keyset
+    # position it reached so the next run resumes instead of starting over.
+    # It also counts the failed runs that stopped at one node, so a repeated
+    # failure is bounded and skipped instead of pinning the scope (#545).
     conn.execute("""
         CREATE TABLE IF NOT EXISTS organizer_watermarks (
             scope_key VARCHAR NOT NULL,
@@ -241,10 +243,29 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
             completed_through TIMESTAMPTZ,
             resume_updated_at TIMESTAMPTZ,
             resume_id UUID,
+            stalled_id UUID,
+            stalled_attempts INTEGER DEFAULT 0,
             updated_at TIMESTAMPTZ DEFAULT current_timestamp,
             PRIMARY KEY (scope_key, job)
         )
     """)
+    watermark_columns = {
+        row[1] for row in conn.execute("PRAGMA table_info('organizer_watermarks')").fetchall()
+    }
+    added_watermark_columns = False
+    for column, ddl in (
+        ("stalled_id", "ALTER TABLE organizer_watermarks ADD COLUMN stalled_id UUID"),
+        ("stalled_attempts",
+         "ALTER TABLE organizer_watermarks ADD COLUMN stalled_attempts INTEGER DEFAULT 0"),
+    ):
+        if column not in watermark_columns:
+            conn.execute(ddl)
+            added_watermark_columns = True
+    if added_watermark_columns:
+        # Persist the migration as soon as it happens, as the event_extractions
+        # ALTER above does: DuckDB's WAL replay of an ADD COLUMN is not reliable
+        # after an abrupt exit.
+        conn.execute("CHECKPOINT")
 
 
 def _migrate_events_scope(conn: duckdb.DuckDBPyConnection) -> None:

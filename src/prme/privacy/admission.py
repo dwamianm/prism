@@ -818,7 +818,15 @@ class AdmissionCoordinator:
                 raise PrivacyDenied("privacy_processing_unavailable")
         plan = await self.engine._event_store.get_derivation_plan(str(event.id), user_id=event.user_id)
         if plan is None:
-            plan = await self.direct_plan(record, event, intent.node)
+            # The node was built when the source was accepted, which can be long
+            # before this drain. Stamp the published copy with the time it is
+            # made and keep its created_at, so it enters the next incremental
+            # organizer window. The direct record keeps its accepted snapshot
+            # (dwamianm/prism#545).
+            made_at = intent.node.model_copy(
+                update={"updated_at": datetime.now(timezone.utc)},
+            )
+            plan = await self.direct_plan(record, event, made_at)
         await self.publish(record, plan)
         return True
 

@@ -472,10 +472,17 @@ An explicit `organize()` call is unchanged: unless a caller sets
 `OrganizerConfig.incremental_enabled`, every job stays full-scope and no
 watermark is written. With the option on, `deduplicate` and `alias_resolve`
 work from a per-scope, per-job watermark stored in `organizer_watermarks`,
-one row per scope and job. A scoped row is keyed by `u:` plus the user id (a
-UUID owner id is stored in its canonical text form), and the empty string is
-reserved for an unscoped operator run, so an empty user id cannot share the
-operator's row.
+one row per scope and job. A scoped row is keyed by `u:` plus the user id
+exactly as the caller passed it, and the empty string is reserved for an
+unscoped operator run, so an empty user id cannot share the operator's row.
+Exact text is deliberate: node ownership matches the exact user id, so two
+spellings of one UUID are two owners for every read and keep separate
+watermarks (dwamianm/prism#545). An owner-wide erasure still removes every row
+that names the owner under any text form of the UUID the standard parser
+accepts, by decoding each row of the per-scope table on the purge's first step
+(the verification stage re-applies the delete and covers a row a concurrent
+writer adds later), and the writer refuses a scope whose owner has such an
+erasure on record, whatever spelling the caller used.
 
 A run captures a ceiling before any work and examines only records created or
 updated after the job's last completed run, up to that ceiling.
@@ -496,6 +503,21 @@ can appear with a stamp just below the ceiling. A stopped or failed run keeps
 `completed_through` and records the processed prefix in `resume_updated_at`
 and `resume_id`; with no processed prefix the previous row stands and the
 window re-runs.
+
+A page whose neighbor search, name lookup or merge failed does not move the
+cursor, so the pair is examined again on the next run rather than being passed
+over (dwamianm/prism#545). Because the cursor is durable, one record that
+fails every time would otherwise pin the scope and nothing stored afterwards
+would be examined. The row therefore also records the node a failed run could
+not get past, in `stalled_id`, and how many runs have now stopped there, in
+`stalled_attempts`. After three failed runs at the same node, the job records
+the node in `details["skipped_nodes"]` and a warning log, moves the cursor
+past it and continues the window. The count is kept in the row so it survives
+a run in another process, and a failure at a different node starts again at
+one. A node skipped this way is examined again when it is next updated, the
+same bounded discovery the jobs already document. The two stall fields
+describe the latest writer and are not part of the monotonic merge, which
+covers only the completed position and the resume cursor.
 
 The store merges each write monotonically, so two runs over one scope that
 finish out of order converge on the furthest `completed_through` and on the
@@ -526,10 +548,11 @@ full-scope `alias_resolve` run examines only the newest 100 active entities,
 so it re-evaluates an older scope only in pages. Clearing that scope's row
 while the option is on starts a paged whole-scope incremental run, which is
 how an older scope is re-evaluated today; paging the option-off full scan is
-follow-up work. The same applies to a record materialized from an event whose
-timestamp is older than the window: the 60-second overlap covers a write that
-becomes visible soon after its stamp, not one admitted much later with an old
-stamp.
+follow-up work. A note materialized from a queued fast-ingest item is stamped
+`updated_at` with the time it is made, while `created_at` keeps the event's
+save time, so it enters the next window even when the event was saved long
+before (dwamianm/prism#545). The 60-second overlap still covers a write that
+becomes visible soon after its stamp.
 
 `summarize` stays full-scope as well, for a reason of its own
 (dwamianm/prism#523). Its output is one summary per day, week and month, and
@@ -551,11 +574,13 @@ marker leaves no node row for the window. A later `organize()` call does not
 put the owner's scope key back: the writer refuses a scope whose owner has an
 owner-wide memory erasure on record, and removes a row it wrote if the erasure
 appeared between its check and the write. The erasure verification stage fails
-when a resume cursor still names an erased node, and, for an owner-wide
-request, when the owner's scope row still exists. Before checking, it
-re-applies the purge's cursor clear and scope delete, because a concurrent
-writer can add the row after the SQL stage; a row that survives the second
-check fails the erasure. A full run re-examines every period
+when a resume cursor or stall still names an erased node, and, for an
+owner-wide request, when any row that names the owner under any UUID text form
+the standard parser accepts still exists. Before checking, it re-applies the
+purge's cursor and stall clear and the owner's scope delete, because a
+concurrent writer can add
+the row after the SQL stage; a row that survives the second check fails the
+erasure. A full run re-examines every period
 it reaches, so it reflects a move or a delete where the period still meets
 its minimum and the run's budget reaches it. A below-minimum period keeps its
 summary, and the week and month summaries built from it keep its excerpt until

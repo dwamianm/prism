@@ -134,8 +134,11 @@ and the merged node is superseded, so the next run re-finds only what is still
 active. The per-scope watermark and resumable stop added in dwamianm/prism#517 (and
 extended to `alias_resolve` in dwamianm/prism#523) let these jobs record where
 they stopped and continue on the next run when
-`OrganizerConfig.incremental_enabled` is on. This audit records the behavior and does
-not change the merge policy.
+`OrganizerConfig.incremental_enabled` is on. A page whose search or merge
+failed does not advance that watermark, and a node that fails three runs in a
+row is recorded as skipped and passed, so one bad record cannot pin the scope
+(dwamianm/prism#545). This audit records the behavior and does not change the
+merge policy.
 
 The local timing table above adds a 240-node row so one provider measures all
 three sizes. Its absolute `deduplicate` time is lower than the hosted number

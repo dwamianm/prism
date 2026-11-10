@@ -2172,11 +2172,14 @@ class MemoryEngine:
     async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
         """Materialize a saved direct store or raw source without a new event.
 
-        Direct stores retain their complete initial node snapshot; raw NOTE
-        identity and timestamps derive from the event. Retries preserve existing
-        graph state and never reactivate retired nodes. Active-node completion
-        is acknowledged only after both indexes are durable. When pending_lexical
-        is supplied, the enclosing batch must commit it before acknowledgement.
+        Direct stores retain their complete initial node snapshot; a raw NOTE
+        takes the event's identity and save time as ``created_at``, and is
+        stamped ``updated_at`` with the time it is made, so a note materialized
+        long after its save still enters the next incremental organizer window
+        (dwamianm/prism#545). Retries preserve existing graph state and never
+        reactivate retired nodes. Active-node completion is acknowledged only
+        after both indexes are durable. When pending_lexical is supplied, the
+        enclosing batch must commit it before acknowledgement.
         """
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
@@ -2203,7 +2206,7 @@ class MemoryEngine:
                     node_type=NodeType.NOTE, evidence_refs=[event.id],
                     epistemic_type=epistemic_type, source_type=source_type,
                     confidence=confidence, confidence_base=confidence,
-                    created_at=event.created_at, updated_at=event.created_at,
+                    created_at=event.created_at, updated_at=datetime.now(timezone.utc),
                     valid_from=event.timestamp, last_reinforced_at=event.timestamp,
                     event_time=event.event_time,
                     ttl_days=self._config.organizer.default_ttl_days.get("note"),
@@ -3173,6 +3176,8 @@ class MemoryEngine:
         completed_through,
         resume_updated_at=None,
         resume_id: str | None = None,
+        stalled_id: str | None = None,
+        stalled_attempts: int = 0,
     ) -> bool:
         """Record a job's progress for one scope.
 
@@ -3180,9 +3185,12 @@ class MemoryEngine:
         memory erasure on record, and in that case leaves no row: the guard
         refuses before the write, and if an erasure appears between the guard
         and the write the row just written is removed. The erasure purge
-        deletes that owner's rows, and a later organize call must not put the
-        plaintext owner id back. The store applies the upsert monotonically, so
-        two concurrent runs converge on the furthest position.
+        deletes that owner's rows under every spelling of the user id, and a
+        later organize call must not put the plaintext owner id back. The store
+        applies the upsert monotonically, so two concurrent runs converge on
+        the furthest position. ``stalled_id`` and ``stalled_attempts`` record
+        the node a failed run could not get past, which is how a repeated
+        failure is bounded instead of pinning the scope (dwamianm/prism#545).
         """
         from prme.organizer.watermarks import scope_owner
 
@@ -3196,6 +3204,8 @@ class MemoryEngine:
             completed_through=completed_through,
             resume_updated_at=resume_updated_at,
             resume_id=resume_id,
+            stalled_id=stalled_id,
+            stalled_attempts=stalled_attempts,
         )
         if owner is not None and await repository.owner_wide_erasure_requested(owner):
             # An erasure was recorded between the guard and the write, so the

@@ -634,16 +634,30 @@ async def _discover(repository, intent):
         pass
 
 
+# The saved SQL-stage progress before its first step. The default and the
+# first-step test share it, so they cannot drift apart and silently skip the
+# owner-wide watermark delete (dwamianm/prism#545).
+_PURGE_PROGRESS_START = ("", str(UUID(int=0)))
+
+
 async def _purge_sql_step(repository, intent):
     import json
     from prme.privacy.erasure import ErasedOperation
     from prme.storage.privacy_journals import finish_processing
     request = intent.request
+    start = _PURGE_PROGRESS_START
     async with repository.session(transaction=True) as session:
         tables = await repository.tables(session)
-        progress = await _progress(session, request.request_id, "sql", {"kind": "", "after": str(UUID(int=0)), "done": False})
+        progress = await _progress(
+            session, request.request_id, "sql",
+            {"kind": start[0], "after": start[1], "done": False},
+        )
         if progress["done"]:
             return True
+        # The owner-wide watermark delete below reads every scope key, so it
+        # runs on the first step only; the verification stage re-applies it and
+        # covers a row a concurrent writer added later (dwamianm/prism#545).
+        first_step = (progress["kind"], progress["after"]) == start
         rows = await session.fetch("SELECT kind,object_id FROM privacy_erasure_targets WHERE request_id=$1 AND (kind>$2 OR (kind=$2 AND object_id>$3)) ORDER BY kind,object_id LIMIT 128",
                                    str(request.request_id), progress["kind"], progress["after"])
         targets = {(row["kind"], UUID(str(row["object_id"]))) for row in rows}
@@ -709,23 +723,30 @@ async def _purge_sql_step(repository, intent):
             if "consolidation_stage_fences" in tables:
                 await session.execute("UPDATE consolidation_stage_fences SET epoch=epoch+1 WHERE plan_id=$1", node)
             if "organizer_watermarks" in tables:
-                # An unscoped run's resume cursor may name a node of any owner.
-                # Clear it rather than retain an erased identity; the run then
-                # re-scans that scope's window.
+                # An unscoped run's resume cursor or stall may name a node of
+                # any owner. Clear it rather than retain an erased identity;
+                # the run then re-scans that scope's window.
                 await session.execute(
-                    "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL "
-                    "WHERE resume_id=$1",
+                    "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL, "
+                    "stalled_id=NULL, stalled_attempts=0 "
+                    "WHERE resume_id=$1 OR stalled_id=$1",
                     node,
                 )
-        if "organizer_watermarks" in tables:
+        if "organizer_watermarks" in tables and first_step:
             # A watermark row names its scope in plaintext, so the erased
-            # owner's rows must not survive the purge. The key encoding lives
-            # in one place so this delete cannot drift from the writer.
-            from prme.organizer.watermarks import scope_key as _scope_key
-            await session.execute(
-                "DELETE FROM organizer_watermarks WHERE scope_key=$1",
-                _scope_key(str(intent.owner_id)),
-            )
+            # owner's rows must not survive the purge. Ownership is exact and a
+            # caller may have keyed a row under any UUID text form the standard
+            # parser accepts, so every row that names the owner is removed; the
+            # key encoding lives in one place so this delete cannot drift from
+            # the writer.
+            from prme.organizer.watermarks import owner_scope_keys
+            rows = await session.fetch("SELECT scope_key FROM organizer_watermarks")
+            for key in owner_scope_keys(
+                (row["scope_key"] for row in rows), str(intent.owner_id),
+            ):
+                await session.execute(
+                    "DELETE FROM organizer_watermarks WHERE scope_key=$1", key,
+                )
         for event_id in event_ids:
             await session.execute("DELETE FROM edges WHERE provenance_event_id=$1 AND user_id=$2", str(event_id), str(intent.owner_id))
         for kind, identifier in targets:
@@ -865,14 +886,19 @@ async def _verify_purge(coordinator, intent):
             raise PrivacyDenied("privacy_invalid_result")
         tables = await repository.tables(session)
         if intent.request.mode == "memory" and intent.request.owner_all and "organizer_watermarks" in tables:
-            from prme.organizer.watermarks import scope_key as _scope_key
-            key = _scope_key(str(intent.owner_id))
-            # Re-apply the purge's scope delete: a concurrent writer can add
-            # the row after the SQL stage, and that row names the owner in
-            # plaintext. Then verify it is gone.
-            await session.execute("DELETE FROM organizer_watermarks WHERE scope_key=$1", key)
-            if await session.fetch(
-                    "SELECT 1 FROM organizer_watermarks WHERE scope_key=$1 LIMIT 1", key):
+            from prme.organizer.watermarks import owner_scope_keys
+            # Re-apply the purge's owner delete: a concurrent writer can add a
+            # row after the SQL stage, and that row names the owner in
+            # plaintext under whatever text form keyed it. Then verify none
+            # is left.
+            rows = await session.fetch("SELECT scope_key FROM organizer_watermarks")
+            for key in owner_scope_keys(
+                (row["scope_key"] for row in rows), str(intent.owner_id),
+            ):
+                await session.execute("DELETE FROM organizer_watermarks WHERE scope_key=$1", key)
+            rows = await session.fetch("SELECT scope_key FROM organizer_watermarks")
+            if owner_scope_keys(
+                    (row["scope_key"] for row in rows), str(intent.owner_id)):
                 raise PrivacyDenied("privacy_invalid_result")
         if not targets:
             # An owner-wide request for an empty protected store still has an
@@ -906,17 +932,19 @@ async def _verify_purge(coordinator, intent):
                 if await session.fetch("SELECT 1 FROM edges WHERE source_id=$1 OR target_id=$1 LIMIT 1", str(identifier)):
                     raise PrivacyDenied("privacy_invalid_result")
                 if "organizer_watermarks" in tables:
-                    # Re-apply the purge's cursor clear: a concurrent unscoped
-                    # run can add the cursor after the SQL stage. A surviving
-                    # cursor is an erased identity, so report it rather than
-                    # claim the purge finished.
+                    # Re-apply the purge's cursor and stall clear: a concurrent
+                    # unscoped run can add either after the SQL stage. A
+                    # surviving cursor or stall is an erased identity, so report
+                    # it rather than claim the purge finished.
                     await session.execute(
-                        "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL "
-                        "WHERE resume_id=$1",
+                        "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL, "
+                        "stalled_id=NULL, stalled_attempts=0 "
+                        "WHERE resume_id=$1 OR stalled_id=$1",
                         str(identifier),
                     )
                     if await session.fetch(
-                            "SELECT 1 FROM organizer_watermarks WHERE resume_id=$1 LIMIT 1",
+                            "SELECT 1 FROM organizer_watermarks "
+                            "WHERE resume_id=$1 OR stalled_id=$1 LIMIT 1",
                             str(identifier)):
                         raise PrivacyDenied("privacy_invalid_result")
             if kind == "operation":

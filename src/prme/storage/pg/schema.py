@@ -240,6 +240,8 @@ CREATE TABLE IF NOT EXISTS organizer_watermarks (
     completed_through TIMESTAMPTZ,
     resume_updated_at TIMESTAMPTZ,
     resume_id UUID,
+    stalled_id UUID,
+    stalled_attempts INTEGER DEFAULT 0,
     updated_at TIMESTAMPTZ DEFAULT now(),
     PRIMARY KEY (scope_key, job)
 )"""
@@ -376,6 +378,14 @@ async def initialize_pg_database(
 
         # Organizer watermarks (dwamianm/prism#517)
         await conn.execute(_ORGANIZER_WATERMARKS_TABLE)
+        # The failed-run counter that bounds a repeated stall (dwamianm/prism#545).
+        await conn.execute(
+            "ALTER TABLE organizer_watermarks ADD COLUMN IF NOT EXISTS stalled_id UUID"
+        )
+        await conn.execute(
+            "ALTER TABLE organizer_watermarks ADD COLUMN IF NOT EXISTS "
+            "stalled_attempts INTEGER DEFAULT 0"
+        )
 
         # Lexical documents
         await conn.execute(_LEXICAL_DOCUMENTS_TABLE)

@@ -494,7 +494,8 @@ class DuckPGQGraphStore:
 
         def read() -> OrganizerWatermark | None:
             row = self._conn.execute(
-                "SELECT completed_through, resume_updated_at, resume_id "
+                "SELECT completed_through, resume_updated_at, resume_id, "
+                "stalled_id, stalled_attempts "
                 "FROM organizer_watermarks WHERE scope_key = ? AND job = ?",
                 [scope_key, job],
             ).fetchone()
@@ -513,6 +514,8 @@ class DuckPGQGraphStore:
                 completed_through=ensure_tz(row[0]),
                 resume_updated_at=ensure_tz(row[1]),
                 resume_id=resume_id,
+                stalled_id=None if row[3] is None else str(row[3]),
+                stalled_attempts=int(row[4] or 0),
             )
 
         async with self._conn_lock:
@@ -526,6 +529,8 @@ class DuckPGQGraphStore:
         completed_through: datetime | None,
         resume_updated_at: datetime | None = None,
         resume_id: str | None = None,
+        stalled_id: str | None = None,
+        stalled_attempts: int = 0,
     ) -> None:
         """Upsert a job's progress for one scope, monotonically.
 
@@ -534,13 +539,15 @@ class DuckPGQGraphStore:
         keeps the later ``(resume_updated_at, resume_id)`` pair. A completed
         run clears a cursor only when that cursor does not point past the
         completed position, so it cannot discard a newer stop from a run that
-        started first.
+        started first. The stall fields describe the latest writer's failure
+        and are not positional: the last writer sets them.
         """
         def write() -> None:
             self._conn.execute(
                 "INSERT INTO organizer_watermarks "
-                "(scope_key, job, completed_through, resume_updated_at, resume_id, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, current_timestamp) "
+                "(scope_key, job, completed_through, resume_updated_at, resume_id, "
+                "stalled_id, stalled_attempts, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, current_timestamp) "
                 "ON CONFLICT (scope_key, job) DO UPDATE SET "
                 "completed_through = CASE "
                 "WHEN organizer_watermarks.completed_through IS NULL THEN excluded.completed_through "
@@ -572,8 +579,13 @@ class DuckPGQGraphStore:
                 "AND excluded.resume_id > organizer_watermarks.resume_id) "
                 "THEN excluded.resume_id "
                 "ELSE organizer_watermarks.resume_id END, "
+                "stalled_id = excluded.stalled_id, "
+                "stalled_attempts = excluded.stalled_attempts, "
                 "updated_at = excluded.updated_at",
-                [scope_key, job, completed_through, resume_updated_at, resume_id],
+                [
+                    scope_key, job, completed_through, resume_updated_at, resume_id,
+                    stalled_id, stalled_attempts,
+                ],
             )
 
         async with self._conn_lock:

@@ -290,6 +290,7 @@ async def merge_duplicates(
     engine: MemoryEngine,
     duplicates: list[DuplicateCandidate],
     *, user_id: str | None = None,
+    failure_count: list[int] | None = None,
 ) -> int:
     """Merge duplicate node pairs.
 
@@ -301,6 +302,10 @@ async def merge_duplicates(
     Args:
         engine: The MemoryEngine for storage operations.
         duplicates: List of DuplicateCandidate pairs from find_duplicates().
+        failure_count: When given, receives the number of pairs whose merge
+            raised. The incremental caller uses it to keep the page resumable
+            instead of advancing past a pair that was not retried
+            (dwamianm/prism#545).
 
     Returns:
         Count of newly merged (superseded) nodes.
@@ -367,6 +372,8 @@ async def merge_duplicates(
             )
 
         except Exception:
+            if failure_count is not None:
+                failure_count[0] += 1
             logger.warning(
                 "Failed to merge duplicate pair (%s, %s)",
                 dup.node_a_id,

@@ -3,7 +3,10 @@
 Requires PRME_TEST_DATABASE_URL. Mirrors the DuckDB coverage: the watermark
 store, the keyset scan, deduplicate and alias_resolve runs that converge,
 tenant isolation, a budget stop that resumes, and the nothing-new path over
-10,000 nodes finishing under one second.
+10,000 nodes finishing under one second. It also mirrors the four cases that
+could leave memories unexamined for good (dwamianm/prism#545): a queued note
+materialized after a completed run, a search that keeps failing, a merge that
+failed, and two spellings of one UUID owner id.
 """
 
 from __future__ import annotations
@@ -334,3 +337,143 @@ async def test_nothing_new_over_ten_thousand_nodes_under_one_second(pg_engine):
     for job in INCREMENTAL_JOBS:
         assert result.per_job[job].nodes_processed == 0
         assert result.per_job[job].nodes_modified == 0
+
+
+# ---------------------------------------------------------------------------
+# Missed memories (dwamianm/prism#545)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_queued_note_made_after_a_completed_run_is_examined(pg_engine):
+    user = f"pg-545-note-{uuid4().hex[:8]}"
+    event_id = await pg_engine.ingest_fast("queued note", user_id=user)
+    # A completed run whose window starts after the event was saved.
+    await pg_engine.set_organizer_watermark(
+        scope_key=scope_key(user), job="deduplicate",
+        completed_through=datetime.now(timezone.utc),
+    )
+    assert (await pg_engine.process_pending(user_id=user, budget_ms=5000)).processed == 1
+
+    [node] = await pg_engine.query_nodes(user_id=user, lifecycle_states=list(LifecycleState))
+    event = await pg_engine.get_event(event_id)
+    assert node.created_at == event.created_at
+    assert node.updated_at > event.created_at
+
+    result = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+    assert result.per_job["deduplicate"].nodes_processed == 1
+
+
+async def test_a_node_whose_search_always_fails_is_skipped_after_bounded_attempts(
+    pg_engine, monkeypatch,
+):
+    user = f"pg-545-stall-{uuid4().hex[:8]}"
+    for content in ("poison memory", "alpha memory", "beta memory"):
+        await pg_engine.store(
+            content, user_id=user, node_type=NodeType.FACT,
+            scope=Scope.PERSONAL, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        )
+    poison_id = next(
+        node.id for node in await pg_engine.query_nodes(
+            user_id=user, lifecycle_states=list(LifecycleState),
+        )
+        if node.content == "poison memory"
+    )
+
+    index = pg_engine._vector_index
+    original_search = index.search
+
+    async def failing_search(content, *args, **kwargs):
+        if content == "poison memory":
+            raise RuntimeError("embedding rejected")
+        return await original_search(content, *args, **kwargs)
+
+    monkeypatch.setattr(index, "search", failing_search)
+
+    max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+    for attempt in range(1, max_attempts):
+        result = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+        job = result.per_job["deduplicate"]
+        assert job.status == "error"
+        assert job.nodes_processed == 0
+        watermark = await pg_engine.get_organizer_watermark(
+            scope_key=scope_key(user), job="deduplicate",
+        )
+        assert watermark.stalled_id == str(poison_id)
+        assert watermark.stalled_attempts == attempt
+
+    bounded = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+    job = bounded.per_job["deduplicate"]
+    assert job.status == "completed"
+    assert job.details["skipped_nodes"] == [
+        {"node_id": str(poison_id), "attempts": max_attempts},
+    ]
+    assert job.nodes_processed == 2
+
+    await pg_engine.store(
+        "new twin", user_id=user, node_type=NodeType.FACT,
+        scope=Scope.PERSONAL, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    )
+    await pg_engine.store(
+        "new twin", user_id=user, node_type=NodeType.FACT,
+        scope=Scope.PERSONAL, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    )
+    later = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+    assert later.per_job["deduplicate"].nodes_modified == 1
+
+
+async def test_a_failed_merge_is_retried_on_the_next_run(pg_engine, monkeypatch):
+    user = f"pg-545-merge-{uuid4().hex[:8]}"
+    valid_from = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    for _ in range(2):
+        await pg_engine.store(
+            "same thing", user_id=user, node_type=NodeType.FACT,
+            scope=Scope.PERSONAL, valid_from=valid_from,
+        )
+
+    original_merge = pg_engine._graph_store.merge_nodes
+
+    async def failing_merge(*args, **kwargs):
+        raise RuntimeError("merge failed")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(pg_engine._graph_store, "merge_nodes", failing_merge)
+        failed = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+
+    job = failed.per_job["deduplicate"]
+    assert job.status == "error"
+    assert job.nodes_modified == 0
+    watermark = await pg_engine.get_organizer_watermark(
+        scope_key=scope_key(user), job="deduplicate",
+    )
+    assert watermark.completed_through is None
+    assert watermark.resume_cursor is None
+
+    monkeypatch.setattr(pg_engine._graph_store, "merge_nodes", original_merge)
+    retried = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+    assert retried.per_job["deduplicate"].nodes_modified == 1
+
+
+async def test_another_spelling_does_not_inherit_the_first_watermark(pg_engine):
+    from prme.models.nodes import MemoryNode
+
+    canonical = str(uuid4())
+    upper = canonical.upper()
+    old = datetime.now(timezone.utc) - timedelta(hours=2)
+    for index in range(2):
+        await pg_engine._graph_store.create_node(MemoryNode(
+            user_id=canonical,
+            node_type=NodeType.FACT,
+            scope=Scope.PERSONAL,
+            content=f"older memory {index}",
+            created_at=old,
+            updated_at=old,
+            valid_from=old,
+        ))
+    await pg_engine.set_organizer_watermark(
+        scope_key=scope_key(upper), job="deduplicate",
+        completed_through=datetime.now(timezone.utc),
+    )
+
+    result = await pg_engine.organize(user_id=canonical, jobs=["deduplicate"])
+
+    assert result.per_job["deduplicate"].nodes_processed == 2

@@ -568,7 +568,8 @@ class PgGraphStore:
 
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT completed_through, resume_updated_at, resume_id "
+                "SELECT completed_through, resume_updated_at, resume_id, "
+                "stalled_id, stalled_attempts "
                 "FROM organizer_watermarks WHERE scope_key = $1 AND job = $2",
                 scope_key,
                 job,
@@ -582,6 +583,8 @@ class PgGraphStore:
             completed_through=row["completed_through"],
             resume_updated_at=row["resume_updated_at"],
             resume_id=resume_id,
+            stalled_id=None if row["stalled_id"] is None else str(row["stalled_id"]),
+            stalled_attempts=int(row["stalled_attempts"] or 0),
         )
 
     async def set_organizer_watermark(
@@ -592,6 +595,8 @@ class PgGraphStore:
         completed_through: datetime | None,
         resume_updated_at: datetime | None = None,
         resume_id: str | None = None,
+        stalled_id: str | None = None,
+        stalled_attempts: int = 0,
     ) -> None:
         """Upsert a job's progress for one scope, monotonically.
 
@@ -600,13 +605,15 @@ class PgGraphStore:
         keeps the later ``(resume_updated_at, resume_id)`` pair. A completed
         run clears a cursor only when that cursor does not point past the
         completed position, so it cannot discard a newer stop from a run that
-        started first.
+        started first. The stall fields describe the latest writer's failure
+        and are not positional: the last writer sets them.
         """
         async with self._pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO organizer_watermarks "
-                "(scope_key, job, completed_through, resume_updated_at, resume_id, updated_at) "
-                "VALUES ($1, $2, $3, $4, $5::uuid, now()) "
+                "(scope_key, job, completed_through, resume_updated_at, resume_id, "
+                "stalled_id, stalled_attempts, updated_at) "
+                "VALUES ($1, $2, $3, $4, $5::uuid, $6::uuid, $7, now()) "
                 "ON CONFLICT (scope_key, job) DO UPDATE SET "
                 "completed_through = CASE "
                 "WHEN organizer_watermarks.completed_through IS NULL THEN excluded.completed_through "
@@ -638,12 +645,16 @@ class PgGraphStore:
                 "AND excluded.resume_id > organizer_watermarks.resume_id) "
                 "THEN excluded.resume_id "
                 "ELSE organizer_watermarks.resume_id END, "
+                "stalled_id = excluded.stalled_id, "
+                "stalled_attempts = excluded.stalled_attempts, "
                 "updated_at = excluded.updated_at",
                 scope_key,
                 job,
                 completed_through,
                 resume_updated_at,
                 resume_id,
+                stalled_id,
+                stalled_attempts,
             )
 
     async def delete_organizer_watermark(self, *, scope_key: str, job: str) -> None:
