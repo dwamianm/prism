@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a6] - 2026-11-10
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a6`.
+
+What is new since 0.17.0a5: incremental `deduplicate` and `alias_resolve` no longer leave memories
+unexamined for good, because a queued fast-ingest note now enters the next window, a failed page keeps
+its cursor and a record that fails three times is skipped instead of pinning the scope, a failed
+merge is reported so the page retries, and the watermark key matches exact ownership
+(dwamianm/prism#545); and the `summarize` job's hierarchical summaries no longer enter the lexical or
+vector index that default retrieval reads, so they cannot outrank the source that answers a narrow
+question, and `retrieve()` gains `include_node_types` as the explicit opt-in that reads them from the
+graph (dwamianm/prism#534).
+
+Upgrade notes:
+
+- `DERIVATION_VERSION` is unchanged from 0.17.0a5 (it stays 2), so this upgrade makes no stored
+  memory stale.
+- PostgreSQL: `organizer_watermarks` gains `stalled_id` and `stalled_attempts`, which are part of the
+  runtime schema fingerprint. A deployment that opens its stores with `initialize=False` refuses to
+  open (`postgres_schema_bootstrap_required`) until the privileged schema bootstrap has run again. An
+  open with `initialize=True`, the default of `MemoryEngine.open` and
+  `MemoryWorkspace.open_postgres`, adds the columns itself.
+- An install that already ran incremental mode should clear its organizer watermarks once, so nodes
+  materialized before this release are examined. Run `DELETE FROM organizer_watermarks;` against the
+  pack's DuckDB database, or the equivalent statement on PostgreSQL, before the next `organize()`
+  call. The next run of each incremental job then scans its scope from the start, which costs one full
+  pass per scope. An install that never turned the option on has no rows and needs nothing.
+- Retrieval: a note with no `event_time` that fast ingest materializes can now be the rank fusion
+  current-update anchor, because a node made from a queued item takes its make time as `updated_at`.
+  A current-state query whose pool holds such an update-worded note can therefore order it as the
+  newest update. The offline evidence gate cannot show this, because its packs hold no such notes.
+- A directory pack built before this release keeps its older summary documents in the lexical index
+  until the next `summarize` run, `prme rebuild` or, for a single-file pack, the next open.
+- `retrieve()` and `MemoryClient.retrieve()` gain `include_node_types`, a node type allowlist. Default
+  retrieval now leaves summary nodes out; a caller that wants them passes the type, for example
+  `include_node_types=["summary"]`.
+
 ### Fixed
 
 - Incremental `deduplicate` and `alias_resolve` no longer leave memories unexamined for good (dwamianm/prism#545). Four cases are fixed, each with a test that fails without the change and passes with it on DuckDB and on PostgreSQL. A note materialized from a queued fast-ingest item now takes the time it is made as `updated_at` while `created_at` keeps the event's save time, so a note saved long before a completed run still enters the next incremental window; on a privacy-admitted store the note is published when the queue drains and is stamped the same way; a direct-store node keeps the snapshot it was accepted with. A page whose neighbor search, name lookup or merge failed keeps the cursor so the pair is examined again instead of being passed over. The watermark row also records the node a failed run could not get past and how many runs have stopped there, and after three failed runs at the same node the job records it in `details["skipped_nodes"]` and a warning log, moves the cursor past it and continues, so one record that fails every time cannot pin a scope and stop later memories from being examined. The watermark scope key now keeps the user id exactly as the caller passed it, because node ownership matches the exact string: two spellings of one UUID owner id are two owners and no longer share one watermark, and an owner-wide erasure still removes the owner's rows under every text form of the UUID the standard parser accepts.
@@ -3525,7 +3565,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a5...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a6...HEAD
+[0.17.0a6]: https://github.com/dwamianm/prism/compare/v0.17.0a5...v0.17.0a6
 [0.17.0a5]: https://github.com/dwamianm/prism/compare/v0.17.0a4...v0.17.0a5
 [0.17.0a4]: https://github.com/dwamianm/prism/compare/v0.17.0a3...v0.17.0a4
 [0.17.0a3]: https://github.com/dwamianm/prism/compare/v0.17.0a2...v0.17.0a3
