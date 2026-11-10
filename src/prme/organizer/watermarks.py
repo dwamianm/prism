@@ -36,13 +36,19 @@ from datetime import datetime
 # never revisit it. snapshot_generation stays full-scope because a snapshot is
 # built from an entity's neighborhood and edges, and creating an edge does not
 # touch either endpoint's updated_at. Time-driven jobs (decay_sweep, archive,
-# tombstone_sweep) and whole-corpus jobs (consolidate, index_compaction,
-# feedback_apply) stay full-scope as well. summarize stays full-scope because
+# tombstone_sweep) and whole-corpus jobs (index_compaction, feedback_apply)
+# stay full-scope as well. summarize stays full-scope because
 # its candidate set is periods, not nodes: update_node can change event_time,
 # which moves a node between periods, and a hard delete leaves no node row, so
 # a change window over node rows cannot name a period a node has left. The old
 # period is recoverable from the summary that recorded its sources
-# (dwamianm/prism#523; see _job_summarize).
+# (dwamianm/prism#523; see _job_summarize). consolidate stays full-scope
+# because its unit of work is a cluster of the active node page the job reads,
+# not a node: the greedy partition seeds at the earliest unassigned node, so a
+# changed-node scan can produce a different member set and therefore a
+# different consolidation lineage, and a cluster can also become eligible when
+# a different node's retirement frees its neighbors or a member is deleted
+# (dwamianm/prism#523; see _job_consolidate).
 INCREMENTAL_JOBS: frozenset[str] = frozenset({"deduplicate", "alias_resolve"})
 
 # Scoped keys are prefixed so an empty user id cannot share the row an

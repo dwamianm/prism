@@ -1030,6 +1030,43 @@ async def _job_consolidate(
     Clusters semantically similar episodic memories, creates summary
     abstractions, and archives redundant individual memories. This is a
     Layer 3 job -- pattern-based consolidation, not just time-based.
+
+    This job stays full-scope even when ``OrganizerConfig.incremental_enabled``
+    is on (dwamianm/prism#523). Its unit of work is a cluster, an emergent
+    property of the page of active nodes the job reads, not a node:
+
+    - ``cluster_similar_memories`` loads the newest 500 active FACT, EVENT and
+      NOTE nodes per type and partitions them greedily. Each cluster is seeded
+      at the earliest unassigned node under ``_stable_source_key``, and its
+      members are that seed's top-50 similar unassigned neighbors. A changed
+      node seeded on its own can see a different neighbor set from the node
+      that seeds the full run's cluster, so it can produce a different member
+      set. The consolidation key is the exact member set, so that is a
+      different lineage rather than a refresh of the existing summary.
+    - A cluster can become eligible with no member written. Retiring a seed
+      frees the neighbors it had claimed, and the next unchanged node can then
+      seed a new cluster among them; the write is the retired seed's, which
+      need not be one of the new cluster's members. ``delete_node`` and the
+      privacy erasure path are stronger: they remove a member outright and
+      leave no row for a node-change window.
+    - The budget is checked once per cluster and the cluster list is
+      recomputed on every run, so a node keyset cursor cannot name the point a
+      stopped run reached. The job reports ``completed`` even when the budget
+      truncates the cluster scan, and the next run starts again at the first
+      cluster.
+
+    The job already converges on unchanged input when the previous run retired
+    nothing: the consolidation publication path returns the summary whose
+    member set and request hash match, and retiring an ineligible source is a
+    no-op. It is not idempotent across a partial retirement: only the sources
+    covered by the summary are retirement candidates, so a cluster of more than
+    three can leave uncovered sources that form their own cluster and lineage
+    on the next run. Two further full-run limits are not convergence: a cluster
+    below ``consolidation_min_cluster_size`` is silently skipped, and nodes
+    beyond the newest-500 page of a type are not read at all. An incremental
+    form would need a durable cluster-transition record, not a node-change
+    window; that is the alternative a future design should weigh before
+    changing this job.
     """
     from prme.organizer.consolidation import run_consolidation_pipeline
 

@@ -36,6 +36,15 @@ from prme.types import EdgeType, LifecycleState, NodeType, Scope
 USER = "incremental-user"
 FIXED_VALID_FROM = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
+# Four memories the default embedding provider clusters at the similarity
+# threshold the engine fixture pins for the consolidation tests.
+CONSOLIDATION_CONTENTS = [
+    "Python is widely used for machine learning",
+    "Python is a popular language for ML projects",
+    "Python is commonly used in machine learning applications",
+    "Python is the top choice for ML development",
+]
+
 
 @pytest_asyncio.fixture
 async def engine():
@@ -55,6 +64,10 @@ async def engine():
                 # change what that test proves.
                 summarization_daily_min_events=5,
                 summarization_max_items_per_summary=10,
+                # Pin the consolidation thresholds the consolidate tests
+                # cluster with, for the same reason.
+                consolidation_min_cluster_size=3,
+                consolidation_similarity_threshold=0.70,
             ),
         ))
         yield eng
@@ -945,6 +958,148 @@ class TestSummarizeStaysFullScope:
         assert str(ids_a[-1]) not in after_a.metadata["source_node_ids"]
         assert "day-a-5" not in after_a.content
         assert "day-a-5" in after_b.content
+
+
+class TestConsolidateStaysFullScope:
+    """consolidate stays full-scope, and the docstring records why (#523).
+
+    Its unit of work is a cluster, an emergent property of the active node page
+    the job reads. Clustering seeds at the earliest unassigned node under the
+    stable source key, so a changed-node scan can produce a different member set
+    and therefore a different consolidation lineage; a cluster can also become
+    eligible when a different node's retirement frees its neighbors. The
+    publication path already makes a second full run a no-op when the first
+    run retired nothing.
+    """
+
+    @pytest.mark.asyncio
+    async def test_consolidate_is_not_an_incremental_job(self, engine):
+        assert "consolidate" not in INCREMENTAL_JOBS
+        await _store_many(engine, CONSOLIDATION_CONTENTS)
+
+        result = await engine.organize(
+            user_id=USER, jobs=["consolidate"], budget_ms=60000,
+        )
+
+        job = result.per_job["consolidate"]
+        assert job.status == "completed"
+        assert job.details["summaries_created"] == 1
+        assert "incremental" not in job.details
+        assert await _watermark_rows(engine) == []
+
+    @pytest.mark.asyncio
+    async def test_second_consolidate_run_creates_no_new_summary(self, engine):
+        await _store_many(engine, CONSOLIDATION_CONTENTS)
+
+        first = await engine.organize(
+            user_id=USER, jobs=["consolidate"], budget_ms=60000,
+        )
+        first_job = first.per_job["consolidate"]
+        assert first_job.details["summaries_created"] == 1
+        # No source retired, so the second run re-partitions the same node set
+        # and reaches the publication path's idempotent match.
+        assert first_job.details["nodes_archived"] == 0
+
+        second = await engine.organize(
+            user_id=USER, jobs=["consolidate"], budget_ms=60000,
+        )
+        job = second.per_job["consolidate"]
+        assert job.details["clusters_found"] == 1
+        assert job.details["summaries_created"] == 0
+        assert job.details["nodes_archived"] == 0
+        assert job.nodes_modified == 0
+
+        summaries = await engine.query_nodes(
+            user_id=USER,
+            node_type=NodeType.SUMMARY,
+            lifecycle_states=list(LifecycleState),
+            limit=100,
+        )
+        assert len(summaries) == 1
+
+    @pytest.mark.asyncio
+    async def test_a_cluster_can_seed_at_an_unchanged_node(self, engine, monkeypatch):
+        """The seed need not be the node a change window would contain.
+
+        Seed is similar to both other nodes; Bridge is similar only to Seed.
+        The full greedy partition forms one three-node cluster from Seed, which
+        a changed-node scan seeded at Bridge cannot reproduce: Bridge's own
+        neighborhood is a single node.
+        """
+        from prme.organizer.consolidation import cluster_similar_memories
+
+        base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        contents = ["Seed memory", "Bridge memory", "Leaf memory"]
+        for index, content in enumerate(contents):
+            await engine.store(
+                content,
+                user_id=USER,
+                node_type=NodeType.FACT,
+                scope=Scope.PERSONAL,
+                event_time=base + timedelta(minutes=index),
+            )
+        ids = {
+            node.content: str(node.id)
+            for node in await engine.query_nodes(
+                user_id=USER, lifecycle_states=list(LifecycleState), limit=100,
+            )
+        }
+        neighbours = {
+            "Seed memory": ["Bridge memory", "Leaf memory"],
+            "Bridge memory": ["Seed memory"],
+            "Leaf memory": ["Seed memory"],
+        }
+
+        async def planted_search(content, *args, **kwargs):
+            return [
+                {"node_id": ids[name], "score": 0.95}
+                for name in neighbours.get(content, [])
+            ]
+
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._vector_index, "search", planted_search)
+            clusters = await cluster_similar_memories(
+                engine,
+                user_id=USER,
+                min_cluster_size=3,
+                similarity_threshold=0.70,
+            )
+
+        # Bridge's planted neighborhood is Seed only, so a cluster seeded at
+        # Bridge has two members and is below the minimum.
+        assert len(clusters) == 1
+        assert clusters[0].centroid_id == ids["Seed memory"]
+        assert sorted(ids[name] for name in contents) == sorted(
+            clusters[0].member_ids
+        )
+
+    @pytest.mark.asyncio
+    async def test_truncated_run_reports_completed_and_writes_no_cursor(self, engine):
+        """A budget-truncated full run is not a resumable incremental stop."""
+        await _store_many(engine, CONSOLIDATION_CONTENTS)
+
+        # Run the job directly so the assertion does not depend on organize()'s
+        # remaining-budget gate, which marks a job not_started when it has none.
+        truncated = await run_job(
+            "consolidate",
+            engine,
+            engine._config.organizer,
+            0,
+            USER,
+        )
+        assert truncated.status == "completed"
+        assert truncated.stopped_on_budget is False
+        assert truncated.details["clusters_found"] == 1
+        assert truncated.details["summaries_created"] == 0
+        assert await _watermark_rows(engine) == []
+
+        # The next run starts again at the first cluster and finishes it.
+        completed = await engine.organize(
+            user_id=USER, jobs=["consolidate"], budget_ms=60000,
+        )
+        assert (
+            completed.per_job["consolidate"].details["summaries_created"] == 1
+        )
 
 
 class TestTenancy:

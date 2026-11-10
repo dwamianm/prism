@@ -500,7 +500,7 @@ The other jobs stay full-scope. An unchanged scope cannot make them provably
 no-ops: `promote` depends on a node crossing `promotion_age_days`,
 `snapshot_generation` depends on an entity's neighborhood and edges, a node
 can decay below a threshold, a TTL can expire, or a cluster can become
-eligible without any node being written. Only `deduplicate` and
+eligible without any member of the new cluster being written. Only `deduplicate` and
 `alias_resolve` have a candidate set a node write fully determines. An
 entity's name is immutable after creation, and creating an entity or changing
 its lifecycle writes `updated_at`, so a newly eligible alias pair always has
@@ -546,6 +546,35 @@ truncates the period scan, and the next run starts again at the oldest period.
 An incremental form would need a summary-membership read and a cascade through
 the three levels; that is the alternative a future design should weigh before
 adding period-transition history.
+
+`consolidate` also stays full-scope (dwamianm/prism#523). Its unit of work is a
+cluster, an emergent property of the page of active nodes the job reads, not a
+node. `cluster_similar_memories` loads the newest 500 active FACT, EVENT and
+NOTE nodes per type and partitions them greedily: the seed is the earliest
+unassigned node under `_stable_source_key`, and the members are that seed's
+top-50 similar unassigned neighbors in the same namespace. A changed node
+seeded on its own can see a different neighbor set from the node that seeds the
+full run's cluster, and the consolidation key is the exact member set
+(RFC-0015 section 5.3, `consolidation_key`), so the result is a different
+lineage rather than a refresh of the existing summary. A cluster can also
+become eligible with no member written: retiring a seed frees the neighbors it
+had claimed, and the next unchanged node can seed a new cluster among them;
+`delete_node` and the privacy erasure path are stronger, because they remove a
+member outright and leave no row for the window. The budget is checked once per
+cluster and the cluster list is recomputed on every run, so a node keyset
+cursor cannot name where a stopped run stopped; the job reports `completed`
+even when the budget truncates the cluster scan, and the next run starts again
+at the first cluster. The job converges on unchanged input when the previous
+run retired nothing, because the publication path returns the summary whose
+member set and request hash match, and retiring an ineligible source is a
+no-op. It is not idempotent across a partial retirement: only the sources
+covered by the summary are retirement candidates, so a cluster of more than
+three can leave uncovered sources that form their own cluster and lineage on
+the next run. Two further full-run limits are not convergence: a cluster below
+`consolidation_min_cluster_size` is silently skipped, and nodes beyond the
+newest-500 page of a type are not read at all. An incremental form would need a
+durable cluster-transition record, not a node-change window; that is the
+alternative a future design should weigh before changing the job.
 
 Known limitation: on a privacy-admitted store,
 Known limitations: on a privacy-admitted store, `scan_changed_nodes` reads the
