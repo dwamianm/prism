@@ -14,6 +14,7 @@ from enum import Enum
 from typing import TypeVar
 
 from prme.retrieval.models import ExcludedCandidate, RetrievalCandidate
+from prme.index_policy import is_unindexed_summary
 from prme.types import DEFAULT_EXCLUDED_EPISTEMIC, EpistemicType, LifecycleState, NodeType, RetrievalMode, SourceType
 
 # [HYPOTHESIS] -- configurable threshold for UNVERIFIED nodes in DEFAULT mode.
@@ -151,22 +152,47 @@ def normalize_type_filters(
             _normalize_types(source_types, SourceType, "source_types"))
 
 
+def normalize_include_types(
+    include_node_types: Collection[NodeType] | None = None,
+) -> frozenset[NodeType] | None:
+    """Copy and validate an explicit node-type allowlist; an empty one keeps nothing."""
+    return _normalize_types(include_node_types, NodeType, "include_node_types")
+
+
 def filter_candidate_types(
     candidates: list[RetrievalCandidate],
     exclude_node_types: Collection[NodeType] | None = None,
     source_types: Collection[SourceType] | None = None,
+    include_node_types: Collection[NodeType] | None = None,
 ) -> tuple[list[RetrievalCandidate], list[ExcludedCandidate]]:
-    """Apply explicit node exclusions and source allowlist, in either retrieval mode."""
-    if not exclude_node_types and source_types is None:
-        return candidates, []
+    """Apply explicit node exclusions, source allowlist and node-type opt-in.
+
+    Without ``include_node_types`` a hierarchical summary from the summarize
+    job is left out (dwamianm/prism#534): the default indexes do not hold it,
+    so no candidate path may surface it. Naming SUMMARY in
+    ``include_node_types`` is the explicit opt-in that keeps it.
+    """
+    if not exclude_node_types and source_types is None and include_node_types is None:
+        # The summarize summaries still have to be checked; only skip when a
+        # later condition cannot apply.
+        if not any(
+            is_unindexed_summary(candidate.node.node_type.value, candidate.node.metadata)
+            for candidate in candidates
+        ):
+            return candidates, []
     kept: list[RetrievalCandidate] = []
     excluded: list[ExcludedCandidate] = []
     for candidate in candidates:
         node = candidate.node
         reason = None
-        if exclude_node_types is not None and node.node_type in exclude_node_types:
+        if include_node_types is not None:
+            if node.node_type not in include_node_types:
+                reason = f"node_type_not_included:{node.node_type.value}"
+        elif is_unindexed_summary(node.node_type.value, node.metadata):
+            reason = f"node_type_not_indexed:{node.node_type.value}"
+        if reason is None and exclude_node_types is not None and node.node_type in exclude_node_types:
             reason = f"node_type_filtered:{node.node_type.value}"
-        elif source_types is not None and node.source_type not in source_types:
+        elif reason is None and source_types is not None and node.source_type not in source_types:
             reason = f"source_type_filtered:{node.source_type.value}"
         if reason is None:
             kept.append(candidate)

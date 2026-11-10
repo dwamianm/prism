@@ -347,6 +347,7 @@ async def memory_retrieve(
     max_per_evidence: Optional[int] = None,
     exclude_node_types: Optional[list[NodeType]] = None,
     source_types: Optional[list[SourceType]] = None,
+    include_node_types: Optional[list[NodeType]] = None,
     token_budget: Optional[int] = None,
     ranking_multipliers: Optional[RankingMultipliers] = None,
     reference_time: Optional[AwareDatetime] = None,
@@ -382,6 +383,9 @@ async def memory_retrieve(
             evidence set, including differently worded extracted siblings.
         exclude_node_types: Node types to omit from results and packed context.
         source_types: Provenance allowlist; an empty list returns no memories.
+        include_node_types: Node-type allowlist and the explicit opt-in for
+            summaries the default indexes leave out. Naming SUMMARY reads the
+            summarize job's summaries from the graph instead.
         token_budget: Maximum packed context tokens.
         scope: One scope or a nonempty list of scopes.
         ranking_multipliers: Explicit bounded ranking trial; does not activate a profile.
@@ -470,6 +474,11 @@ async def memory_retrieve(
             kwargs["exclude_node_types"] = excluded_types
         if allowed_sources is not None:
             kwargs["source_types"] = allowed_sources
+        from prme.retrieval.filtering import normalize_include_types
+
+        included_types = normalize_include_types(include_node_types)
+        if included_types is not None:
+            kwargs["include_node_types"] = included_types
         from prme.retrieval.selection import validate_selection
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
         if token_budget is not None and token_budget < 0:

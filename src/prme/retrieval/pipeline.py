@@ -40,6 +40,7 @@ from prme.retrieval.candidates import (
     CandidateDiagnostics,
     _find_seed_entities,
     generate_candidates,
+    generate_summary_candidates,
     merge_normalized_bm25_hits,
 )
 from prme.retrieval.claim_statements import fold_claim_statements
@@ -68,7 +69,12 @@ from prme.retrieval.evidence_context import (
     project_evidence_context,
 )
 from prme.retrieval.episode_context import expand_episode_context
-from prme.retrieval.filtering import filter_candidate_types, filter_epistemic, normalize_type_filters
+from prme.retrieval.filtering import (
+    filter_candidate_types,
+    filter_epistemic,
+    normalize_include_types,
+    normalize_type_filters,
+)
 from prme.retrieval.models import (
     AggregationCoverage,
     AggregationLimitation,
@@ -363,6 +369,7 @@ class RetrievalPipeline:
         max_per_evidence: int | None = None,
         exclude_node_types: Collection[NodeType] | None = None,
         source_types: Collection[SourceType] | None = None,
+        include_node_types: Collection[NodeType] | None = None,
         weights: ScoringWeights | None = None,
         ranking_multipliers: RankingMultipliers | None = None,
         ranking_profile: dict | None = None,
@@ -417,6 +424,11 @@ class RetrievalPipeline:
                 packed context and supplementary hints, before result limiting.
             source_types: Optional provenance allowlist. None allows all source
                 types; an empty collection allows none. Applies in either mode.
+            include_node_types: Optional node-type allowlist and explicit opt-in
+                for summaries the default indexes leave out. Without it a
+                hierarchical ``summarize`` summary is not a primary result;
+                naming SUMMARY reads those summaries from the graph instead
+                (dwamianm/prism#534). An empty collection keeps nothing.
             weights: Override default scoring weights for this request.
             ranking_multipliers: Explicit bounded adjustment after query-specific
                 weight redistribution, before reranking and session expansion.
@@ -449,6 +461,7 @@ class RetrievalPipeline:
         speaker = normalize_speaker(speaker)
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
         exclude_node_types, source_types = normalize_type_filters(exclude_node_types, source_types)
+        include_node_types = normalize_include_types(include_node_types)
         if ranking_multipliers is not None:
             ranking_multipliers = RankingMultipliers.model_validate_json(ranking_multipliers.model_dump_json())
         normalized_concepts = normalize_concepts(concepts)
@@ -527,6 +540,7 @@ class RetrievalPipeline:
                     time_to=effective_time_to,
                     exclude_node_types=exclude_node_types,
                     source_types=source_types,
+                    include_node_types=include_node_types,
                     retrieval_mode=analysis.retrieval_mode,
                 )
             except PrivacyDenied:
@@ -559,6 +573,7 @@ class RetrievalPipeline:
                     time_to=effective_time_to,
                     exclude_node_types=exclude_node_types,
                     source_types=source_types,
+                    include_node_types=include_node_types,
                     retrieval_mode=analysis.retrieval_mode,
                 )
             except PrivacyDenied:
@@ -677,6 +692,24 @@ class RetrievalPipeline:
             diagnostics=candidate_diagnostics,
             graph_seed_reach=effective_weights.fusion == "rrf" and effective_weights.rrf_graph_seed_count,
         )
+
+        # An explicit summary request reads the summaries the default indexes
+        # leave out from the graph (dwamianm/prism#534). They are merged by
+        # node id, so a summary the graph path already found keeps its rank.
+        if include_node_types and NodeType.SUMMARY in include_node_types:
+            summary_candidates = await generate_summary_candidates(
+                analysis, self._graph_store, user_id, candidate_config,
+                scope=normalized_scope,
+            )
+            existing_ids = {str(candidate.node.id) for candidate in candidates}
+            added = 0
+            for candidate in summary_candidates:
+                if str(candidate.node.id) not in existing_ids:
+                    existing_ids.add(str(candidate.node.id))
+                    candidates.append(candidate)
+                    added += 1
+            if added:
+                candidate_counts["SUMMARY"] = added
 
         aggregation_candidate_limit_paths: list[str] = []
         if analysis.is_aggregation:
@@ -851,7 +884,7 @@ class RetrievalPipeline:
             effective_time_from, effective_time_to,
         )
 
-        candidates, type_excluded = filter_candidate_types(candidates, exclude_node_types, source_types)
+        candidates, type_excluded = filter_candidate_types(candidates, exclude_node_types, source_types, include_node_types)
 
         # --- Stage 4: Epistemic Filtering ---
         filtered, excluded = filter_epistemic(
@@ -969,7 +1002,7 @@ class RetrievalPipeline:
                             expanded, knowledge_at, event_time_from, event_time_to,
                             effective_time_from, effective_time_to,
                         )
-                        expanded, type_excluded = filter_candidate_types(expanded, exclude_node_types, source_types)
+                        expanded, type_excluded = filter_candidate_types(expanded, exclude_node_types, source_types, include_node_types)
                         excluded.extend(type_excluded)
                         expanded, late_excluded = filter_epistemic(
                             expanded,
@@ -1041,6 +1074,7 @@ class RetrievalPipeline:
                     scopes=normalized_scope,
                     retrieval_mode=analysis.retrieval_mode,
                     exclude_node_types=exclude_node_types, source_types=source_types,
+                    include_node_types=include_node_types,
                     unverified_confidence_threshold=(
                         self._unverified_confidence_threshold
                     ),
@@ -1074,6 +1108,7 @@ class RetrievalPipeline:
                     scopes=normalized_scope,
                     retrieval_mode=analysis.retrieval_mode,
                     exclude_node_types=exclude_node_types, source_types=source_types,
+                    include_node_types=include_node_types,
                     unverified_confidence_threshold=(
                         self._unverified_confidence_threshold
                     ),
@@ -1131,7 +1166,7 @@ class RetrievalPipeline:
                     candidate_counts["OWNER_PROFILE"] = 1
 
         # Enforce consumer filters after episode/projection/augmentation stages too.
-        scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types)
+        scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types, include_node_types)
         excluded.extend(type_excluded)
 
         # --- Stage 5.5h: Profiles that quote a retired memory (issue #462) ---
@@ -1205,7 +1240,7 @@ class RetrievalPipeline:
                     hint_candidates, knowledge_at, event_time_from, event_time_to,
                     effective_time_from, effective_time_to,
                 )
-                hint_candidates, _ = filter_candidate_types(hint_candidates, exclude_node_types, source_types)
+                hint_candidates, _ = filter_candidate_types(hint_candidates, exclude_node_types, source_types, include_node_types)
                 hint_candidates, _ = filter_epistemic(
                     hint_candidates,
                     analysis.retrieval_mode,
@@ -1402,6 +1437,8 @@ class RetrievalPipeline:
                        if exclude_node_types is not None else {}),
                     **({"source_types": sorted(value.value for value in source_types)}
                        if source_types is not None else {}),
+                    **({"include_node_types": sorted(value.value for value in include_node_types)}
+                       if include_node_types is not None else {}),
                     "epistemic_weights": {key: value for key, value in self._epistemic_weights.items()}
                         if self._epistemic_weights is not None else None,
                     "unverified_confidence_threshold": self._unverified_confidence_threshold,
@@ -1562,6 +1599,7 @@ class RetrievalPipeline:
             scope_filter=[s.value for s in normalized_scope] if normalized_scope else None,
             exclude_node_types=sorted(value.value for value in exclude_node_types) if exclude_node_types is not None else None,
             source_types=sorted(value.value for value in source_types) if source_types is not None else None,
+            include_node_types=sorted(value.value for value in include_node_types) if include_node_types is not None else None,
             time_from=effective_time_from,
             time_to=effective_time_to,
             cross_scope_enabled=include_cross_scope and normalized_scope is not None,
@@ -1587,6 +1625,7 @@ class RetrievalPipeline:
         time_to: datetime | None,
         exclude_node_types: Collection[NodeType] | None,
         source_types: Collection[SourceType] | None,
+        include_node_types: Collection[NodeType] | None,
         retrieval_mode: RetrievalMode,
     ) -> Callable[[list[RetrievalCandidate]], list[RetrievalCandidate]]:
         """The filters every other candidate passes (issue #60), for records a stage adds itself."""
@@ -1595,7 +1634,7 @@ class RetrievalPipeline:
             candidates = _apply_bitemporal_filters(
                 candidates, knowledge_at, event_time_from, event_time_to, time_from, time_to,
             )
-            candidates, _ = filter_candidate_types(candidates, exclude_node_types, source_types)
+            candidates, _ = filter_candidate_types(candidates, exclude_node_types, source_types, include_node_types)
             candidates, _ = filter_epistemic(
                 candidates, retrieval_mode,
                 unverified_threshold=self._unverified_confidence_threshold,
@@ -1616,6 +1655,7 @@ class RetrievalPipeline:
         time_to: datetime | None,
         exclude_node_types: Collection[NodeType] | None,
         source_types: Collection[SourceType] | None,
+        include_node_types: Collection[NodeType] | None,
         retrieval_mode: RetrievalMode,
     ) -> list[RetrievalCandidate]:
         """The newest observations of the most recent observation session that this request may see."""
@@ -1623,7 +1663,8 @@ class RetrievalPipeline:
         eligible = self._request_filter(
             knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
             time_from=time_from, time_to=time_to, exclude_node_types=exclude_node_types,
-            source_types=source_types, retrieval_mode=retrieval_mode,
+            source_types=source_types, include_node_types=include_node_types,
+            retrieval_mode=retrieval_mode,
         )
 
         return await latest_session_observations(
@@ -1647,6 +1688,7 @@ class RetrievalPipeline:
         time_to: datetime | None,
         exclude_node_types: Collection[NodeType] | None,
         source_types: Collection[SourceType] | None,
+        include_node_types: Collection[NodeType] | None,
         retrieval_mode: RetrievalMode,
     ) -> RetrievalCandidate | None:
         """The owner's newest profile that this request may see, or None."""
@@ -1654,7 +1696,8 @@ class RetrievalPipeline:
         eligible = self._request_filter(
             knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
             time_from=time_from, time_to=time_to, exclude_node_types=exclude_node_types,
-            source_types=source_types, retrieval_mode=retrieval_mode,
+            source_types=source_types, include_node_types=include_node_types,
+            retrieval_mode=retrieval_mode,
         )
 
         return await find_owner_profile(

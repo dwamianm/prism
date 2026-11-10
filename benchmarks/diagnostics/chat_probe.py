@@ -417,8 +417,8 @@ async def measure(folder: Path, conversation: dict) -> dict:
 
 async def build(label: str, *, conversation_path: Path = DEFAULT_CONVERSATION, root: Path | None = None,
                 overrides: dict | None = None, model: str = DEFAULT_MODEL, cloud: bool = False,
-                speaker: bool = False, organize: bool = False, cache: bool = True, replace: bool = False,
-                prepare=None) -> dict:
+                speaker: bool = False, organize: bool = False, organize_jobs: list[str] | None = None,
+                cache: bool = True, replace: bool = False, prepare=None) -> dict:
     """Ingest the conversation into a fresh pack under ``label``, then measure it.
 
     ``prepare(engine)``, for tests, runs before the first turn.
@@ -441,7 +441,10 @@ async def build(label: str, *, conversation_path: Path = DEFAULT_CONVERSATION, r
     owner = conversation["owner"]
     record = {"kind": BUILD_KIND, "schema_version": SCHEMA_VERSION, "label": label,
               "conversation": conversation["name"], "conversation_sha256": conversation_digest(conversation_path),
-              "overrides": overrides, "speaker": speaker, "organize": organize, "extraction_cache": cache,
+              "overrides": overrides, "speaker": speaker,
+              "organize": ("summarize-only" if organize_jobs == ["summarize"]
+                           else list(organize_jobs) if organize_jobs else organize),
+              "extraction_cache": cache,
               "model": {name: identity.get(name) for name in (
                   "provider", "model", "resolved_model", "manifest_digest_sha256", "remote_host", "remote_model")},
               "server_version": identity.get("server_version"),
@@ -496,8 +499,10 @@ async def build(label: str, *, conversation_path: Path = DEFAULT_CONVERSATION, r
         # at the end of a session (enable_owner_profile_context) is measured too.
         ended = await engine.end_session(user_id=owner)
         record["end_session_result"] = ended.model_dump(mode="json", exclude={"duration_ms", "budget_remaining_ms"})
-        if organize:
-            result = await engine.organize(user_id=owner, budget_ms=600_000)
+        if organize or organize_jobs:
+            result = await engine.organize(
+                user_id=owner, jobs=organize_jobs or None, budget_ms=600_000,
+            )
             record["organize_result"] = result.model_dump(mode="json")
     record.update(totals={"turns": len(event_ids), **dict(totals), "cache_unreproduced": hits.unreproduced},
                   finished_at=datetime.now(timezone.utc).isoformat())
@@ -593,6 +598,9 @@ def main(argv: list[str] | None = None) -> None:
                          help="Accept an Ollama cloud model: Ollama's hosted service receives the turns")
     command.add_argument("--speaker", action="store_true", help="Name the owner as the speaker of their turns")
     command.add_argument("--organize", action="store_true", help="Run the organizer once after the last turn")
+    command.add_argument("--organize-jobs", dest="organize_jobs", metavar="JOBS",
+                         help="Comma-separated organizer jobs to run after the last turn, "
+                              "e.g. summarize; implies --organize")
     command.add_argument("--no-cache", action="store_true", help="Ask the model again for every turn")
     command.add_argument("--replace", action="store_true", help="Delete an earlier build with this label first")
     command.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
@@ -612,8 +620,11 @@ def main(argv: list[str] | None = None) -> None:
             build_config(Path("{pack}"), overrides, model=args.model)
         except ValueError as exc:
             parser.error(str(exc))
+        organize_jobs = ([name.strip() for name in args.organize_jobs.split(",") if name.strip()]
+                         if args.organize_jobs else None)
         report = asyncio.run(build(args.label, conversation_path=args.conversation, root=root, overrides=overrides,
                                    model=args.model, cloud=args.cloud, speaker=args.speaker, organize=args.organize,
+                                   organize_jobs=organize_jobs,
                                    cache=not args.no_cache, replace=args.replace))
         print(report_markdown(report))
     elif args.command == "measure":

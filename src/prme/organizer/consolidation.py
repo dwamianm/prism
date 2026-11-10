@@ -28,6 +28,7 @@ from prme.models.consolidation import (
     consolidation_key,
     consolidation_request_hash,
 )
+from prme.index_policy import is_unindexed_summary
 from prme.models.derivation import PreparedEmbedding
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
@@ -315,6 +316,7 @@ async def publish_consolidation_plan(
         engine._pool is not None
         and plan.privacy_manifest is None
         and node_id == str(plan.node.id)
+        and not is_unindexed_summary(plan.node.node_type.value, plan.node.metadata)
     ):
         from prme.storage.multi_model import write_additional_models
 
@@ -324,7 +326,28 @@ async def publish_consolidation_plan(
     published = await engine.get_node(node_id, **({"user_id": owner} if plan.privacy_manifest else {}))
     if published is None:
         raise RuntimeError("Consolidation publication did not produce an active summary")
+    # A summary that was already searchable before this version keeps its old
+    # documents until they are removed here or by the next open/rebuild.
+    await exclude_from_default_search(engine, published)
     return published
+
+
+async def exclude_from_default_search(engine, node: MemoryNode) -> None:
+    """Keep a hierarchical summary out of the default search indexes.
+
+    Its vector keeps its durable metadata and staged text but is removed from
+    the native index, and any lexical document it had is deleted
+    (dwamianm/prism#534). A summary the ``consolidate`` job writes is left
+    alone, because that job retires the sources it represents.
+    """
+    if not is_unindexed_summary(node.node_type.value, node.metadata):
+        return
+    node_id = str(node.id)
+    await engine._write_queue.submit(
+        lambda: engine._lexical_index.delete_by_node_id(node_id),
+        label=f"summary.lexical:{node_id}",
+    )
+    await engine._vector_index.exclude_from_search(node_id)
 
 
 async def _stage_consolidation(engine, plan):
@@ -335,15 +358,17 @@ async def _stage_consolidation(engine, plan):
     from prme.models.consolidation import StaleConsolidationError
     from prme.storage.consolidation_publication import ConsolidationStageFence
 
+    searchable = not is_unindexed_summary(plan.node.node_type.value, plan.node.metadata)
     fence = ConsolidationStageFence(
         engine._conn, engine._event_store._conn_lock, plan
     )
     for attempt in range(10):
         try:
             await engine._vector_index.stage(
-                plan.embedding, user_id=owner, fence=fence
+                plan.embedding, user_id=owner, fence=fence, searchable=searchable,
             )
-            await engine._lexical_index.stage_consolidation(plan, fence=fence)
+            if searchable:
+                await engine._lexical_index.stage_consolidation(plan, fence=fence)
             break
         except (duckdb.ConstraintException, duckdb.TransactionException) as exc:
             if attempt == 9:

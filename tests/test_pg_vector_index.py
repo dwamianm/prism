@@ -78,6 +78,29 @@ async def test_index_and_search(vector_index, graph_store):
     assert results[0]["node_id"] == str(node.id)
 
 
+async def test_hierarchical_summary_vector_is_not_searched(vector_index, graph_store):
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    summary = MemoryNode(
+        user_id=uid, node_type=NodeType.SUMMARY, scope=Scope.PERSONAL,
+        content="Daily summary: the launch moved to Friday",
+        metadata={
+            "consolidation_summary": True,
+            "consolidation_key": str(uuid.uuid4()),
+            "summary_publication_kind": "hierarchical_source_excerpts_v2",
+            "summary_publication_key": str(uuid.uuid4()),
+            "summarization_level": "daily",
+            "summary_format": "source-excerpts-v1",
+            "period_key": "2026-01-02",
+            "source_count": 2,
+            "source_node_ids": [str(uuid.uuid4()), str(uuid.uuid4())],
+        },
+    )
+    await graph_store.create_node(summary)
+    await vector_index.index(str(summary.id), summary.content, uid)
+
+    assert await vector_index.search(summary.content, uid, k=5) == []
+
+
 async def test_search_empty(vector_index):
     uid = f"user-{uuid.uuid4().hex[:8]}"
     results = await vector_index.search("nonexistent query", uid, k=5)

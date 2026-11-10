@@ -17,6 +17,7 @@ from datetime import datetime
 
 import asyncpg
 
+from prme.index_policy import unindexed_summary_sql
 from prme.storage.pg.vector_sql import VectorSQL, resolve_vector_sql
 
 from prme.storage.embedding import EmbeddingProvider, EmbeddingVersionMismatchError, encode_query, encode_texts
@@ -140,6 +141,9 @@ class PgVectorIndex:
             "user_id = $1",
             "embedding IS NOT NULL",
             "lifecycle_state IN ('tentative', 'stable', 'contested')",
+            # A hierarchical summary keeps its stored vector but default
+            # retrieval does not search it (dwamianm/prism#534).
+            "NOT " + unindexed_summary_sql("nodes", dialect="postgres"),
         ]
         params: list = [user_id]
         idx = 2
@@ -209,6 +213,10 @@ class PgVectorIndex:
                 "distance": distance,
             })
         return results
+
+    async def exclude_from_search(self, node_id: str) -> int:
+        """PostgreSQL searches filter hierarchical summaries in SQL, so nothing to remove."""
+        return 0
 
     async def delete_by_node_id(self, node_id: str) -> int:
         """Clear the stored vector for a node so it stops surfacing (#41).

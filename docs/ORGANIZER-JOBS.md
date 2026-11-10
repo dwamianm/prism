@@ -26,7 +26,7 @@ one pass.
 | `archive` | Yes | Archives nodes below `force_archive_salience_threshold` | Safe |
 | `deduplicate` | Yes | Merges equivalent copies into one canonical node, transfers evidence and edges, records a journal | Safe |
 | `alias_resolve` | Yes | Merges known name variants, or publishes an unverified alias proposal link | Safe |
-| `summarize` | Yes | Publishes extractive daily, weekly and monthly SUMMARY nodes | Safe |
+| `summarize` | Yes | Publishes extractive daily, weekly and monthly SUMMARY nodes; they stay out of the default lexical and vector indexes and are read through `include_node_types` | Safe |
 | `feedback_apply` | No | Retunes engine-global scoring weights from pending feedback | Excluded; weights are engine-global, and a scoped call raises before any work |
 | `tombstone_sweep` | Yes | Archives nodes past their TTL and records the policy transition | Safe |
 | `snapshot_generation` | Yes | Reads an entity and its owned neighborhood and builds an ephemeral snapshot | Safe; no graph write |

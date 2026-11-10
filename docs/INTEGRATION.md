@@ -568,13 +568,21 @@ in this release.
 #### Consumer node and source filters
 
 `retrieve()` on the async engine and synchronous client accepts
-`exclude_node_types` and `source_types`. Filters apply within generated
-candidates before scoring and limiting, and to session expansion, supplementary
-evidence, packed context and cross-scope hints. They apply in DEFAULT and
-EXPLICIT modes. `source_types=None` allows all provenance types; an empty
-collection allows none. Invalid enum values fail before pending work is drained.
-Receipts record active filters in `execution.parameters`, and responses expose
-them in `filter_metadata`.
+`exclude_node_types`, `source_types` and `include_node_types`. Filters apply
+within generated candidates before scoring and limiting, and to session
+expansion, supplementary evidence, packed context and cross-scope hints. They
+apply in DEFAULT and EXPLICIT modes. `source_types=None` allows all provenance
+types; an empty collection allows none. Invalid enum values fail before pending
+work is drained. Receipts record active filters in `execution.parameters`, and
+responses expose them in `filter_metadata`.
+
+`include_node_types` is a node-type allowlist and the explicit opt-in for
+summaries that default retrieval leaves out: the `summarize` job's daily,
+weekly and monthly summaries are not in the lexical or vector index, so naming
+`SUMMARY` reads them from the graph instead (dwamianm/prism#534). Without it
+those summaries are not primary results, packed context or hints. The other
+summary nodes, such as knowledge profiles, stay in the indexes and are reached
+normally.
 
 ```python
 from prme import NodeType, SourceType

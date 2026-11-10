@@ -33,7 +33,10 @@ from prme.models.consolidation import (
 from prme.models.derivation import PreparedEmbedding
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
-from prme.organizer.consolidation import publish_consolidation_plan
+from prme.organizer.consolidation import (
+    exclude_from_default_search,
+    publish_consolidation_plan,
+)
 from prme.organizer.models import JobResult
 from prme.storage.embedding import encode_texts
 from prme.types import (
@@ -331,6 +334,9 @@ async def _materialize_summary_node(
     if len(previous) == 1 and len(matching) == 1:
         for stale in retired:
             await engine._evict_from_indexes(str(stale.id))
+        # A summary published before this version may still hold a lexical
+        # document or a native vector (dwamianm/prism#534).
+        await exclude_from_default_search(engine, matching[0])
         return matching[0], False
 
     generation = await engine._graph_store.consolidation_generation(key)
