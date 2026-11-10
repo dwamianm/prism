@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a5] - 2026-11-10
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a5`.
+
+What is new since 0.17.0a4: every organizer job is measured, user-scoped and checked for
+information loss, and `index_compaction` on PostgreSQL clears the vector and lexical rows of retired
+nodes (dwamianm/prism#518); `deduplicate` (dwamianm/prism#517) and `alias_resolve`
+(dwamianm/prism#523) can run incrementally from a per-scope, per-job watermark and resume a budget
+stop, behind `OrganizerConfig.incremental_enabled`, which is off by default; every job an
+`organize()` call names now gets a per-job result entry, with status `not_started` when the budget
+never reached it; the reasons `summarize` and `consolidate` stay full-scope are recorded
+(dwamianm/prism#523); the watermark cannot outlive or re-create an erased owner, erasure
+verification covers the resume cursor and the owner scope, and concurrent watermark upserts
+converge (dwamianm/prism#525); and `query_nodes()` and `count_nodes()` can leave archived entity
+profiles out of a page (dwamianm/prism#432).
+
+Upgrade notes:
+
+- `DERIVATION_VERSION` is unchanged from 0.17.0a4 (it stays 2), so this upgrade makes no stored
+  memory stale. A store that has not yet re-derived after the move to 0.17.0a4 still needs that one
+  pass.
+- PostgreSQL: the new `organizer_watermarks` table is part of the runtime schema fingerprint. A
+  deployment that opens its stores with `initialize=False` refuses to open
+  (`postgres_schema_bootstrap_required`) until the privileged schema bootstrap has run again, and the
+  runtime login needs INSERT, UPDATE and DELETE on the table before the incremental option is turned
+  on. An open with `initialize=True`, the default of `MemoryEngine.open` and
+  `MemoryWorkspace.open_postgres`, creates the table itself the next time each store or namespace
+  opens.
+- The incremental mode is off by default, and a default `organize()` call reads and writes no
+  watermark, so organizer behavior does not change until `PRME_ORGANIZER__INCREMENTAL_ENABLED` is set.
+  An install that turns it on gets both incremental jobs, and the first run of each examines the whole
+  scope.
+- HTTP API: `GET /v1/nodes` and `GET /v1/stats` take a repeatable `state` query parameter, so the
+  OpenAPI schema now describes `state` as an array. A single value is still accepted. Both routes
+  also accept `exclude_archived_profiles`.
+- `organize()` results now carry an entry for every requested job. A caller that read only the jobs
+  that ran sees `not_started` entries with zero counts for the rest; `jobs_skipped` still names them.
+
+Known issue: the `summarize` job can push probe answers out of the top 3 after it runs
+(dwamianm/prism#534; on the member probe, 11 to 9 of 12 in a hosted measurement). A host that
+organizes on a schedule may want to leave `summarize` out of the job list until that is fixed.
+
 ### Added
 
 - Every organizer job is measured, user-scoped and checked for information loss (dwamianm/prism#518). The audit adds a deterministic store built from the member, chat and defect probe conversations, a scoping test per job on DuckDB and on PostgreSQL that leaves a second owner unchanged, a no-loss test per job that checks every fact, evidence reference, edge and provenance record survives a merge, retirement or archival, and a promotion test for the explicit `promote` job, the automatic maintenance pass and the scheduled request path. On PostgreSQL, `index_compaction` now clears the stored vector and any `lexical_documents` row for a node the graph has already retired, instead of returning immediately; a retired node's generated `content_tsv` and multi-model rows remain, tracked in dwamianm/prism#520 and dwamianm/prism#521. `docs/ORGANIZER-JOBS.md` records the per-job timings at 240, 1,000 and 10,000 nodes, the measurement method and machine, the deduplicate budget behavior and its resumable-stop follow-up (dwamianm/prism#517), and the jobs excluded from a scheduled run.
@@ -21,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `summarize` organizer job stays full-scope, and its reason is now recorded (dwamianm/prism#523). Its output is one top-N summary per day, week and month over that period's active membership, so a node-change window cannot name a period a node has left: `update_node` accepts `event_time`, and a hard delete leaves no node row to scan. The vacated period is recoverable from the summary that recorded its sources (and from the publication journal), which is a different read from the node window. The `_job_summarize` docstring and RFC-0015 section 5.5 record the reason, the full-run limits (a period below its minimum and a budget-truncated scan), and the alternative a future incremental design should weigh, so a later change does not assume `OrganizerConfig.incremental_enabled` covers the job.
 
 - The `consolidate` organizer job stays full-scope, and its reason is now recorded (dwamianm/prism#523). Its unit of work is a cluster, an emergent property of the active node page the job reads (the newest 500 FACT, EVENT and NOTE nodes per type), not a node: clustering seeds at the earliest unassigned node under the stable source key and takes that seed's similar unassigned neighbors, so a changed-node scan can produce a different member set and therefore a different consolidation lineage. A cluster can also become eligible with no member written when a different node's retirement frees its neighbors; a hard delete removes a member outright and leaves no row for the window. The budget is checked once per cluster over a list recomputed on every run, so a node keyset cursor cannot name where a stopped run stopped: the job reports `completed` even when the budget truncates the scan, and the next run starts again at the first cluster. The job converges on unchanged input when the previous run retired nothing, because the publication path returns the summary whose member set and request hash match, but it is not idempotent across a partial retirement, and a cluster below the minimum size and nodes beyond the newest-500 page are not read at all. The `_job_consolidate` docstring, the watermarks comment and RFC-0015 section 5.5 record the reason, those limits, and the durable cluster-transition record a future incremental design would need, so a later change does not assume the option covers the job.
+
+### Fixed
+
+- The organizer watermark cannot outlive or re-create an erased owner, erasure verification now covers the resume cursor and the owner scope, and concurrent watermark upserts converge (dwamianm/prism#525). A later `organize(user_id=...)` call for an owner with an owner-wide memory erasure on record writes no watermark, so the plaintext scope key the purge removed is not put back; if an erasure is recorded between that check and the write, the row just written is removed, and a targeted erasure of individual events or nodes leaves the owner live and writes as before. A UUID owner id is now stored in its canonical text form, the same form the purge deletes. The erasure verification stage fails when a resume cursor still names an erased node or, for an owner-wide request, when the owner's scope row still exists, alongside the node, vector, lexical and edge checks it already ran; before checking, it re-applies the purge's cursor clear and scope delete, so a row a concurrent writer added after the SQL stage is removed and the erasure can still complete. On DuckDB and PostgreSQL the upsert keeps the furthest `completed_through` and the newer `(resume_updated_at, resume_id)` cursor, so two runs over one scope converge instead of the last-finishing run moving the watermark backwards or replacing a newer cursor. A completed run still clears a cursor that does not point past its own completed position.
 
 ## [0.17.0a4] - 2026-11-09
 
@@ -59,8 +108,6 @@ Upgrade notes:
   optional `deadline`, and `ProfileBuildDeadlineExceeded` is exported from `prme`.
 
 ### Fixed
-
-- The organizer watermark cannot outlive or re-create an erased owner, erasure verification now covers the resume cursor and the owner scope, and concurrent watermark upserts converge (dwamianm/prism#525). A later `organize(user_id=...)` call for an owner with an owner-wide memory erasure on record writes no watermark, so the plaintext scope key the purge removed is not put back; if an erasure is recorded between that check and the write, the row just written is removed, and a targeted erasure of individual events or nodes leaves the owner live and writes as before. A UUID owner id is now stored in its canonical text form, the same form the purge deletes. The erasure verification stage fails when a resume cursor still names an erased node or, for an owner-wide request, when the owner's scope row still exists, alongside the node, vector, lexical and edge checks it already ran; before checking, it re-applies the purge's cursor clear and scope delete, so a row a concurrent writer added after the SQL stage is removed and the erasure can still complete. On DuckDB and PostgreSQL the upsert keeps the furthest `completed_through` and the newer `(resume_updated_at, resume_id)` cursor, so two runs over one scope converge instead of the last-finishing run moving the watermark backwards or replacing a newer cursor. A completed run still clears a cursor that does not point past its own completed position.
 
 - A month named without a year in a user turn now resolves against the turn's own event time instead of always to a past occurrence (dwamianm/prism#498). The claim resolver passed `PREFER_DATES_FROM=past` to dateparser for every reference, so `I am planning a trip for us in December` stored on 2026-11-02 became a date in December 2025 and the trip sorted as the oldest memory. A turn that talks about a plan or the future now takes the next occurrence, a turn that talks about something that already happened takes the most recent past occurrence, and a turn whose tense gives no signal takes the occurrence nearest the event time and records `resolved_date_uncertain` in the claim's metadata. References that name a year, relative references such as `yesterday`, and the protected forward-start path resolve exactly as before. `DERIVATION_VERSION` is unchanged, so `reingest()` finds every stored memory current; a memory stored before the fix keeps the date it was given, and the new rule applies to memories stored after the upgrade.
 
@@ -3443,7 +3490,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a4...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a5...HEAD
+[0.17.0a5]: https://github.com/dwamianm/prism/compare/v0.17.0a4...v0.17.0a5
 [0.17.0a4]: https://github.com/dwamianm/prism/compare/v0.17.0a3...v0.17.0a4
 [0.17.0a3]: https://github.com/dwamianm/prism/compare/v0.17.0a2...v0.17.0a3
 [0.17.0a2]: https://github.com/dwamianm/prism/compare/v0.17.0a1...v0.17.0a2
