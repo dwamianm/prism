@@ -307,14 +307,18 @@ class GraphStore(Protocol):
         completed_through: datetime | None,
         resume_updated_at: datetime | None = None,
         resume_id: str | None = None,
+        stalled_id: str | None = None,
+        stalled_attempts: int = 0,
     ) -> None:
         """Record a job's progress for one scope, monotonically.
 
         The store keeps the furthest completed position and the newer resume
         cursor, so two concurrent runs converge instead of the last write
-        winning. A production writer must call ``MemoryEngine``'s method
-        instead of this one: the engine also refuses a scope whose owner has an
-        owner-wide memory erasure, which this protocol cannot see.
+        winning. The stall fields record the node the latest run could not get
+        past and how many failed runs have now stopped there. A production
+        writer must call ``MemoryEngine``'s method instead of this one: the
+        engine also refuses a scope whose owner has an owner-wide memory
+        erasure, which this protocol cannot see.
         """
         ...
 

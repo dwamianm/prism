@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Incremental `deduplicate` and `alias_resolve` no longer leave memories unexamined for good (dwamianm/prism#545). Four cases are fixed, each with a test that fails without the change and passes with it on DuckDB and on PostgreSQL. A note materialized from a queued fast-ingest item now takes the time it is made as `updated_at` while `created_at` keeps the event's save time, so a note saved long before a completed run still enters the next incremental window; on a privacy-admitted store the note is published when the queue drains and is stamped the same way; a direct-store node keeps the snapshot it was accepted with. A page whose neighbor search, name lookup or merge failed keeps the cursor so the pair is examined again instead of being passed over. The watermark row also records the node a failed run could not get past and how many runs have stopped there, and after three failed runs at the same node the job records it in `details["skipped_nodes"]` and a warning log, moves the cursor past it and continues, so one record that fails every time cannot pin a scope and stop later memories from being examined. The watermark scope key now keeps the user id exactly as the caller passed it, because node ownership matches the exact string: two spellings of one UUID owner id are two owners and no longer share one watermark, and an owner-wide erasure still removes the owner's rows under every text form of the UUID the standard parser accepts.
+
+  Stored memories are not rewritten and `DERIVATION_VERSION` is unchanged: these fixes change which records future organizer runs examine, not what a stored event derives.
+
+  Upgrade note: an install that already ran incremental mode should clear its organizer watermarks once after upgrading, so nodes materialized before the fix are examined. Run `DELETE FROM organizer_watermarks;` against the pack's DuckDB database, or the equivalent statement on PostgreSQL, before the next `organize()` call. The next run of each incremental job then scans its scope from the start in pages of 500 nodes, which costs one full pass per scope; the rows hold only a timestamp, a cursor position, a node id and an attempt count, so nothing else is lost. An install that never turned the option on has no rows and needs nothing.
+
+  Retrieval: the default rank fusion's current-state recency boost dates a candidate by its event time or `created_at`, and that boost is unchanged. Two smaller paths date a note with no `event_time` by its `updated_at`: the rank fusion current-update multiplier's reference time, and the weighted formula's recency. A current-state query whose pool holds an update-worded `ingest_fast` note made long after it was saved can therefore order that note as the newest update, and its rendered context can change for that case. Because the time is wall-clock, that narrow ordering is not reproducible across two materializations of the same event log. The offline evidence gate cannot show it: its packs are built with `store()` and hold no `ingest_fast` notes.
+
+  PostgreSQL: `organizer_watermarks` gains `stalled_id` and `stalled_attempts`, which are part of the runtime schema fingerprint. A deployment that opens its stores with `initialize=False` refuses to open until the privileged schema bootstrap runs again; an open with `initialize=True` (the default of `MemoryEngine.open` and `MemoryWorkspace.open_postgres`) adds the columns itself.
+
 ## [0.17.0a5] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

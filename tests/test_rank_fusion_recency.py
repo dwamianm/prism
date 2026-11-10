@@ -206,6 +206,28 @@ def test_the_boost_and_the_current_update_multiplier_combine_and_replay():
     assert restored.replay_score() == update.composite_score
 
 
+def test_a_note_made_long_after_it_was_saved_can_be_the_newest_update():
+    # A materialized note keeps its save time as created_at and takes the time
+    # it is made as updated_at (dwamianm/prism#545), and ingest_fast notes have
+    # no event time. The current-update anchor reads updated_at, so the note
+    # made last is the newest update even though it was saved first.
+    saved = NOW - timedelta(days=30)
+    older = candidate(1, semantic=.9, lexical=1.0, content="Our database is MySQL.")
+    older.node.created_at = older.node.updated_at = saved
+    older.node.event_time = None
+    made_now = candidate(2, semantic=.8, lexical=.6, content=UPDATE)
+    made_now.node.created_at = saved
+    made_now.node.updated_at = NOW
+    made_now.node.event_time = None
+
+    ranked, _ = score_and_rank([older, made_now], BOOST, now=NOW, query_analysis=CURRENT)
+
+    update = next(c for c in ranked if c.node.content == UPDATE)
+    assert [op.kind for op in update.score_provenance.adjustments] == ["current_update"]
+    saved_node = next(c for c in ranked if c.node.content != UPDATE)
+    assert saved_node.score_provenance.adjustments == ()
+
+
 def test_weighted_settings_copied_with_the_terms_are_rejected():
     # Validation drops the terms from weighted scoring; model_copy skips it.
     copied = DEFAULT_SCORING_WEIGHTS.model_copy(update={"rrf_tie_break": "event_time"})

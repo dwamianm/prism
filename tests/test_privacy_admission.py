@@ -266,3 +266,34 @@ async def test_capability_errors_are_content_free_before_durable_effect(tmp_path
         assert not r.embedder.sends
     finally:
         await engine.close()
+
+
+async def test_AP08_a_queued_protected_note_takes_the_time_it_is_made(tmp_path, layout):
+    """A protected fast-ingest note enters the next incremental window (#545).
+
+    The note is built when the source is accepted and published when the queue
+    drains. Its created_at keeps the acceptance time and its updated_at is the
+    time it is published, so a completed watermark written in between does not
+    leave it behind.
+    """
+    from datetime import datetime, timezone
+
+    from prme.organizer.watermarks import scope_key
+
+    engine, _runtime, policy = await open_engine(tmp_path, layout=layout)
+    owner = str(policy.owner_id)
+    try:
+        events = await engine.ingest_fast_many([{"content": SOURCE}], user_id=owner)
+        accepted_before = datetime.now(timezone.utc)
+        # A completed run whose window starts after the source was accepted.
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(owner), job="deduplicate",
+            completed_through=accepted_before,
+        )
+        assert (await engine.process_pending(user_id=owner, budget_ms=60000)).processed == 1
+
+        [node] = await engine.get_event_nodes(events[0], user_id=owner)
+        assert node.created_at < accepted_before
+        assert node.updated_at > accepted_before
+    finally:
+        await engine.close()

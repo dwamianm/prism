@@ -10,7 +10,9 @@ alias_resolve:
   for a pair whose two endpoints are both in the full job's newest-100 page.
 
 The option is off by default, so a test also checks that a default
-``organize()`` writes no watermark and behaves as before.
+``organize()`` writes no watermark and behaves as before. Later sections cover
+the four cases that could leave memories unexamined for good
+(dwamianm/prism#545) and the watermark store's migration for an older pack.
 """
 
 from __future__ import annotations
@@ -131,6 +133,45 @@ async def _watermark_rows(engine):
 
 
 class TestWatermarkStore:
+    def test_an_older_pack_gains_the_stall_columns_on_open(self, tmp_path):
+        """A pack written before the stall counter keeps its rows and gains them."""
+        import duckdb
+
+        from prme.storage.schema import create_schema
+
+        path = tmp_path / "older.duckdb"
+        conn = duckdb.connect(str(path))
+        try:
+            conn.execute("""
+                CREATE TABLE organizer_watermarks (
+                    scope_key VARCHAR NOT NULL,
+                    job VARCHAR NOT NULL,
+                    completed_through TIMESTAMPTZ,
+                    resume_updated_at TIMESTAMPTZ,
+                    resume_id UUID,
+                    updated_at TIMESTAMPTZ DEFAULT current_timestamp,
+                    PRIMARY KEY (scope_key, job)
+                )
+            """)
+            conn.execute(
+                "INSERT INTO organizer_watermarks (scope_key, job, completed_through) "
+                "VALUES ('u:alice', 'deduplicate', current_timestamp)"
+            )
+
+            create_schema(conn)
+
+            columns = {
+                row[1]
+                for row in conn.execute("PRAGMA table_info('organizer_watermarks')").fetchall()
+            }
+            assert {"stalled_id", "stalled_attempts"} <= columns
+            row = conn.execute(
+                "SELECT stalled_id, stalled_attempts FROM organizer_watermarks"
+            ).fetchone()
+            assert row == (None, 0)
+        finally:
+            conn.close()
+
     @pytest.mark.asyncio
     async def test_round_trip_and_resume_cursor(self, engine):
         scoped = scope_key(USER)
@@ -196,16 +237,24 @@ class TestWatermarkStore:
         assert scope_key("") == "u:"
         assert scope_key("alice") != scope_key("bob")
 
-    def test_scope_keys_round_trip_and_canonicalize_uuid_ids(self):
-        from prme.organizer.watermarks import scope_owner
+    def test_scope_keys_round_trip_and_keep_the_exact_owner_text(self):
+        from prme.organizer.watermarks import owner_scope_keys, scope_owner
 
         assert scope_owner(scope_key(None)) is None
         assert scope_owner(scope_key("")) == ""
         assert scope_owner(scope_key("alice")) == "alice"
         upper = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
-        # The purge deletes the canonical form, so the writer stores the same.
-        assert scope_key(upper) == scope_key(upper.lower())
-        assert scope_owner(scope_key(upper)) == upper.lower()
+        # Ownership matches the exact string, so the key keeps the exact text:
+        # two spellings of one UUID are two owners with two watermarks.
+        assert scope_key(upper) != scope_key(upper.lower())
+        assert scope_owner(scope_key(upper)) == upper
+        # The purge still finds every spelling, because an erasure names the
+        # owner as one UUID and the rows may be keyed under any text form.
+        assert set(owner_scope_keys(
+            [scope_key(upper), scope_key(upper.lower()), scope_key("alice"), scope_key(None)],
+            upper.lower(),
+        )) == {scope_key(upper), scope_key(upper.lower())}
+        assert owner_scope_keys([scope_key("alice"), ""], upper.lower()) == []
         # A key that is neither the operator scope nor a scoped key is a bug.
         with pytest.raises(ValueError):
             scope_owner("alice")
@@ -1342,6 +1391,192 @@ class TestNothingNewIsFast:
             assert result.per_job[job].nodes_processed == 0
             assert result.per_job[job].nodes_modified == 0
             assert result.per_job[job].status == "completed"
+
+
+# ---------------------------------------------------------------------------
+# Missed memories (dwamianm/prism#545)
+# ---------------------------------------------------------------------------
+
+
+class TestMaterializedNoteEntersNextWindow:
+    """A note made from a queued fast-ingest item must enter the next window.
+
+    The note's ``created_at`` stays the event's save time, and its
+    ``updated_at`` is the time it is made, so a note materialized after a
+    completed run's watermark still ranks after it.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_queued_note_made_after_a_completed_run_is_examined(self, engine):
+        event_id = await engine.ingest_fast("queued note", user_id=USER)
+        # A completed run whose window starts after the event was saved.
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+            completed_through=datetime.now(timezone.utc),
+        )
+        processed = await engine.process_pending(user_id=USER, budget_ms=5000)
+        assert processed.processed == 1
+
+        [node] = await engine.query_nodes(
+            user_id=USER, lifecycle_states=list(LifecycleState),
+        )
+        event = await engine.get_event(event_id)
+        assert node.created_at == event.created_at
+        assert node.updated_at > event.created_at
+
+        result = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        assert result.per_job["deduplicate"].nodes_processed == 1
+
+
+class TestRepeatedFailureIsBounded:
+    """A node that keeps failing must not pin the scope's cursor for good."""
+
+    @pytest.mark.asyncio
+    async def test_a_node_whose_search_always_fails_is_skipped_after_bounded_attempts(
+        self, engine, monkeypatch,
+    ):
+        await _store_many(
+            engine, ["poison memory", "alpha memory", "beta memory"],
+            valid_from=FIXED_VALID_FROM,
+        )
+        poison_id = next(
+            node.id for node in await engine.query_nodes(
+                user_id=USER, lifecycle_states=list(LifecycleState),
+            )
+            if node.content == "poison memory"
+        )
+
+        index = engine._vector_index
+        original_search = index.search
+
+        async def failing_search(content, *args, **kwargs):
+            if content == "poison memory":
+                raise RuntimeError("embedding rejected")
+            return await original_search(content, *args, **kwargs)
+
+        monkeypatch.setattr(index, "search", failing_search)
+
+        max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+        for attempt in range(1, max_attempts):
+            result = await engine.organize(user_id=USER, jobs=["deduplicate"])
+            job = result.per_job["deduplicate"]
+            assert job.status == "error"
+            assert job.nodes_processed == 0
+            watermark = await engine.get_organizer_watermark(
+                scope_key=scope_key(USER), job="deduplicate",
+            )
+            assert watermark.stalled_id == str(poison_id)
+            assert watermark.stalled_attempts == attempt
+
+        bounded = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        job = bounded.per_job["deduplicate"]
+        assert job.status == "completed"
+        assert job.details["skipped_nodes"] == [
+            {"node_id": str(poison_id), "attempts": max_attempts},
+        ]
+        # The nodes after the skipped one are examined in the same run.
+        assert job.nodes_processed == 2
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        )
+        assert watermark.stalled_id is None
+
+        # Nothing the owner stores afterwards is stuck behind the bad node.
+        await _store_many(engine, ["new twin", "new twin"], valid_from=FIXED_VALID_FROM)
+        later = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        assert later.per_job["deduplicate"].nodes_modified == 1
+
+    @pytest.mark.asyncio
+    async def test_alias_resolve_bounds_a_repeated_search_failure_too(self, engine, monkeypatch):
+        """The same bound covers alias_resolve's incremental path."""
+        await _store_entities(engine, ["poison entity", "alpha", "beta"])
+        poison_id = next(
+            node.id for node in await engine.query_nodes(
+                user_id=USER, node_type=NodeType.ENTITY, lifecycle_states=list(LifecycleState),
+            )
+            if node.content == "poison entity"
+        )
+
+        index = engine._vector_index
+        original_search = index.search
+
+        async def failing_search(content, *args, **kwargs):
+            if content == "poison entity":
+                raise RuntimeError("embedding rejected")
+            return await original_search(content, *args, **kwargs)
+
+        monkeypatch.setattr(index, "search", failing_search)
+
+        max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+        for _ in range(max_attempts - 1):
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+            assert result.per_job["alias_resolve"].status == "error"
+
+        bounded = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        job = bounded.per_job["alias_resolve"]
+        assert job.status == "completed"
+        assert job.details["skipped_nodes"] == [
+            {"node_id": str(poison_id), "attempts": max_attempts},
+        ]
+        assert job.nodes_processed == 2
+
+
+class TestFailedMergeKeepsThePageResumable:
+    """A pair whose merge failed is tried again instead of being skipped."""
+
+    @pytest.mark.asyncio
+    async def test_a_failed_merge_is_retried_on_the_next_run(self, engine, monkeypatch):
+        await _store_many(engine, ["same thing", "same thing"], valid_from=FIXED_VALID_FROM)
+
+        original_merge = engine._graph_store.merge_nodes
+
+        async def failing_merge(*args, **kwargs):
+            raise RuntimeError("merge failed")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(engine._graph_store, "merge_nodes", failing_merge)
+            failed = await engine.organize(user_id=USER, jobs=["deduplicate"])
+
+        job = failed.per_job["deduplicate"]
+        assert job.status == "error"
+        assert job.nodes_modified == 0
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        )
+        assert watermark.completed_through is None
+        assert watermark.resume_cursor is None
+
+        monkeypatch.setattr(engine._graph_store, "merge_nodes", original_merge)
+        retried = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        assert retried.per_job["deduplicate"].nodes_modified == 1
+
+
+class TestOwnerKeyMatchesOwnership:
+    """Two spellings of one UUID owner id are two owners and two watermarks."""
+
+    @pytest.mark.asyncio
+    async def test_another_spelling_does_not_inherit_the_first_watermark(self, engine):
+        canonical = "550e8400-e29b-41d4-a716-446655440000"
+        upper = canonical.upper()
+        old = datetime.now(timezone.utc) - timedelta(hours=2)
+        for index in range(2):
+            await engine._graph_store.create_node(MemoryNode(
+                user_id=canonical,
+                node_type=NodeType.FACT,
+                scope=Scope.PERSONAL,
+                content=f"older memory {index}",
+                created_at=old,
+                updated_at=old,
+                valid_from=old,
+            ))
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(upper), job="deduplicate",
+            completed_through=datetime.now(timezone.utc),
+        )
+
+        result = await engine.organize(user_id=canonical, jobs=["deduplicate"])
+
+        assert result.per_job["deduplicate"].nodes_processed == 2
 
 
 # ---------------------------------------------------------------------------

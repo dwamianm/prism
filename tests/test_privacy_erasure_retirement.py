@@ -256,19 +256,64 @@ async def test_ER02_verification_rejects_a_resume_cursor_naming_an_erased_node(
             targets = await _targets(session, intent.request.request_id)
         [node] = [identifier for kind, identifier in targets if kind == "node"]
 
-        # Re-create a cursor that names the erased node, as a racing organize
-        # could between the purge and verification.
+        # Re-create a cursor and a stall that name the erased node, as a racing
+        # organize could between the purge and verification.
         now = datetime.now(timezone.utc)
         assert await engine.set_organizer_watermark(
             scope_key=scope_key(None), job="deduplicate", completed_through=now,
             resume_updated_at=now, resume_id=str(node),
+            stalled_id=str(node), stalled_attempts=2,
         ) is True
-        # Verification re-applies the cursor clear and then confirms it.
+        # Verification re-applies the cursor and stall clear, then confirms it.
         await _verify_purge(engine._privacy.erasure, intent)
         unscoped = await engine.get_organizer_watermark(
             scope_key=scope_key(None), job="deduplicate",
         )
         assert unscoped.resume_cursor is None
+        assert unscoped.stalled_id is None
+        assert unscoped.stalled_attempts == 0
     finally:
         await engine.close()
 
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_ER02_owner_wide_purge_removes_a_watermark_keyed_under_another_spelling(
+    tmp_path, layout, analyzer, native,
+):
+    """The purge removes the owner's watermark whatever spelling keyed it (#545).
+
+    Ownership matches the exact user id, so a row may be keyed under any text
+    form of the owner's UUID. An erasure names the owner as one UUID, and no
+    row that names it in plaintext may survive.
+    """
+    engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
+    runtime = replace(runtime, key_custody=custody,
+        retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    engine._privacy.runtime = runtime
+    owner = str(policy.owner_id)
+    scoped = scope_key(owner.upper())
+    try:
+        await engine.store("Mara likes tea.", user_id=owner)
+        assert await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate",
+            completed_through=datetime.now(timezone.utc),
+        ) is True
+
+        await engine.request_erasure(
+            ErasureRequest(request_id=uuid4(), owner_all=True), user_id=owner,
+        )
+        [status] = await engine.process_erasures(user_id=owner, budget_ms=60000)
+        assert status.state == "live_purged" and status.failure is None, (
+            status.stage, status.failure, status.attempts,
+        )
+        assert await engine.get_organizer_watermark(
+            scope_key=scoped, job="deduplicate",
+        ) is None
+        # The writer still refuses that owner under any spelling, so a later
+        # organize call cannot put the plaintext key back.
+        assert await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate",
+            completed_through=datetime.now(timezone.utc),
+        ) is False
+    finally:
+        await engine.close()

@@ -177,7 +177,18 @@ async def test_batch_and_serial_recovery_return_identical_product_contexts(confi
                                              reference_time=clock, token_budget=2048)
             assert response.results
             outcomes.append(([candidate.model_dump(mode='json') for candidate in response.results], response.bundle.render()))
-    assert outcomes[0] == outcomes[1]
+
+    def without_made_at(dumped):
+        # A materialized note's updated_at records when it was made, not when
+        # its event was saved (dwamianm/prism#545), so two drains that happen
+        # at different moments differ only in that operational timestamp. Every
+        # other field, and the rendered context, must still match.
+        for candidate in dumped:
+            candidate['node']['updated_at'] = None
+        return dumped
+
+    assert without_made_at(outcomes[0][0]) == without_made_at(outcomes[1][0])
+    assert outcomes[0][1] == outcomes[1][1]
 
 
 @pytest.mark.parametrize('failure', ['vector', 'lexical'])
