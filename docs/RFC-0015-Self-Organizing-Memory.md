@@ -594,7 +594,6 @@ newest-500 page of a type are not read at all. An incremental form would need a
 durable cluster-transition record, not a node-change window; that is the
 alternative a future design should weigh before changing the job.
 
-Known limitation: on a privacy-admitted store,
 Known limitations: on a privacy-admitted store, `scan_changed_nodes` reads the
 whole admitted scope and sorts it in memory on every page, so an incremental
 page costs a scan of the scope, and the `alias_resolve` name lookup repeats
