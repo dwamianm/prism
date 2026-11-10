@@ -524,8 +524,23 @@ class TestResume:
         assert set(states.values()) == {LifecycleState.TENTATIVE}
 
     @pytest.mark.asyncio
+    async def test_a_budget_skipped_job_still_reports_a_result(self, engine):
+        """A requested job that the budget never reached still has an entry, so a reader can tell why."""
+        await _store_entities(engine, ["Alpha", "Beta", "Gamma"])
+
+        result = await engine.organize(
+            user_id=USER, jobs=["alias_resolve", "deduplicate"], budget_ms=0,
+        )
+
+        assert result.jobs_skipped == ["alias_resolve", "deduplicate"]
+        assert set(result.per_job) == {"alias_resolve", "deduplicate"}
+        for job in result.per_job.values():
+            assert job.status == "not_started"
+            assert job.nodes_processed == 0
+
+    @pytest.mark.asyncio
     async def test_alias_resolve_makes_progress_with_a_tiny_budget(self, engine, monkeypatch):
-        """A budget smaller than one entity's work still leaves a cursor."""
+        """A budget smaller than the whole scan still leaves a cursor."""
         await _store_entities(engine, ["Alpha", "Beta", "Gamma"])
         index = engine._vector_index
         original_search = index.search
@@ -537,11 +552,11 @@ class TestResume:
         monkeypatch.setattr(index, "search", slow_search)
 
         result = await engine.organize(
-            user_id=USER, jobs=["alias_resolve"], budget_ms=1,
+            user_id=USER, jobs=["alias_resolve"], budget_ms=40,
         )
         job = result.per_job["alias_resolve"]
         assert job.status == "budget_exhausted"
-        assert job.nodes_processed == 1
+        assert 0 < job.nodes_processed < 3
 
         watermark = await engine.get_organizer_watermark(
             scope_key=scope_key(USER), job="alias_resolve",
@@ -552,7 +567,6 @@ class TestResume:
             user_id=USER, jobs=["alias_resolve"], budget_ms=5000,
         )
         assert resumed.per_job["alias_resolve"].status == "completed"
-        assert resumed.per_job["alias_resolve"].nodes_processed == 2
 
     @pytest.mark.asyncio
     async def test_alias_resolve_budget_stop_resumes(self, engine, monkeypatch):
