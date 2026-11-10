@@ -212,10 +212,11 @@ then the graph node and both indexes are written. Index failures leave the job
 pending; `processing_status()` and `process_pending()` expose scoped inspection
 and repair after restart. A graph creation failure raises `MaterializationError`
 with the accepted `event_id`. Recovery preserves the original node values without
-an LLM, except `updated_at`: the materialized node takes the time it is made, as
-the raw queued-note and privacy-admitted paths do, so a materialization that lands
-after a completed organizer run still enters the next incremental window. The
-saved direct-store snapshot keeps the timestamps it was accepted with. Optional
+an LLM, except `updated_at` when the drain materializes the node later: that copy
+takes the time it is made, as the raw queued-note and privacy-admitted paths do,
+so a materialization that lands after a completed organizer run still enters the
+next incremental window. The node inserted by the `store()` call itself and the
+saved direct-store snapshot keep the timestamps they were accepted with. Optional
 reinforcement, supersedence and QA pairing run afterward and are outside this
 job's completion boundary.
 

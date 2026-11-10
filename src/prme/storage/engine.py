@@ -2173,18 +2173,20 @@ class MemoryEngine:
         )
         return [str(event_id) for event_id in admission.event_ids]
 
-    async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
+    async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None,
+                                 deferred_direct: bool = False) -> None:
         """Materialize a saved direct store or raw source without a new event.
 
         A direct store keeps its complete accepted snapshot in the direct
-        record, and the node it inserts keeps that snapshot's ``created_at``
-        and is stamped ``updated_at`` with the time it is made, as a raw NOTE
-        and a privacy-admitted direct store are, so a source materialized long
-        after its save still enters the next incremental organizer window
-        (dwamianm/prism#545, #548). The stored node may therefore differ from
-        the accepted snapshot in that one timestamp. Retries preserve existing
-        graph state and never reactivate retired nodes. Active-node completion
-        is acknowledged only after both indexes are durable. When
+        record. The node inserted by the ``store()`` call that accepted it
+        keeps that snapshot unchanged. A node the drain makes later is stamped
+        ``updated_at`` with the time it is made, as a raw NOTE and a
+        privacy-admitted direct store are, so a source materialized after a
+        completed organizer run still enters the next incremental window
+        (dwamianm/prism#545, #548). Such a stored node may therefore differ
+        from the accepted snapshot in that one timestamp. Retries preserve
+        existing graph state and never reactivate retired nodes. Active-node
+        completion is acknowledged only after both indexes are durable. When
         pending_lexical is supplied, the enclosing batch must commit it before
         acknowledgement.
         """
@@ -2202,13 +2204,17 @@ class MemoryEngine:
         node = await self._graph_store.get_node(node_id, include_superseded=True)
         if node is None:
             if direct is not None:
-                # The accepted snapshot has the save time on both timestamps.
-                # A copy inserted after a completed organizer run would rank
-                # behind that run's watermark and never be examined, so stamp
-                # the inserted copy with the time it is made (#548).
-                node = direct.node.model_copy(
-                    update={"updated_at": datetime.now(timezone.utc)},
-                )
+                node = direct.node
+                if deferred_direct:
+                    # The accepted snapshot has the save time on both
+                    # timestamps. A copy inserted after a completed organizer
+                    # run would rank behind that run's watermark and never be
+                    # examined, so stamp the drained copy with the time it is
+                    # made (#548). The store() call that accepts the source
+                    # keeps the snapshot as it is.
+                    node = node.model_copy(
+                        update={"updated_at": datetime.now(timezone.utc)},
+                    )
             else:
                 epistemic_type = infer_epistemic_type(NodeType.NOTE, content=event.content, role=event.role)
                 source_type = infer_source_type(NodeType.NOTE, role=event.role)
@@ -2307,7 +2313,7 @@ class MemoryEngine:
                 break
             attempted.append(event)
             try:
-                await self._materialize_event(event, pending_lexical=documents)
+                await self._materialize_event(event, pending_lexical=documents, deferred_direct=True)
             except Exception as exc:
                 from prme.privacy.diagnostics import event_failure_code
                 failures[str(event.id)] = event_failure_code(event, exc)
