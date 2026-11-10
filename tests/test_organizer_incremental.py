@@ -196,6 +196,145 @@ class TestWatermarkStore:
         assert scope_key("") == "u:"
         assert scope_key("alice") != scope_key("bob")
 
+    def test_scope_keys_round_trip_and_canonicalize_uuid_ids(self):
+        from prme.organizer.watermarks import scope_owner
+
+        assert scope_owner(scope_key(None)) is None
+        assert scope_owner(scope_key("")) == ""
+        assert scope_owner(scope_key("alice")) == "alice"
+        upper = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+        # The purge deletes the canonical form, so the writer stores the same.
+        assert scope_key(upper) == scope_key(upper.lower())
+        assert scope_owner(scope_key(upper)) == upper.lower()
+        # A key that is neither the operator scope nor a scoped key is a bug.
+        with pytest.raises(ValueError):
+            scope_owner("alice")
+
+    @pytest.mark.asyncio
+    async def test_completed_through_never_moves_backwards(self, engine):
+        """A run that finishes last must not move the scope behind an earlier one."""
+        scoped = scope_key(USER)
+        later = datetime(2026, 2, 1, tzinfo=timezone.utc)
+        earlier = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=later,
+        )
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=earlier,
+        )
+
+        row = await engine.get_organizer_watermark(scope_key=scoped, job="deduplicate")
+        assert row.completed_through == later
+
+    @pytest.mark.asyncio
+    async def test_newer_resume_cursor_survives_an_older_stop(self, engine):
+        """Two stops keep the later (updated_at, id); a completed run clears it."""
+        scoped = scope_key(USER)
+        completed = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        newer = datetime(2026, 1, 5, tzinfo=timezone.utc)
+        older = datetime(2026, 1, 3, tzinfo=timezone.utc)
+        newer_id = "22222222-2222-2222-2222-222222222222"
+        older_id = "11111111-1111-1111-1111-111111111111"
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=completed,
+            resume_updated_at=newer, resume_id=newer_id,
+        )
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=completed,
+            resume_updated_at=older, resume_id=older_id,
+        )
+        row = await engine.get_organizer_watermark(scope_key=scoped, job="deduplicate")
+        assert row.resume_cursor == (newer, newer_id)
+
+        # A completed run behind the cursor keeps it: that position was not
+        # covered by the run.
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=older,
+        )
+        row = await engine.get_organizer_watermark(scope_key=scoped, job="deduplicate")
+        assert row.resume_cursor == (newer, newer_id)
+
+        # A completed run past the cursor clears it.
+        await engine.set_organizer_watermark(
+            scope_key=scoped, job="deduplicate", completed_through=datetime(2026, 1, 6, tzinfo=timezone.utc),
+        )
+        row = await engine.get_organizer_watermark(scope_key=scoped, job="deduplicate")
+        assert row.resume_cursor is None
+
+    @pytest.mark.asyncio
+    async def test_concurrent_upserts_converge_on_the_furthest_position(self, engine):
+        scoped = scope_key(USER)
+        first = datetime(2026, 3, 1, tzinfo=timezone.utc)
+        second = datetime(2026, 3, 2, tzinfo=timezone.utc)
+        await asyncio.gather(
+            engine.set_organizer_watermark(
+                scope_key=scoped, job="deduplicate", completed_through=second,
+            ),
+            engine.set_organizer_watermark(
+                scope_key=scoped, job="deduplicate", completed_through=first,
+            ),
+        )
+
+        row = await engine.get_organizer_watermark(scope_key=scoped, job="deduplicate")
+        assert row.completed_through == second
+
+    @pytest.mark.asyncio
+    async def test_watermark_is_not_written_for_an_erased_owner(self, engine, monkeypatch):
+        """The engine refuses the scope and leaves the unscoped run alone."""
+        async def erased(owner_id):
+            return owner_id == USER
+
+        monkeypatch.setattr(
+            engine._privacy.erasure.repository, "owner_wide_erasure_requested", erased,
+        )
+        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate", completed_through=now,
+        ) is False
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        ) is None
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate", completed_through=now,
+        ) is True
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate",
+        ) is not None
+
+        # The job reports why no watermark was recorded.
+        result = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        assert result.per_job["deduplicate"].details["incremental"]["watermark"] == (
+            "not_written_erased_scope"
+        )
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        ) is None
+
+    @pytest.mark.asyncio
+    async def test_erasure_recorded_after_the_guard_removes_the_written_row(
+        self, engine, monkeypatch,
+    ):
+        """A row written in the check-to-write window is deleted again."""
+        calls = []
+
+        async def erased(owner_id):
+            calls.append(owner_id)
+            return len(calls) > 1
+
+        monkeypatch.setattr(
+            engine._privacy.erasure.repository, "owner_wide_erasure_requested", erased,
+        )
+
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+            completed_through=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        ) is False
+        assert calls == [USER, USER]
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        ) is None
+
 
 class TestScanChangedNodes:
     @pytest.mark.asyncio

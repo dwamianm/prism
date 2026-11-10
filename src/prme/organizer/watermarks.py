@@ -10,6 +10,12 @@ timestamp and the id of the node a budget-stopped run reached. It is written
 after the job's own writes have committed, so a crash re-runs the window
 instead of skipping it.
 
+A scope whose owner has an owner-wide memory erasure never gets a new row: the
+purge deletes the owner's rows, and a later organize call must not put the
+plaintext owner key back. The store also applies each upsert monotonically, so
+two concurrent runs converge on the furthest completed position and on the
+newer resume cursor instead of the later write winning outright.
+
 Incremental execution is opt-in (``OrganizerConfig.incremental_enabled``).
 With the option off the organizer reads and writes no watermark and every job
 keeps its full-scope behaviour.
@@ -19,6 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from uuid import UUID
 
 
 # Jobs whose candidate set is driven by node changes, so an incremental scan
@@ -56,13 +63,43 @@ INCREMENTAL_JOBS: frozenset[str] = frozenset({"deduplicate", "alias_resolve"})
 _SCOPED_PREFIX = "u:"
 
 
+def _canonical_owner(user_id: str) -> str:
+    """The canonical text of a UUID owner id, or the id unchanged.
+
+    The erasure purge deletes ``scope_key(str(owner_id))``, which is canonical
+    lowercase hyphenated text. Canonicalizing a UUID-shaped id here keeps the
+    writer's key the same one the purge deletes, whatever text form the caller
+    passed. A non-UUID id is written as given; it cannot match a UUID owner
+    record, so the erasure guard treats it as never erased.
+    """
+    try:
+        return str(UUID(user_id))
+    except (AttributeError, TypeError, ValueError):
+        return user_id
+
+
 def scope_key(user_id: str | None) -> str:
     """The watermark scope for an organize call.
 
     ``""`` is the unscoped operator scope. Any user id, including an empty
     one, maps to a distinct ``u:`` prefixed key.
     """
-    return "" if user_id is None else _SCOPED_PREFIX + user_id
+    return "" if user_id is None else _SCOPED_PREFIX + _canonical_owner(user_id)
+
+
+def scope_owner(key: str) -> str | None:
+    """The user id in a scoped key, or ``None`` for the unscoped operator scope.
+
+    The prefix is decoded here so a writer that must consult owner-level state
+    reads the same encoding ``scope_key`` produced. Only the two defined
+    encodings are accepted, so a mis-encoded key fails instead of being read
+    as the operator scope.
+    """
+    if key == "":
+        return None
+    if not key.startswith(_SCOPED_PREFIX):
+        raise ValueError(f"unknown organizer watermark scope key: {key!r}")
+    return key[len(_SCOPED_PREFIX):]
 
 
 @dataclass(frozen=True)

@@ -593,22 +593,71 @@ class PgGraphStore:
         resume_updated_at: datetime | None = None,
         resume_id: str | None = None,
     ) -> None:
-        """Upsert a job's progress for one scope."""
+        """Upsert a job's progress for one scope, monotonically.
+
+        Two runs over one scope may finish out of order. ``completed_through``
+        keeps the furthest position either run reached, and the resume cursor
+        keeps the later ``(resume_updated_at, resume_id)`` pair. A completed
+        run clears a cursor only when that cursor does not point past the
+        completed position, so it cannot discard a newer stop from a run that
+        started first.
+        """
         async with self._pool.acquire() as conn:
             await conn.execute(
                 "INSERT INTO organizer_watermarks "
                 "(scope_key, job, completed_through, resume_updated_at, resume_id, updated_at) "
                 "VALUES ($1, $2, $3, $4, $5::uuid, now()) "
                 "ON CONFLICT (scope_key, job) DO UPDATE SET "
-                "completed_through = excluded.completed_through, "
-                "resume_updated_at = excluded.resume_updated_at, "
-                "resume_id = excluded.resume_id, "
+                "completed_through = CASE "
+                "WHEN organizer_watermarks.completed_through IS NULL THEN excluded.completed_through "
+                "WHEN excluded.completed_through IS NULL THEN organizer_watermarks.completed_through "
+                "WHEN excluded.completed_through > organizer_watermarks.completed_through "
+                "THEN excluded.completed_through "
+                "ELSE organizer_watermarks.completed_through END, "
+                "resume_updated_at = CASE "
+                "WHEN excluded.resume_updated_at IS NULL THEN CASE "
+                "WHEN organizer_watermarks.resume_updated_at IS NOT NULL "
+                "AND (excluded.completed_through IS NULL "
+                "OR organizer_watermarks.resume_updated_at > excluded.completed_through) "
+                "THEN organizer_watermarks.resume_updated_at ELSE NULL END "
+                "WHEN organizer_watermarks.resume_updated_at IS NULL THEN excluded.resume_updated_at "
+                "WHEN excluded.resume_updated_at > organizer_watermarks.resume_updated_at "
+                "OR (excluded.resume_updated_at = organizer_watermarks.resume_updated_at "
+                "AND excluded.resume_id > organizer_watermarks.resume_id) "
+                "THEN excluded.resume_updated_at "
+                "ELSE organizer_watermarks.resume_updated_at END, "
+                "resume_id = CASE "
+                "WHEN excluded.resume_updated_at IS NULL THEN CASE "
+                "WHEN organizer_watermarks.resume_updated_at IS NOT NULL "
+                "AND (excluded.completed_through IS NULL "
+                "OR organizer_watermarks.resume_updated_at > excluded.completed_through) "
+                "THEN organizer_watermarks.resume_id ELSE NULL END "
+                "WHEN organizer_watermarks.resume_updated_at IS NULL THEN excluded.resume_id "
+                "WHEN excluded.resume_updated_at > organizer_watermarks.resume_updated_at "
+                "OR (excluded.resume_updated_at = organizer_watermarks.resume_updated_at "
+                "AND excluded.resume_id > organizer_watermarks.resume_id) "
+                "THEN excluded.resume_id "
+                "ELSE organizer_watermarks.resume_id END, "
                 "updated_at = excluded.updated_at",
                 scope_key,
                 job,
                 completed_through,
                 resume_updated_at,
                 resume_id,
+            )
+
+    async def delete_organizer_watermark(self, *, scope_key: str, job: str) -> None:
+        """Remove one scope and job's row.
+
+        Used when an owner-wide erasure was recorded between a watermark
+        write's guard read and its upsert: the row just written must not
+        outlive the purge.
+        """
+        async with self._pool.acquire() as conn:
+            await conn.execute(
+                "DELETE FROM organizer_watermarks WHERE scope_key=$1 AND job=$2",
+                scope_key,
+                job,
             )
 
     # --- Node Update ---

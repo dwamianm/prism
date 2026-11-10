@@ -170,3 +170,105 @@ async def test_ER02_shared_custody_store_survives_pending_retirement(tmp_path, l
         await survivor.close()
         await engine.close()
 
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_ER02_erased_owner_does_not_get_a_watermark_back(tmp_path, layout, analyzer, native):
+    """A post-erasure organize must not re-create the plaintext owner key (#525)."""
+    engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
+    runtime = replace(runtime, key_custody=custody,
+        retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    engine._privacy.runtime = runtime
+    owner = str(policy.owner_id)
+    scope = scope_key(owner)
+    completed = datetime.now(timezone.utc)
+    try:
+        assert await engine.set_organizer_watermark(
+            scope_key=scope, job="deduplicate", completed_through=completed,
+        ) is True
+        await engine.store("Mara likes tea.", user_id=owner)
+
+        await engine.request_erasure(
+            ErasureRequest(request_id=uuid4(), owner_all=True), user_id=owner,
+        )
+        [status] = await engine.process_erasures(user_id=owner, budget_ms=60000)
+        assert status.state == "live_purged" and status.failure is None, (
+            status.stage, status.failure, status.attempts,
+        )
+        assert await engine.get_organizer_watermark(scope_key=scope, job="deduplicate") is None
+
+        # The writer refuses the scope, so a later organize that reaches it
+        # (for example after the owner is admitted again) writes nothing.
+        assert await engine.set_organizer_watermark(
+            scope_key=scope, job="deduplicate", completed_through=completed,
+        ) is False
+        assert await engine.get_organizer_watermark(scope_key=scope, job="deduplicate") is None
+
+        # The unscoped operator scope is not an owner scope and still writes.
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate", completed_through=completed,
+        ) is True
+
+        # A non-UUID owner id cannot match a UUID erasure record, so the guard
+        # must not raise on a store whose privacy tables exist.
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key("legacy-user"), job="deduplicate", completed_through=completed,
+        ) is True
+        assert await engine.get_organizer_watermark(
+            scope_key=scope_key("legacy-user"), job="deduplicate",
+        ) is not None
+
+        # An owner-wide purge must not report success while the plaintext
+        # scope row survives, even if a writer added it after the purge. The
+        # verify stage re-applies the delete and then confirms it is gone.
+        [intent] = await engine._privacy.erasure.repository.intents()
+        await engine._graph_store.set_organizer_watermark(
+            scope_key=scope, job="deduplicate", completed_through=completed,
+        )
+        from prme.storage.erasure import _verify_purge
+        await _verify_purge(engine._privacy.erasure, intent)
+        assert await engine.get_organizer_watermark(scope_key=scope, job="deduplicate") is None
+    finally:
+        await engine.close()
+
+
+@pytest.mark.parametrize("layout", LAYOUTS)
+async def test_ER02_verification_rejects_a_resume_cursor_naming_an_erased_node(
+    tmp_path, layout, analyzer, native,
+):
+    """The verify stage now covers the cleared resume cursor (#525)."""
+    from prme.storage.erasure import _targets, _verify_purge
+
+    engine, runtime, policy, custody, *_ = await journal_engine(tmp_path, layout, analyzer)
+    runtime = replace(runtime, key_custody=custody,
+        retry_committer=NativeRetryCommitter(custody, clock=runtime.clock))
+    engine._privacy.runtime = runtime
+    owner = str(policy.owner_id)
+    try:
+        event = await engine.store("Mara keeps a notebook.", user_id=owner)
+        await engine.request_erasure(
+            ErasureRequest(request_id=uuid4(), event_ids=(UUID(str(event)),)), user_id=owner,
+        )
+        [status] = await engine.process_erasures(user_id=owner, budget_ms=60000)
+        assert status.state == "live_purged" and status.failure is None, status
+
+        [intent] = await engine._privacy.erasure.repository.intents()
+        async with engine._privacy.erasure.repository.session() as session:
+            targets = await _targets(session, intent.request.request_id)
+        [node] = [identifier for kind, identifier in targets if kind == "node"]
+
+        # Re-create a cursor that names the erased node, as a racing organize
+        # could between the purge and verification.
+        now = datetime.now(timezone.utc)
+        assert await engine.set_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate", completed_through=now,
+            resume_updated_at=now, resume_id=str(node),
+        ) is True
+        # Verification re-applies the cursor clear and then confirms it.
+        await _verify_purge(engine._privacy.erasure, intent)
+        unscoped = await engine.get_organizer_watermark(
+            scope_key=scope_key(None), job="deduplicate",
+        )
+        assert unscoped.resume_cursor is None
+    finally:
+        await engine.close()
+

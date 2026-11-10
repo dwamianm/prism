@@ -103,6 +103,35 @@ class ErasureRepository(ExtractionWorkRepository):
             await session.execute("UPDATE privacy_erasure_jobs SET status=$1 WHERE request_id=$2",
                                   status.model_dump_json(), str(status.request_id))
 
+    async def owner_wide_erasure_requested(self, owner_id) -> bool:
+        """True while the owner has an owner-wide memory erasure on record.
+
+        The request counts from the moment its ledger intent is applied, not
+        only once the purge completes. A later organizer run must not re-create
+        the plaintext scope key the purge removed, whether the erasure is still
+        in flight or already finished. A targeted erasure of individual events
+        or nodes leaves the owner live, so it does not count.
+        """
+        try:
+            owner = str(UUID(str(owner_id)))
+        except (AttributeError, TypeError, ValueError):
+            # A non-UUID id cannot equal a stored UUID owner id, so no erasure
+            # can name it. Returning False keeps the write working for legacy
+            # or non-UUID owner ids on a store whose privacy tables exist.
+            return False
+        async with self.session() as session:
+            tables = await self.tables(session)
+            if "privacy_erasure_jobs" not in tables:
+                return False
+            rows = await session.fetch(
+                "SELECT intent FROM privacy_erasure_jobs WHERE owner_id=$1", owner,
+            )
+        for row in rows:
+            intent = ErasureIntent.model_validate_json(row["intent"])
+            if intent.request.mode == "memory" and intent.request.owner_all:
+                return True
+        return False
+
 
 def affected(intent, record, purpose="memory"):
     request, policy = intent.request, record.snapshot.policy
@@ -834,13 +863,23 @@ async def _verify_purge(coordinator, intent):
         required.update(("node", value) for value in intent.request.node_ids)
         if not required <= targets or (intent.request.node_ids and not intent.source_event_ids):
             raise PrivacyDenied("privacy_invalid_result")
+        tables = await repository.tables(session)
+        if intent.request.mode == "memory" and intent.request.owner_all and "organizer_watermarks" in tables:
+            from prme.organizer.watermarks import scope_key as _scope_key
+            key = _scope_key(str(intent.owner_id))
+            # Re-apply the purge's scope delete: a concurrent writer can add
+            # the row after the SQL stage, and that row names the owner in
+            # plaintext. Then verify it is gone.
+            await session.execute("DELETE FROM organizer_watermarks WHERE scope_key=$1", key)
+            if await session.fetch(
+                    "SELECT 1 FROM organizer_watermarks WHERE scope_key=$1 LIMIT 1", key):
+                raise PrivacyDenied("privacy_invalid_result")
         if not targets:
             # An owner-wide request for an empty protected store still has an
             # access cutoff; it provides no positive purge evidence.
             if not intent.request.owner_all:
                 raise PrivacyDenied("privacy_invalid_result")
             return
-        tables = await repository.tables(session)
         for kind, identifier in targets:
             if kind == "event":
                 rows = await session.fetch("SELECT body FROM privacy_admissions WHERE event_id=$1", str(identifier))
@@ -866,6 +905,20 @@ async def _verify_purge(coordinator, intent):
                         raise PrivacyDenied("privacy_invalid_result")
                 if await session.fetch("SELECT 1 FROM edges WHERE source_id=$1 OR target_id=$1 LIMIT 1", str(identifier)):
                     raise PrivacyDenied("privacy_invalid_result")
+                if "organizer_watermarks" in tables:
+                    # Re-apply the purge's cursor clear: a concurrent unscoped
+                    # run can add the cursor after the SQL stage. A surviving
+                    # cursor is an erased identity, so report it rather than
+                    # claim the purge finished.
+                    await session.execute(
+                        "UPDATE organizer_watermarks SET resume_updated_at=NULL, resume_id=NULL "
+                        "WHERE resume_id=$1",
+                        str(identifier),
+                    )
+                    if await session.fetch(
+                            "SELECT 1 FROM organizer_watermarks WHERE resume_id=$1 LIMIT 1",
+                            str(identifier)):
+                        raise PrivacyDenied("privacy_invalid_result")
             if kind == "operation":
                 rows = await session.fetch("SELECT op_type,payload FROM operations WHERE id=$1", str(identifier))
                 if rows and rows[0]["op_type"] != "PRIVACY_ERASED":

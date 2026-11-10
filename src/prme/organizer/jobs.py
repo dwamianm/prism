@@ -103,6 +103,7 @@ async def _run_incremental(
     )
     cursor = result.details.pop("_resume", None)
 
+    written = True
     if result.status == "error" or result.stopped_on_budget:
         # Do not advance past a window that did not finish. Keep any prefix
         # that was processed before the failure or the stop so the retry
@@ -111,7 +112,7 @@ async def _run_incremental(
             resume_updated_at, resume_id = cursor
             if isinstance(resume_updated_at, str):
                 resume_updated_at = datetime.fromisoformat(resume_updated_at)
-            await engine.set_organizer_watermark(
+            written = await engine.set_organizer_watermark(
                 scope_key=scope,
                 job=job_name,
                 completed_through=prior_completed,
@@ -119,7 +120,7 @@ async def _run_incremental(
                 resume_id=resume_id,
             )
     else:
-        await engine.set_organizer_watermark(
+        written = await engine.set_organizer_watermark(
             scope_key=scope,
             job=job_name,
             completed_through=ceiling - _WATERMARK_OVERLAP,
@@ -129,6 +130,10 @@ async def _run_incremental(
         "window_start": updated_after.isoformat() if updated_after is not None else None,
         "window_end": ceiling.isoformat(),
     }
+    if not written:
+        # The owner has an owner-wide erasure on record, so the next run starts
+        # from the full scope instead of a resurrected watermark row.
+        result.details["incremental"]["watermark"] = "not_written_erased_scope"
     return result
 
 
