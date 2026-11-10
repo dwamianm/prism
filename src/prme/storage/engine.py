@@ -2176,14 +2176,17 @@ class MemoryEngine:
     async def _materialize_event(self, event: Event, *, pending_lexical: dict[str, MemoryNode] | None = None) -> None:
         """Materialize a saved direct store or raw source without a new event.
 
-        Direct stores retain their complete initial node snapshot; a raw NOTE
-        takes the event's identity and save time as ``created_at``, and is
-        stamped ``updated_at`` with the time it is made, so a note materialized
-        long after its save still enters the next incremental organizer window
-        (dwamianm/prism#545). Retries preserve existing graph state and never
-        reactivate retired nodes. Active-node completion is acknowledged only
-        after both indexes are durable. When pending_lexical is supplied, the
-        enclosing batch must commit it before acknowledgement.
+        A direct store keeps its complete accepted snapshot in the direct
+        record, and the node it inserts keeps that snapshot's ``created_at``
+        and is stamped ``updated_at`` with the time it is made, as a raw NOTE
+        and a privacy-admitted direct store are, so a source materialized long
+        after its save still enters the next incremental organizer window
+        (dwamianm/prism#545, #548). The stored node may therefore differ from
+        the accepted snapshot in that one timestamp. Retries preserve existing
+        graph state and never reactivate retired nodes. Active-node completion
+        is acknowledged only after both indexes are durable. When
+        pending_lexical is supplied, the enclosing batch must commit it before
+        acknowledgement.
         """
         from prme.epistemic.inference import infer_epistemic_type, infer_source_type
 
@@ -2199,7 +2202,13 @@ class MemoryEngine:
         node = await self._graph_store.get_node(node_id, include_superseded=True)
         if node is None:
             if direct is not None:
-                node = direct.node
+                # The accepted snapshot has the save time on both timestamps.
+                # A copy inserted after a completed organizer run would rank
+                # behind that run's watermark and never be examined, so stamp
+                # the inserted copy with the time it is made (#548).
+                node = direct.node.model_copy(
+                    update={"updated_at": datetime.now(timezone.utc)},
+                )
             else:
                 epistemic_type = infer_epistemic_type(NodeType.NOTE, content=event.content, role=event.role)
                 source_type = infer_source_type(NodeType.NOTE, role=event.role)

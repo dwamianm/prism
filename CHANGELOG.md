@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A direct-store node whose materialization is deferred and lands after a completed organizer run is now examined by the next incremental `deduplicate` and `alias_resolve` run (dwamianm/prism#548). The node keeps the accepted snapshot's `created_at` and takes the time it is made as `updated_at`, as a raw queued note and a privacy-admitted direct store already do, so it ranks after a watermark that moved past its save time. The direct record keeps the accepted snapshot unchanged, so the stored node may differ from it in that one timestamp. A test for each job fails without the change and passes with it on DuckDB and on PostgreSQL. Stored memories are not rewritten, and `DERIVATION_VERSION` and the runtime schema fingerprint are unchanged.
+
 ## [0.17.0a6] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

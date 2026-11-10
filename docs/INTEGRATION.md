@@ -212,8 +212,12 @@ then the graph node and both indexes are written. Index failures leave the job
 pending; `processing_status()` and `process_pending()` expose scoped inspection
 and repair after restart. A graph creation failure raises `MaterializationError`
 with the accepted `event_id`. Recovery preserves the original node values without
-an LLM. Optional reinforcement, supersedence and QA pairing run afterward and
-are outside this job's completion boundary.
+an LLM, except `updated_at`: the materialized node takes the time it is made, as
+the raw queued-note and privacy-admitted paths do, so a materialization that lands
+after a completed organizer run still enters the next incremental window. The
+saved direct-store snapshot keeps the timestamps it was accepted with. Optional
+reinforcement, supersedence and QA pairing run afterward and are outside this
+job's completion boundary.
 
 Question/answer pairing is disabled by default. `enable_qa_pairing=True`
 enables an experimental in-process heuristic that creates an extra merged node
