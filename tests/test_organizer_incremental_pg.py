@@ -1,12 +1,14 @@
-"""Incremental organizer watermarks on PostgreSQL (dwamianm/prism#517).
+"""Incremental organizer watermarks on PostgreSQL (dwamianm/prism#517, #523).
 
 Requires PRME_TEST_DATABASE_URL. Mirrors the DuckDB coverage: the watermark
-store, the keyset scan, an incremental run that converges, tenant isolation,
-and the nothing-new path over 10,000 nodes finishing under one second.
+store, the keyset scan, deduplicate and alias_resolve runs that converge,
+tenant isolation, a budget stop that resumes, and the nothing-new path over
+10,000 nodes finishing under one second.
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -15,6 +17,7 @@ from uuid import uuid4
 import pytest
 
 from prme.config import OrganizerConfig, PRMEConfig
+from prme.organizer import jobs as jobs_module
 from prme.organizer.watermarks import INCREMENTAL_JOBS, scope_key
 from prme.storage.engine import MemoryEngine
 from prme.types import LifecycleState, NodeType, Scope
@@ -144,6 +147,101 @@ async def test_incremental_deduplicate_run_converges(pg_engine):
 
     nodes = await pg_engine.query_nodes(user_id=user, lifecycle_states=list(LifecycleState))
     assert sorted(node.lifecycle_state.value for node in nodes) == ["superseded", "tentative"]
+
+
+async def test_query_nodes_content_equals_any(graph_store):
+    from prme.models.nodes import MemoryNode
+
+    owner = f"user-{uuid4().hex[:8]}"
+    for content in ("JavaScript", " javascript ", "JS"):
+        await graph_store.create_node(MemoryNode(
+            user_id=owner,
+            node_type=NodeType.ENTITY,
+            scope=Scope.PERSONAL,
+            content=content,
+        ))
+
+    matches = await graph_store.query_nodes(
+        user_id=owner,
+        node_type=NodeType.ENTITY,
+        content_equals_any=["JAVASCRIPT"],
+    )
+    assert sorted(node.content for node in matches) == [" javascript ", "JavaScript"]
+
+    missing = await graph_store.query_nodes(
+        user_id=owner,
+        content_equals_any=["vaScript"],
+    )
+    assert missing == []
+
+    unfiltered = await graph_store.query_nodes(
+        user_id=owner, content_equals_any=[],
+    )
+    assert sorted(node.content for node in unfiltered) == [
+        " javascript ", "JS", "JavaScript",
+    ]
+
+
+async def test_incremental_alias_resolve_run_converges(pg_engine):
+    user = f"pg-alias-{uuid4().hex[:8]}"
+    for content in ("JavaScript", "js", "PostgreSQL", "postgresql"):
+        await pg_engine.store(
+            content, user_id=user, node_type=NodeType.ENTITY, scope=Scope.PERSONAL,
+        )
+
+    first = await pg_engine.organize(user_id=user, jobs=["alias_resolve"])
+    assert first.per_job["alias_resolve"].nodes_modified == 2
+
+    second = await pg_engine.organize(user_id=user, jobs=["alias_resolve"])
+    assert second.per_job["alias_resolve"].nodes_modified == 0
+
+    nodes = await pg_engine.query_nodes(user_id=user, lifecycle_states=list(LifecycleState))
+    states = sorted(node.lifecycle_state.value for node in nodes)
+    assert states == ["superseded", "superseded", "tentative", "tentative"]
+
+
+async def test_incremental_alias_resolve_budget_stop_resumes(pg_engine, monkeypatch):
+    user = f"pg-alias-resume-{uuid4().hex[:8]}"
+    for content in ("JavaScript", "js", "PostgreSQL", "postgresql"):
+        await pg_engine.store(
+            content, user_id=user, node_type=NodeType.ENTITY, scope=Scope.PERSONAL,
+        )
+    monkeypatch.setattr(jobs_module, "_INCREMENTAL_PAGE_SIZE", 2)
+
+    index = pg_engine._vector_index
+    original_search = index.search
+
+    async def slow_search(*args, **kwargs):
+        await asyncio.sleep(0.02)
+        return await original_search(*args, **kwargs)
+
+    monkeypatch.setattr(index, "search", slow_search)
+
+    stopped = await pg_engine.organize(
+        user_id=user, jobs=["alias_resolve"], budget_ms=40,
+    )
+    job = stopped.per_job["alias_resolve"]
+    assert job.status == "budget_exhausted"
+    assert 0 < job.nodes_processed < 4
+
+    watermark = await pg_engine.get_organizer_watermark(
+        scope_key=scope_key(user), job="alias_resolve",
+    )
+    assert watermark.resume_cursor is not None
+
+    resumed = await pg_engine.organize(
+        user_id=user, jobs=["alias_resolve"], budget_ms=5000,
+    )
+    assert resumed.per_job["alias_resolve"].status == "completed"
+
+    converged = await pg_engine.organize(
+        user_id=user, jobs=["alias_resolve"], budget_ms=5000,
+    )
+    assert converged.per_job["alias_resolve"].nodes_modified == 0
+
+    nodes = await pg_engine.query_nodes(user_id=user, lifecycle_states=list(LifecycleState))
+    states = sorted(node.lifecycle_state.value for node in nodes)
+    assert states == ["superseded", "superseded", "tentative", "tentative"]
 
 
 async def test_scoped_incremental_scan_excludes_another_owner(pg_engine):

@@ -731,13 +731,38 @@ async def _job_alias_resolve(
     config: OrganizerConfig,
     budget_ms: float,
     user_id: str | None = None,
+    window: IncrementalWindow | None = None,
 ) -> JobResult:
     """Find and resolve entity alias relationships (issue #11).
 
     Detects abbreviations, case variations, and semantic aliases among
     ENTITY nodes, then merges compatible known name variants or links them
     with RELATES_TO edges.
+
+    With ``window`` (incremental mode) it examines only ENTITY nodes created
+    or updated since the last completed run. Each changed entity is looked up
+    by its equivalent names, so an unchanged name twin is found even when it
+    is not on the page, and searched against the vector index for semantic
+    aliases; the run records a keyset position when the budget stops.
+
+    The candidate set is write-determined: an entity's name is immutable after
+    creation, and creating an entity or changing its lifecycle writes
+    ``updated_at``, so a new alias pair always has an endpoint in the window.
+    Discovery is bounded, not complete: the vector search returns each changed
+    entity's top-10 neighbors, so a semantic pair that neither endpoint ranks
+    can be missed, and the name lookup returns a bounded page of matches. A
+    tuning threshold change, a rebuilt index or a changed known-alias table is
+    outside the write guarantee, as it is for ``deduplicate``. With the option
+    off, the full-scope run examines only the newest 100 active entities.
+    Clearing the scope's row while the option is on starts a paged whole-scope
+    incremental run, which is how an older scope is re-evaluated today; paging
+    the option-off full scan is follow-up work.
     """
+    if window is not None:
+        return await _alias_resolve_incremental(
+            job_name, engine, config, budget_ms, user_id, window,
+        )
+
     from prme.organizer.alias_resolution import find_aliases, resolve_aliases
 
     start = time.monotonic()
@@ -767,6 +792,169 @@ async def _job_alias_resolve(
             "aliases_resolved": resolved_count,
         },
     )
+
+
+async def _alias_resolve_incremental(
+    job_name: str,
+    engine: MemoryEngine,
+    config: OrganizerConfig,
+    budget_ms: float,
+    user_id: str | None,
+    window: IncrementalWindow,
+) -> JobResult:
+    """Resolve aliases one incremental page at a time.
+
+    The scan half of the job budget examines changed ENTITY nodes; each is
+    looked up by its equivalent names and searched in the vector index so a
+    new entity can pair with an older twin that is not on the page. A page's
+    candidates are resolved before the keyset cursor moves past them, so a
+    stop or a resolution failure leaves the unexamined entities for the next
+    run. The run-level ``seen_pairs`` set is shared across pages, unlike
+    deduplicate's per-page set, because the two alias phases can rediscover a
+    pair that an earlier page already resolved.
+    """
+    from prme.organizer.alias_resolution import find_aliases_in_page, resolve_aliases
+    from prme.privacy.journals import generation_search
+
+    start = time.monotonic()
+
+    try:
+        index = await generation_search(engine, user_id=user_id)
+    except Exception:
+        logger.warning("Alias resolution job failed", exc_info=True)
+        return JobResult(
+            job=job_name,
+            errors=1,
+            duration_ms=round((time.monotonic() - start) * 1000.0, 2),
+            status="error",
+            details={"error": "index_unavailable"},
+        )
+
+    scan_budget_ms = budget_ms / 2
+    updated_after = window.updated_after
+    after_id = window.after_id
+    processed = 0
+    resolved_count = 0
+    aliases_found = 0
+    errors = 0
+    stopped = False
+    failed = False
+    last_cursor: tuple[datetime, str] | None = None
+    seen_pairs: set[tuple[str, str]] = set()
+
+    while True:
+        try:
+            entities = await engine.scan_changed_nodes(
+                user_id=user_id,
+                lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+                node_type=NodeType.ENTITY,
+                updated_after=updated_after,
+                after_id=after_id,
+                updated_at_or_before=window.ceiling,
+                limit=_INCREMENTAL_PAGE_SIZE,
+            )
+        except Exception:
+            logger.warning("Incremental alias resolution scan failed", exc_info=True)
+            errors += 1
+            failed = True
+            break
+
+        if not entities:
+            break
+
+        examined = []
+        for position, entity in enumerate(entities):
+            # Examine at least one entity even when the remaining budget is
+            # smaller than the scan, so a stopped run records a cursor instead
+            # of repeating the same page forever.
+            if position > 0 and (time.monotonic() - start) * 1000.0 >= scan_budget_ms:
+                stopped = True
+                break
+            examined.append(entity)
+
+        if examined:
+            remaining_ms = max(
+                1.0, scan_budget_ms - (time.monotonic() - start) * 1000.0,
+            )
+            resolve_failures = [0]
+            try:
+                aliases, completed, lookup_failed = await find_aliases_in_page(
+                    engine,
+                    config,
+                    examined,
+                    index=index,
+                    budget_ms=remaining_ms,
+                    user_id=user_id,
+                    seen_pairs=seen_pairs,
+                )
+                aliases_found += len(aliases)
+                resolved_count += await resolve_aliases(
+                    engine,
+                    aliases,
+                    **({"user_id": user_id} if user_id else {}),
+                    failure_count=resolve_failures,
+                )
+                # Only the examined prefix may move the cursor. A page whose
+                # name lookup, neighbor search or resolution stopped or failed
+                # is examined again, and a failure is reported as an error so
+                # it is not mistaken for a budget stop.
+                if lookup_failed:
+                    failed = True
+                    errors += 1
+                if resolve_failures[0]:
+                    failed = True
+                    errors += resolve_failures[0]
+                if completed < len(examined):
+                    stopped = True
+                if not lookup_failed and not resolve_failures[0]:
+                    done = examined[:completed]
+                    processed += len(done)
+                    if done:
+                        last_cursor = (
+                            done[-1].updated_at or done[-1].created_at,
+                            str(done[-1].id),
+                        )
+            except Exception:
+                logger.warning(
+                    "Incremental alias resolution failed for a page", exc_info=True,
+                )
+                errors += 1
+                failed = True
+
+        # One over-budget page is allowed to make progress, then the run stops
+        # so it does not keep paying for a scope the budget cannot cover. A
+        # short page is the end of the scope, so there is nothing to stop for.
+        if (
+            len(entities) >= _INCREMENTAL_PAGE_SIZE
+            and (time.monotonic() - start) * 1000.0 >= scan_budget_ms
+        ):
+            stopped = True
+
+        # A stop or a failure must not advance the cursor past this page.
+        if stopped or failed:
+            break
+        updated_after = entities[-1].updated_at or entities[-1].created_at
+        after_id = str(entities[-1].id)
+        if len(entities) < _INCREMENTAL_PAGE_SIZE:
+            break
+
+    result = JobResult(
+        job=job_name,
+        nodes_processed=processed,
+        nodes_modified=resolved_count,
+        errors=errors,
+        duration_ms=round((time.monotonic() - start) * 1000.0, 2),
+        status="error" if failed else ("budget_exhausted" if stopped else "completed"),
+        stopped_on_budget=stopped,
+        details={
+            "aliases_found": aliases_found,
+            "aliases_resolved": resolved_count,
+            "pairs_not_applied": aliases_found - resolved_count,
+        },
+    )
+    if (stopped or failed) and last_cursor is not None:
+        result.details["_resume"] = [last_cursor[0].isoformat(), last_cursor[1]]
+    return result
 
 
 async def _job_snapshot_generation(

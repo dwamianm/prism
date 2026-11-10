@@ -4529,7 +4529,7 @@ class MemoryEngine:
             OrganizeResult with per-job results and timing.
         """
         from prme.organizer.jobs import DEFAULT_JOBS, run_job
-        from prme.organizer.models import OrganizeResult
+        from prme.organizer.models import JobResult, OrganizeResult
 
         import time
 
@@ -4560,7 +4560,10 @@ class MemoryEngine:
             remaining_ms = budget_ms - elapsed_ms
 
             if remaining_ms <= 0:
+                # A caller that asks for a job always gets a result entry for it, so a reader that
+                # walks per_job for the requested jobs does not have to guess why one is missing.
                 result.jobs_skipped.append(job_name)
+                result.per_job[job_name] = JobResult(job=job_name, status="not_started")
                 continue
 
             try:
