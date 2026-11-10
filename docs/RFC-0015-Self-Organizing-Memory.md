@@ -508,6 +508,32 @@ from an event whose timestamp is older than the window: the 60-second overlap
 covers a write that becomes visible soon after its stamp, not one admitted
 much later with an old stamp.
 
+`summarize` stays full-scope as well, for a reason of its own
+(dwamianm/prism#523). Its output is one summary per day, week and month, and
+each is a top-N selection over that period's active membership: a daily
+summary over the day's non-summary nodes, a weekly summary over the week's
+daily summaries, and a monthly summary over the month's weekly summaries. A
+node-change window can name the periods a changed node is in now, but not the
+periods it has left. `update_node` accepts `event_time` on both backends, so
+moving a node to another day writes the new event time and a new
+`updated_at`; the window finds the node, but its row names only the new day.
+The vacated period is recoverable by reading the summary that recorded it:
+summary nodes keep `source_node_ids` and `selected_source_node_ids` (and
+`DERIVED_FROM` edges), so a membership scan over SUMMARY nodes can name the
+old period. That is a different read from the node window, not a
+period-transition record. `delete_node` and the erasure path remove a node
+outright; the erasure path also clears the owner's watermark rows, so a
+future incremental job would rescan that scope, but a delete with no such
+marker leaves no node row for the window. A full run re-examines every period
+it reaches, so it reflects a move or a delete where the period still meets
+its minimum and the run's budget reaches it. A below-minimum period keeps its
+summary, and the week and month summaries built from it keep its excerpt until
+the period qualifies again. The job reports `completed` even when the budget
+truncates the period scan, and the next run starts again at the oldest period.
+An incremental form would need a summary-membership read and a cascade through
+the three levels; that is the alternative a future design should weigh before
+adding period-transition history.
+
 Known limitation: on a privacy-admitted store, `scan_changed_nodes` reads the
 whole admitted scope and sorts it in memory on every page, so an incremental
 page costs a scan of the scope and the nothing-new bound is not met there.

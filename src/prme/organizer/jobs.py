@@ -954,6 +954,39 @@ async def _job_summarize(
     """Run hierarchical summarization: daily -> weekly -> monthly.
 
     Splits the time budget 50/30/20 across the three levels.
+
+    This job stays full-scope even when ``OrganizerConfig.incremental_enabled``
+    is on (dwamianm/prism#523). Its unit of work is a time period, not a node.
+    Each level selects the top ``summarization_max_items_per_summary`` sources
+    from a period: daily over the day's active non-summary nodes, weekly over
+    the week's active daily summaries, and monthly over the month's active
+    weekly summaries. A node-change window like ``deduplicate``'s cannot name
+    the periods a changed node has left:
+
+    - ``GraphStore.update_node`` accepts ``event_time``, the key the periods
+      are grouped by, on DuckDB and PostgreSQL (``_UPDATE_ALLOWED_FIELDS``).
+      Moving a node to another day writes the new event time and a new
+      ``updated_at``, so the node window finds the node, but its row names
+      only the new day.
+    - The vacated period is recoverable by reading the summary that recorded
+      it: a summary node keeps ``source_node_ids`` and
+      ``selected_source_node_ids`` (and ``DERIVED_FROM`` edges), so a
+      membership scan over SUMMARY nodes can name the old period. That is a
+      different read from the node window, not a period-transition record.
+    - ``GraphStore.delete_node`` and the privacy erasure path remove a node
+      outright. The erasure path also clears the owner's watermark rows, so a
+      future incremental job would rescan that scope, but a delete with no such
+      marker leaves no node row for the window.
+
+    A full run re-examines every period it reaches, so it reflects a move or a
+    delete where the period still meets its minimum and the run's budget
+    reaches it. A below-minimum period keeps its summary, and the week and
+    month summaries built from it keep its excerpt until the period qualifies
+    again. The job reports ``completed`` even when the budget truncates the
+    period scan, and the next run starts again at the oldest period. An
+    incremental form would need a summary-membership read and a cascade through
+    the three levels; that is the alternative a future design should weigh
+    before adding period-transition history.
     """
     from prme.organizer.summarization import (
         generate_daily_summaries,
