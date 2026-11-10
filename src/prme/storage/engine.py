@@ -3173,8 +3173,23 @@ class MemoryEngine:
         completed_through,
         resume_updated_at=None,
         resume_id: str | None = None,
-    ) -> None:
-        """Record a job's progress for one scope."""
+    ) -> bool:
+        """Record a job's progress for one scope.
+
+        Returns False when the scope belongs to an owner with an owner-wide
+        memory erasure on record, and in that case leaves no row: the guard
+        refuses before the write, and if an erasure appears between the guard
+        and the write the row just written is removed. The erasure purge
+        deletes that owner's rows, and a later organize call must not put the
+        plaintext owner id back. The store applies the upsert monotonically, so
+        two concurrent runs converge on the furthest position.
+        """
+        from prme.organizer.watermarks import scope_owner
+
+        repository = self._privacy.erasure.repository
+        owner = scope_owner(scope_key)
+        if owner is not None and await repository.owner_wide_erasure_requested(owner):
+            return False
         await self._graph_store.set_organizer_watermark(
             scope_key=scope_key,
             job=job,
@@ -3182,6 +3197,15 @@ class MemoryEngine:
             resume_updated_at=resume_updated_at,
             resume_id=resume_id,
         )
+        if owner is not None and await repository.owner_wide_erasure_requested(owner):
+            # An erasure was recorded between the guard and the write, so the
+            # purge may already have deleted this scope. A completed run writes
+            # no cursor, so nothing else would remove the row it just wrote.
+            await self._graph_store.delete_organizer_watermark(
+                scope_key=scope_key, job=job,
+            )
+            return False
+        return True
 
     async def _ordinary_graph(self, user_id: str | None, *, scopes=None, records=None):
         """Resolve the read facade without changing the engine's storage handles."""

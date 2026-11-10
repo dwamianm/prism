@@ -472,9 +472,10 @@ An explicit `organize()` call is unchanged: unless a caller sets
 `OrganizerConfig.incremental_enabled`, every job stays full-scope and no
 watermark is written. With the option on, `deduplicate` and `alias_resolve`
 work from a per-scope, per-job watermark stored in `organizer_watermarks`,
-one row per scope and job. A scoped row is keyed by `u:` plus the user id, and
-the empty string is reserved for an unscoped operator run, so an empty user id
-cannot share the operator's row.
+one row per scope and job. A scoped row is keyed by `u:` plus the user id (a
+UUID owner id is stored in its canonical text form), and the empty string is
+reserved for an unscoped operator run, so an empty user id cannot share the
+operator's row.
 
 A run captures a ceiling before any work and examines only records created or
 updated after the job's last completed run, up to that ceiling.
@@ -495,6 +496,15 @@ can appear with a stamp just below the ceiling. A stopped or failed run keeps
 `completed_through` and records the processed prefix in `resume_updated_at`
 and `resume_id`; with no processed prefix the previous row stands and the
 window re-runs.
+
+The store merges each write monotonically, so two runs over one scope that
+finish out of order converge on the furthest `completed_through` and on the
+newer `(resume_updated_at, resume_id)` cursor. A completed run clears a cursor
+only when that cursor does not point past its own completed position, so it
+cannot discard a newer stop from a run that started first. A stopped run that
+writes after a completed one can therefore leave a cursor behind the furthest
+completed position; the next run re-scans a range it has already processed,
+which costs work but skips nothing.
 
 The other jobs stay full-scope. An unchanged scope cannot make them provably
 no-ops: `promote` depends on a node crossing `promotion_age_days`,
@@ -537,7 +547,15 @@ old period. That is a different read from the node window, not a
 period-transition record. `delete_node` and the erasure path remove a node
 outright; the erasure path also clears the owner's watermark rows, so a
 future incremental job would rescan that scope, but a delete with no such
-marker leaves no node row for the window. A full run re-examines every period
+marker leaves no node row for the window. A later `organize()` call does not
+put the owner's scope key back: the writer refuses a scope whose owner has an
+owner-wide memory erasure on record, and removes a row it wrote if the erasure
+appeared between its check and the write. The erasure verification stage fails
+when a resume cursor still names an erased node, and, for an owner-wide
+request, when the owner's scope row still exists. Before checking, it
+re-applies the purge's cursor clear and scope delete, because a concurrent
+writer can add the row after the SQL stage; a row that survives the second
+check fails the erasure. A full run re-examines every period
 it reaches, so it reflects a move or a delete where the period still meets
 its minimum and the run's budget reaches it. A below-minimum period keeps its
 summary, and the week and month summaries built from it keep its excerpt until

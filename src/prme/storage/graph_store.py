@@ -308,7 +308,18 @@ class GraphStore(Protocol):
         resume_updated_at: datetime | None = None,
         resume_id: str | None = None,
     ) -> None:
-        """Record a job's progress for one scope."""
+        """Record a job's progress for one scope, monotonically.
+
+        The store keeps the furthest completed position and the newer resume
+        cursor, so two concurrent runs converge instead of the last write
+        winning. A production writer must call ``MemoryEngine``'s method
+        instead of this one: the engine also refuses a scope whose owner has an
+        owner-wide memory erasure, which this protocol cannot see.
+        """
+        ...
+
+    async def delete_organizer_watermark(self, *, scope_key: str, job: str) -> None:
+        """Remove one scope and job's row."""
         ...
 
     # --- Node Update ---

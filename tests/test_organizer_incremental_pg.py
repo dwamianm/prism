@@ -88,6 +88,50 @@ async def test_watermark_round_trip(graph_store):
     assert row.resume_cursor == (resume_at, resume_id)
 
 
+async def test_watermark_upsert_is_monotonic(graph_store):
+    """Out-of-order finishes keep the furthest position and the newer cursor."""
+    scope = scope_key(f"scope-{uuid4().hex[:8]}")
+    later = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    earlier = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=later,
+    )
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=earlier,
+    )
+    row = await graph_store.get_organizer_watermark(scope_key=scope, job="deduplicate")
+    assert row.completed_through == later
+
+    newer = datetime(2026, 1, 5, tzinfo=timezone.utc)
+    older = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    newer_id, older_id = str(uuid4()), str(uuid4())
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=later,
+        resume_updated_at=newer, resume_id=newer_id,
+    )
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=later,
+        resume_updated_at=older, resume_id=older_id,
+    )
+    row = await graph_store.get_organizer_watermark(scope_key=scope, job="deduplicate")
+    assert row.resume_cursor == (newer, newer_id)
+
+    # A completed run behind the cursor keeps it; one past it clears it.
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=older,
+    )
+    row = await graph_store.get_organizer_watermark(scope_key=scope, job="deduplicate")
+    assert row.resume_cursor == (newer, newer_id)
+    await graph_store.set_organizer_watermark(
+        scope_key=scope, job="deduplicate", completed_through=datetime(2026, 1, 6, tzinfo=timezone.utc),
+    )
+    row = await graph_store.get_organizer_watermark(scope_key=scope, job="deduplicate")
+    assert row.resume_cursor is None
+
+    await graph_store.delete_organizer_watermark(scope_key=scope, job="deduplicate")
+    assert await graph_store.get_organizer_watermark(scope_key=scope, job="deduplicate") is None
+
+
 async def test_scan_changed_nodes_windows_and_keyset(graph_store):
     from prme.models.nodes import MemoryNode
 
