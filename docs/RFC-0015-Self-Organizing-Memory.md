@@ -510,14 +510,19 @@ over (dwamianm/prism#545). Because the cursor is durable, one record that
 fails every time would otherwise pin the scope and nothing stored afterwards
 would be examined. The row therefore also records the node a failed run could
 not get past, in `stalled_id`, and how many runs have now stopped there, in
-`stalled_attempts`. After three failed runs at the same node, the job records
-the node in `details["skipped_nodes"]` and a warning log, moves the cursor
-past it and continues the window. The count is kept in the row so it survives
-a run in another process, and a failure at a different node starts again at
-one. A node skipped this way is examined again when it is next updated, the
-same bounded discovery the jobs already document. The two stall fields
-describe the latest writer and are not part of the monotonic merge, which
-covers only the completed position and the resume cursor.
+`stalled_attempts`. That node is the first one the neighbor search, name lookup
+or page scan did not finish, or, when the scan finished and a merge or
+resolution raised, the page node of the earliest failing pair rather than the
+page head (dwamianm/prism#546). A skip past a pair that fails on every run
+therefore covers only that pair's node; the pairs before it were already
+applied and are not named as skipped. After three failed runs at the same
+node, the job records the node in `details["skipped_nodes"]` and a warning log,
+moves the cursor past it and continues the window. The count is kept in the
+row so it survives a run in another process, and a failure at a different node
+starts again at one. A node skipped this way is examined again when it is next
+updated, the same bounded discovery the jobs already document. The two stall
+fields describe the latest writer and are not part of the monotonic merge,
+which covers only the completed position and the resume cursor.
 
 The store merges each write monotonically, so two runs over one scope that
 finish out of order converge on the furthest `completed_through` and on the

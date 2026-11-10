@@ -453,6 +453,160 @@ async def test_a_failed_merge_is_retried_on_the_next_run(pg_engine, monkeypatch)
     assert retried.per_job["deduplicate"].nodes_modified == 1
 
 
+# ---------------------------------------------------------------------------
+# A failed pair is bounded on its own node (dwamianm/prism#546)
+# ---------------------------------------------------------------------------
+
+# Contents far enough apart that no two of them proposes a pair.
+DISTINCT_CONTENTS = [
+    "a red bicycle",
+    "quarterly tax filing",
+    "migrating swallows",
+    "sourdough starter",
+    "the lighthouse keeper",
+    "violin practice",
+]
+
+
+async def _store_fact(pg_engine, user, content):
+    await pg_engine.store(
+        content, user_id=user, node_type=NodeType.FACT,
+        scope=Scope.PERSONAL, valid_from=datetime(2025, 1, 1, tzinfo=timezone.utc),
+    )
+
+
+async def _store_entity(pg_engine, user, name):
+    await pg_engine.store(
+        name, user_id=user, node_type=NodeType.ENTITY, scope=Scope.PERSONAL,
+    )
+
+
+async def test_a_failing_merge_near_the_end_of_a_page_skips_only_its_node(
+    pg_engine, monkeypatch,
+):
+    user = f"pg-546-merge-{uuid4().hex[:8]}"
+    await _store_fact(pg_engine, user, "poison memory")
+    old_twin_id = next(
+        str(node.id) for node in await pg_engine.query_nodes(
+            user_id=user, lifecycle_states=list(LifecycleState),
+        )
+        if node.content == "poison memory"
+    )
+    window_start = datetime.now(timezone.utc)
+    await pg_engine.set_organizer_watermark(
+        scope_key=scope_key(user), job="deduplicate", completed_through=window_start,
+    )
+    for content in (*DISTINCT_CONTENTS, "poison memory"):
+        await _store_fact(pg_engine, user, content)
+    page = await pg_engine.scan_changed_nodes(
+        user_id=user,
+        lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+        updated_after=window_start,
+        updated_at_or_before=datetime.now(timezone.utc),
+        limit=100,
+    )
+    assert len(page) == len(DISTINCT_CONTENTS) + 1
+    failing_id = str(page[-1].id)
+    assert page[-1].content == "poison memory"
+
+    original_merge = pg_engine._graph_store.merge_nodes
+
+    async def failing_merge(node_a_id, node_b_id, **kwargs):
+        if old_twin_id in (str(node_a_id), str(node_b_id)):
+            raise RuntimeError("merge rejected")
+        return await original_merge(node_a_id, node_b_id, **kwargs)
+
+    monkeypatch.setattr(pg_engine._graph_store, "merge_nodes", failing_merge)
+
+    max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+    for attempt in range(1, max_attempts):
+        result = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+        job = result.per_job["deduplicate"]
+        assert job.status == "error"
+        assert job.nodes_processed == 0
+        watermark = await pg_engine.get_organizer_watermark(
+            scope_key=scope_key(user), job="deduplicate",
+        )
+        assert watermark.stalled_id == failing_id
+        assert watermark.stalled_attempts == attempt
+
+    bounded = await pg_engine.organize(user_id=user, jobs=["deduplicate"])
+    job = bounded.per_job["deduplicate"]
+    assert job.status == "completed"
+    assert job.details["skipped_nodes"] == [
+        {"node_id": failing_id, "attempts": max_attempts},
+    ]
+    assert job.nodes_processed == len(DISTINCT_CONTENTS)
+    watermark = await pg_engine.get_organizer_watermark(
+        scope_key=scope_key(user), job="deduplicate",
+    )
+    assert watermark.stalled_id is None
+
+
+async def test_a_failing_resolution_near_the_end_of_a_page_skips_only_its_entity(
+    pg_engine, monkeypatch,
+):
+    user = f"pg-546-alias-{uuid4().hex[:8]}"
+    await _store_entity(pg_engine, user, "PostgreSQL")
+    old_twin_id = next(
+        str(node.id) for node in await pg_engine.query_nodes(
+            user_id=user, node_type=NodeType.ENTITY,
+            lifecycle_states=list(LifecycleState),
+        )
+        if node.content == "PostgreSQL"
+    )
+    window_start = datetime.now(timezone.utc)
+    await pg_engine.set_organizer_watermark(
+        scope_key=scope_key(user), job="alias_resolve", completed_through=window_start,
+    )
+    for name in (*DISTINCT_CONTENTS, "postgresql"):
+        await _store_entity(pg_engine, user, name)
+    page = await pg_engine.scan_changed_nodes(
+        user_id=user,
+        node_type=NodeType.ENTITY,
+        lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+        updated_after=window_start,
+        updated_at_or_before=datetime.now(timezone.utc),
+        limit=100,
+    )
+    assert len(page) == len(DISTINCT_CONTENTS) + 1
+    failing_id = str(page[-1].id)
+    assert page[-1].content == "postgresql"
+
+    original_merge = pg_engine._graph_store.merge_nodes
+
+    async def failing_merge(node_a_id, node_b_id, **kwargs):
+        if old_twin_id in (str(node_a_id), str(node_b_id)):
+            raise RuntimeError("merge rejected")
+        return await original_merge(node_a_id, node_b_id, **kwargs)
+
+    monkeypatch.setattr(pg_engine._graph_store, "merge_nodes", failing_merge)
+
+    max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+    for attempt in range(1, max_attempts):
+        result = await pg_engine.organize(user_id=user, jobs=["alias_resolve"])
+        job = result.per_job["alias_resolve"]
+        assert job.status == "error"
+        assert job.nodes_processed == 0
+        watermark = await pg_engine.get_organizer_watermark(
+            scope_key=scope_key(user), job="alias_resolve",
+        )
+        assert watermark.stalled_id == failing_id
+        assert watermark.stalled_attempts == attempt
+
+    bounded = await pg_engine.organize(user_id=user, jobs=["alias_resolve"])
+    job = bounded.per_job["alias_resolve"]
+    assert job.status == "completed"
+    assert job.details["skipped_nodes"] == [
+        {"node_id": failing_id, "attempts": max_attempts},
+    ]
+    assert job.nodes_processed == len(DISTINCT_CONTENTS)
+    watermark = await pg_engine.get_organizer_watermark(
+        scope_key=scope_key(user), job="alias_resolve",
+    )
+    assert watermark.stalled_id is None
+
+
 async def test_another_spelling_does_not_inherit_the_first_watermark(pg_engine):
     from prme.models.nodes import MemoryNode
 

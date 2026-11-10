@@ -444,7 +444,7 @@ async def resolve_aliases(
     aliases: list[AliasCandidate],
     *,
     user_id: str | None = None,
-    failure_count: list[int] | None = None,
+    failures: list[tuple[str, str]] | None = None,
 ) -> int:
     """Resolve alias relationships between entity nodes.
 
@@ -459,9 +459,12 @@ async def resolve_aliases(
         engine: The MemoryEngine for storage operations.
         aliases: List of AliasCandidate pairs from find_aliases().
         user_id: When given, only this user's entities may be read or changed.
-        failure_count: When given, receives the number of pairs whose
-            resolution raised. The incremental caller uses it to keep the page
-            resumable instead of advancing past a pair that was not retried.
+        failures: When given, receives the two node ids of every pair whose
+            resolution raised, in the order they were tried. The incremental
+            caller uses it to keep the page resumable instead of advancing
+            past a pair that was not retried, and bounds its retry and skip on
+            that pair's own node rather than the page head
+            (dwamianm/prism#546).
 
     Returns:
         Count of aliases resolved (merged or linked).
@@ -542,8 +545,8 @@ async def resolve_aliases(
                 )
 
         except Exception:
-            if failure_count is not None:
-                failure_count[0] += 1
+            if failures is not None:
+                failures.append((alias.entity_a_id, alias.entity_b_id))
             logger.warning(
                 "Failed to resolve alias pair (%s, %s)",
                 alias.entity_a_id,
