@@ -31,6 +31,7 @@ from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 import structlog
 
 from prme.epistemic.inference import OWNER_ROLES, infer_source_type
+from prme.ingestion.assertions import is_structured
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
@@ -1093,7 +1094,14 @@ class IngestionPipeline:
         batch (``through`` bounds the turns it may carry).
         """
         saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
-        if saved is None and self._batch_target_tokens > 0:
+        if saved is None and is_structured(event.metadata):
+            # Caller-stated assertions (ingest(assertions=...)): built from the event, never asked of a model.
+            record = self._structured_record(event)
+            saved = await self._write_queue.submit(
+                lambda: self._event_store.record_extraction(record, claim=claim),
+                label=f"extraction.record:{event.id}",
+            )
+        elif saved is None and self._batch_target_tokens > 0:
             saved = await self._extract_in_batch(event, claim=claim, through=through)
         elif saved is None:
             record = await self._extract_turn(event)
@@ -1103,6 +1111,32 @@ class IngestionPipeline:
             )
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
+
+    def _structured_record(self, event: Event) -> ExtractionRecord:
+        """The extraction record of a source with caller-stated assertions, built with no model call.
+
+        The assertions were checked against the content before the event was admitted, so grounding keeps every
+        claim; a claim it would drop means the stored assertions do not match their content, and the source
+        fails rather than losing it silently. Pronoun repair, corrections and resolved text do not apply.
+        """
+        from prme.ingestion.assertions import STRUCTURED_MODEL, STRUCTURED_PROVIDER, structured_result
+
+        try:
+            result = structured_result(event.content, event.metadata or {})
+        except ValueError as exc:
+            raise ExtractionError(f"Stored assertions are invalid: {exc}", event_id=str(event.id),
+                                  reason_code="AssertionError") from None
+        grounded = validate_grounding(result, event.content)
+        if len(grounded.facts) != len(result.facts) or len(grounded.entities) != len(result.entities):
+            raise ExtractionError("A stated assertion is not grounded in its content", event_id=str(event.id),
+                                  reason_code="AssertionError")
+        return ExtractionRecord(
+            event_id=event.id, user_id=event.user_id, scope=event.scope,
+            content_hash=event.content_hash,
+            provider=STRUCTURED_PROVIDER, model=STRUCTURED_MODEL,
+            grounding_policy=_GROUNDING_POLICY,
+            result=grounded.model_dump(mode="json"),
+        )
 
     async def _extract_in_batch(self, head: Event, *, claim: ExtractionClaim | None,
                                 through: int | None) -> ExtractionRecord:
@@ -1159,7 +1193,8 @@ class IngestionPipeline:
                 break
             event = await self._event_store.get(event_id)
             if (event is None or event.user_id != head.user_id or event.scope != head.scope
-                    or event.session_id != head.session_id):
+                    or event.session_id != head.session_id or is_structured(event.metadata)):
+                # A source with caller-stated assertions is never sent to the model.
                 continue
             if await self._event_store.get_extraction(event_id, user_id=head.user_id) is not None:
                 continue
@@ -1755,7 +1790,9 @@ class IngestionPipeline:
             # (enable_typed_extraction, #400). A relation it left out, or one outside the vocabulary, is dropped
             # with its role and status: the claim keeps its open predicate, and the drop is counted here.
             typed_fields: dict = {}
-            if self._typed_claims:
+            # A caller who states a fact states its relation, so a structured source keeps it whatever
+            # enable_typed_extraction says (ingest(assertions=...)).
+            if self._typed_claims or is_structured(event.metadata):
                 from prme.ingestion.extraction import admit_relation
 
                 relation, typed_role, typed_status = admit_relation(fact)
@@ -2334,7 +2371,8 @@ class IngestionPipeline:
             if requests >= limit:
                 break
             event = await self._event_store.get(event_id)
-            if event is None:
+            if event is None or is_structured(event.metadata):
+                # Caller-stated assertions make no request.
                 continue
             tokens = count_tokens(event.content)
             used = open_requests.get(event.session_id) if event.session_id else None
