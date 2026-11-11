@@ -1,0 +1,10 @@
+2026-11-11 17:39:48 [info     ] write_queue.started
+2026-11-11 17:39:49 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:39:49 [info     ] write_queue.stopped
+6 | routed via visits; ledger from route | Which cities will Alex and Jordan visit in Japan?
+3 | routed via uses; ledger from route | What coding language is Alex learning?
+1 | catalog; ledger from catalog | Which languages does Alex write at work?
+1 | routed via prefers, visits; ledger from route | How does Alex prefer to travel in Japan?
+1 | routed via allergic_to; ledger from route | Who is allergic to shellfish?
+1 | routed via decided, member_of, part_of; ledger from route | What did the team choose for the shipment table?
+1 | catalog; ledger from catalog | Who should review the runbook?

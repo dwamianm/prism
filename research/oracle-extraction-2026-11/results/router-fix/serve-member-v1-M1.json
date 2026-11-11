@@ -1,0 +1,532 @@
+[
+ {
+  "id": "husband",
+  "question": "Who is Maya's husband?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "partner_of"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "My coworker Dana asked whether dental is included for her son."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "OK. My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "My coworker Dana asked whether dental is included for her son. Is it?"
+   }
+  ]
+ },
+ {
+  "id": "child",
+  "question": "What is the name of Maya's child?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "My coworker Dana asked whether dental is included for her son."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+   }
+  ]
+ },
+ {
+  "id": "dependents",
+  "question": "What are the names of Maya's dependents?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   }
+  ]
+ },
+ {
+  "id": "dependents-first-person",
+  "question": "Do you remember the names of my dependents?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Do you remember the names of my dependents?"
+   }
+  ]
+ },
+ {
+  "id": "diagnosis",
+  "question": "What was Maya diagnosed with?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I was just diagnosed with breast cancer?"
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "I was just diagnosed with breast cancer? How does this plan cover it?"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Oncology visits, chemotherapy and radiation are covered in network after the deductible, with the out-of-pocket maximum of $6,000 as the limit for the year."
+   }
+  ]
+ },
+ {
+  "id": "diagnosis-first-person",
+  "question": "What did I tell you about my health?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I was just diagnosed with breast cancer?"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I am pregnant, how does my plan cover this?"
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "What is the first question I asked you today?"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "My coworker Dana asked whether dental is included for her son."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   }
+  ]
+ },
+ {
+  "id": "trip",
+  "question": "Where is Maya planning a trip?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "visits"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I am planning a trip for us in December to Jamaica."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "I am pregnant, how does my plan cover this?"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+   }
+  ]
+ },
+ {
+  "id": "trip-when",
+  "question": "When is Maya's trip to Jamaica?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I am planning a trip for us in December to Jamaica."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "For Jamaica, routine vaccines are enough for most travelers, and hepatitis A is recommended."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "I am planning a trip for us in December to Jamaica. Do we need vaccines?"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+   }
+  ]
+ },
+ {
+  "id": "pregnant",
+  "question": "Is Maya expecting a baby?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "You can add a newborn within 30 days of the birth as a qualifying life event."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "My husband is Theo and my child is Nico."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "My coworker Dana asked whether dental is included for her son."
+   }
+  ]
+ },
+ {
+  "id": "marriage",
+  "question": "What life event did Maya mention?",
+  "answer_rank": 4,
+  "report_rank": 4,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Nico is child of Maya Okafor."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "You can add a newborn within 30 days of the birth as a qualifying life event."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Marriage is also a qualifying life event, so you can change plans within 30 days."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "What is the first question I asked you today?"
+   }
+  ]
+ },
+ {
+  "id": "deductible",
+  "question": "What is my deductible?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Your individual deductible is $1,500 and the family deductible is $3,000."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "How much is my deductible?"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "How much is my deductible?"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I am pregnant, how does my plan cover this?"
+   }
+  ]
+ },
+ {
+  "id": "coworker",
+  "question": "What did Maya's coworker Dana ask about?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana coworker of Maya Okafor."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "My coworker Dana asked whether dental is included for her son."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "My coworker Dana asked whether dental is included for her son. Is it?"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "What is the first question I asked you today?"
+   }
+  ]
+ }
+]

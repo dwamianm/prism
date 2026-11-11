@@ -1,0 +1,5708 @@
+{
+  "routing_version": 2,
+  "questions": [
+    {
+      "set": "probe:defects-v1",
+      "id": "cities",
+      "question": "Which cities will Alex and Jordan visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "learning",
+      "question": "What coding language is Alex learning?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "work-languages",
+      "question": "Which languages does Alex write at work?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "travel",
+      "question": "How does Alex prefer to travel in Japan?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "allergy",
+      "question": "Who is allergic to shellfish?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "shipments",
+      "question": "What did the team choose for the shipment table?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:defects-v1",
+      "id": "reviewer",
+      "question": "Who should review the runbook?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "job-now",
+      "question": "Where does Dana work now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "title-now",
+      "question": "What is Dana's job title now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "start-date",
+      "question": "When did Dana start the new job?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "old-manager",
+      "question": "Who was Dana's manager at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "partner-job",
+      "question": "What does Dana's partner do for work?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "allergy",
+      "question": "What is Sam allergic to?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "dog",
+      "question": "What kind of dog does Dana have, and what is it called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "niece-name",
+      "question": "What is the name of Dana's niece?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "niece"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "niece-born",
+      "question": "When was Ivy born?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "sister-city",
+      "question": "Where does Dana's sister live?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "running-partner",
+      "question": "Who is Dana's running partner?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "race-time",
+      "question": "What was Dana's half marathon finishing time?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "coffee",
+      "question": "Does Dana drink coffee?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "diet",
+      "question": "What is Dana's diet now?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "mel-news",
+      "question": "What news did Melanie share after the race?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "trip",
+      "question": "What is Dana planning for July?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "overnight",
+      "question": "Where will Dana stop overnight on the drive?",
+      "route": null
+    },
+    {
+      "set": "probe:chat-v1",
+      "id": "language",
+      "question": "Which programming language does Dana prefer?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "husband",
+      "question": "Who is Maya's husband?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "child",
+      "question": "What is the name of Maya's child?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "child",
+              "daughter",
+              "kid",
+              "son",
+              "stepchild",
+              "stepdaughter",
+              "stepson"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "dependents",
+      "question": "What are the names of Maya's dependents?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "child",
+              "daughter",
+              "kid",
+              "son",
+              "stepchild",
+              "stepdaughter",
+              "stepson"
+            ]
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "dependents-first-person",
+      "question": "Do you remember the names of my dependents?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "child",
+              "daughter",
+              "kid",
+              "son",
+              "stepchild",
+              "stepdaughter",
+              "stepson"
+            ]
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "diagnosis",
+      "question": "What was Maya diagnosed with?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "diagnosis-first-person",
+      "question": "What did I tell you about my health?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "trip",
+      "question": "Where is Maya planning a trip?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "trip-when",
+      "question": "When is Maya's trip to Jamaica?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "pregnant",
+      "question": "Is Maya expecting a baby?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "marriage",
+      "question": "What life event did Maya mention?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "deductible",
+      "question": "What is my deductible?",
+      "route": null
+    },
+    {
+      "set": "probe:member-v1",
+      "id": "coworker",
+      "question": "What did Maya's coworker Dana ask about?",
+      "route": null
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "cities",
+      "question": "Which cities will Alex and Jordan visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "learning",
+      "question": "What coding language is Alex learning?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "work-languages",
+      "question": "Which languages does Alex write at work?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "travel",
+      "question": "How does Alex prefer to travel in Japan?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "allergy",
+      "question": "Who is allergic to shellfish?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "shipments",
+      "question": "What did the team choose for the shipment table?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "reviewer",
+      "question": "Who should review the runbook?",
+      "route": null
+    },
+    {
+      "set": "gold:defects-v1",
+      "id": "partner-manager",
+      "question": "Who is the manager of Jordan's partner?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "job-now",
+      "question": "Where does Dana work now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "title-now",
+      "question": "What is Dana's job title now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "start-date",
+      "question": "When did Dana start the new job?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "old-manager",
+      "question": "Who was Dana's manager at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "partner-job",
+      "question": "What does Dana's partner do for work?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "allergy",
+      "question": "What is Sam allergic to?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "dog",
+      "question": "What kind of dog does Dana have, and what is it called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "niece-name",
+      "question": "What is the name of Dana's niece?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "niece"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "niece-born",
+      "question": "When was Ivy born?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "sister-city",
+      "question": "Where does Dana's sister live?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "running-partner",
+      "question": "Who is Dana's running partner?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "race-time",
+      "question": "What was Dana's half marathon finishing time?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "coffee",
+      "question": "Does Dana drink coffee?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "diet",
+      "question": "What is Dana's diet now?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "mel-news",
+      "question": "What news did Melanie share after the race?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "trip",
+      "question": "What is Dana planning for July?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "overnight",
+      "question": "Where will Dana stop overnight on the drive?",
+      "route": null
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "language",
+      "question": "Which programming language does Dana prefer?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "ivy-mother-city",
+      "question": "Where does the mother of Ivy live?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "mother"
+            ]
+          },
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "running-partner-fiance",
+      "question": "Who is the fiance of Dana's running partner?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:chat-v1",
+      "id": "biscuit-owner-sister-city",
+      "question": "Where does the sister of the person who owns Biscuit live?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          },
+          {
+            "relation": "lives_in"
+          },
+          {
+            "relation": "owns"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "rust",
+      "question": "what coding language is alex learning?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "japan-cities",
+      "question": "which cities will Alex and jordan visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "cutover",
+      "question": "When is the production cutover?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "japan-dates",
+      "question": "When is the Japan trip?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "pair-programming",
+      "question": "Does Alex like pair programming?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "observability",
+      "question": "Is Alex leading the observability rewrite?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "on-call",
+      "question": "Who is on call the week of 2026-10-26?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "manager",
+      "question": "Who is Alex's manager?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "allergy",
+      "question": "What is Jordan allergic to?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "dog",
+      "question": "What is Alex's dog called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "japan-budget",
+      "question": "How much is the Japan trip budget?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "dashboard",
+      "question": "What is the Datadog dashboard for the migration called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "table-size",
+      "question": "How many rows does the shipment_events table have?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "timescale",
+      "question": "Why did Alex reject TimescaleDB?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "gravel-race",
+      "question": "Which gravel race did Alex sign up for?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "flights",
+      "question": "Which airline did Alex book for the Japan trip?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "sql-style",
+      "question": "How does Alex format SQL?",
+      "route": null
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "employer-observability",
+      "question": "What does Alex's employer use for observability?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "mentee-team",
+      "question": "Which team is the person Alex mentors on?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "mentor"
+            ]
+          },
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "gold:store-v1",
+      "id": "rewrite-backend",
+      "question": "Which backend does the project that Alex's manager asked him to lead use?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:lookup:1",
+      "type": "lookup",
+      "question": "Which cities is Alex planning to visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:1#p1",
+      "type": "lookup",
+      "question": "Which cities does Alex intend to visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:1#p2",
+      "type": "lookup",
+      "question": "In Japan, which cities is Alex planning to visit?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:1#p3",
+      "type": "lookup",
+      "question": "What cities is Alex planning to visit while in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:lookup:2",
+      "type": "lookup",
+      "question": "What book is Alex reading while learning Rust?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:2#p1",
+      "type": "lookup",
+      "question": "What book is Alex reading as he learns Rust?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:2#p2",
+      "type": "lookup",
+      "question": "While learning Rust, what book is Alex reading?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:2#p3",
+      "type": "lookup",
+      "question": "Which book is Alex reading while he studies Rust?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:lookup:3",
+      "type": "lookup",
+      "question": "Who wants the runbook reviewed before Friday?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:3#p1",
+      "type": "lookup",
+      "question": "Who wants the runbook reviewed before Friday?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:3#p2",
+      "type": "lookup",
+      "question": "Who wants the runbook to be reviewed before Friday?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:lookup:3#p3",
+      "type": "lookup",
+      "question": "Who wants someone to review the runbook before Friday?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:list:1",
+      "type": "list",
+      "question": "Which cities are Alex and Jordan planning to visit on their Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:1#p1",
+      "type": "list",
+      "question": "Which cities are Alex and Jordan planning to visit on their trip to Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:1#p2",
+      "type": "list",
+      "question": "On their Japan trip, which cities do Alex and Jordan plan to visit?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:1#p3",
+      "type": "list",
+      "question": "What cities are Alex and Jordan planning to visit during their Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:list:2",
+      "type": "list",
+      "question": "What programming languages does Alex use?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:2#p1",
+      "type": "list",
+      "question": "What programming languages does Alex use?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:2#p2",
+      "type": "list",
+      "question": "Which programming languages does Alex use?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:2#p3",
+      "type": "list",
+      "question": "What languages does Alex use for programming?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:list:3",
+      "type": "list",
+      "question": "What travel arrangements does Alex need to make for the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:3#p1",
+      "type": "list",
+      "question": "What travel arrangements does Alex need to make for the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:3#p2",
+      "type": "list",
+      "question": "For the Japan trip, what travel arrangements does Alex need to make?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:list:3#p3",
+      "type": "list",
+      "question": "What travel plans does Alex need to arrange for the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:multi-hop:1",
+      "type": "lookup",
+      "question": "What database technology did Alex's team decide to use for the shipment table instead of TimescaleDB?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:1#p1",
+      "type": "lookup",
+      "question": "What database technology did Alex's team decide to use for the shipment table instead of TimescaleDB?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:1#p2",
+      "type": "lookup",
+      "question": "Instead of TimescaleDB, what database technology did Alex's team decide to use for the shipment table?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:1#p3",
+      "type": "lookup",
+      "question": "For the shipment table, what database technology did Alex's team decide to use rather than TimescaleDB?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:multi-hop:3",
+      "type": "lookup",
+      "question": "Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:3#p1",
+      "type": "lookup",
+      "question": "Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:3#p2",
+      "type": "lookup",
+      "question": "Jordan is going to Japan with Alex. What allergy does Jordan have that Alex needs to prepare for at restaurants?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:multi-hop:3#p3",
+      "type": "lookup",
+      "question": "What allergy does Jordan have that Alex needs to prepare for at restaurants on their planned trip to Japan?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:temporal:1",
+      "type": "temporal",
+      "question": "When are Alex and Jordan planning their trip to Japan?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:1#p1",
+      "type": "temporal",
+      "question": "When are Alex and Jordan planning their trip to Japan?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:1#p2",
+      "type": "temporal",
+      "question": "When do Alex and Jordan plan to take their trip to Japan?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:1#p3",
+      "type": "temporal",
+      "question": "At what time are Alex and Jordan planning their trip to Japan?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:temporal:2",
+      "type": "temporal",
+      "question": "By when does Dana want the runbook reviewed by Sam?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:2#p1",
+      "type": "temporal",
+      "question": "By when does Dana want the runbook reviewed by Sam?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:2#p2",
+      "type": "temporal",
+      "question": "By what time does Dana want Sam to review the runbook?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:2#p3",
+      "type": "temporal",
+      "question": "When does Dana want the runbook reviewed by Sam?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:temporal:3",
+      "type": "temporal",
+      "question": "When does Alex study Rust?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:3#p1",
+      "type": "temporal",
+      "question": "When does Alex study Rust?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:3#p2",
+      "type": "temporal",
+      "question": "At what time does Alex study Rust?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:temporal:3#p3",
+      "type": "temporal",
+      "question": "When is Alex studying Rust?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:negation:1",
+      "type": "negation",
+      "question": "Which city did Alex and Jordan decide not to include in their Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:1#p1",
+      "type": "negation",
+      "question": "Which city did Alex and Jordan decide not to include in their Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:1#p2",
+      "type": "negation",
+      "question": "Which city did Alex and Jordan decide to leave out of their Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:1#p3",
+      "type": "negation",
+      "question": "What city did Alex and Jordan decide not to include in their trip to Japan?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:negation:2",
+      "type": "negation",
+      "question": "What mode of transport does Alex not want to use for getting around Japan?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:2#p1",
+      "type": "negation",
+      "question": "What mode of transport does Alex not want to use for getting around Japan?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:2#p2",
+      "type": "negation",
+      "question": "For getting around Japan, what mode of transport does Alex not want to use?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:2#p3",
+      "type": "negation",
+      "question": "What mode of transport does Alex not want to use to get around Japan?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:negation:3",
+      "type": "negation",
+      "question": "What approach did Alex decide against for the shipment table at work?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:3#p1",
+      "type": "negation",
+      "question": "What approach did Alex decide against for the shipment table at work?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:3#p2",
+      "type": "negation",
+      "question": "For the shipment table at work, what approach did Alex decide against?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:negation:3#p3",
+      "type": "negation",
+      "question": "What approach did Alex decide not to use for the shipment table at work?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "uses"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:aggregation:1",
+      "type": "aggregation",
+      "question": "How many cities are Alex and Jordan planning to visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:1#p1",
+      "type": "aggregation",
+      "question": "How many cities are Alex and Jordan planning to visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:1#p2",
+      "type": "aggregation",
+      "question": "In Japan, how many cities are Alex and Jordan planning to visit?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:1#p3",
+      "type": "aggregation",
+      "question": "How many cities do Alex and Jordan plan to visit in Japan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "defects-v1:aggregation:2",
+      "type": "lookup",
+      "question": "Which programming languages does Alex use at work?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:2#p1",
+      "type": "lookup",
+      "question": "Which programming languages does Alex use at work?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:2#p2",
+      "type": "lookup",
+      "question": "At work, which programming languages does Alex use?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "defects-v1:aggregation:2#p3",
+      "type": "lookup",
+      "question": "What programming languages does Alex use at work?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:1",
+      "type": "lookup",
+      "question": "What is the name of Alex's border collie?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:1#p1",
+      "type": "lookup",
+      "question": "What's the name of the border collie that belongs to Alex?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:1#p2",
+      "type": "lookup",
+      "question": "Alex has a border collie\u2014what is it called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:1#p3",
+      "type": "lookup",
+      "question": "What name does Alex's border collie go by?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:4",
+      "type": "lookup",
+      "question": "What is the current monthly Datadog spend?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:4#p1",
+      "type": "lookup",
+      "question": "How much is currently being spent on Datadog each month?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:4#p2",
+      "type": "lookup",
+      "question": "What does the monthly Datadog bill amount to at present?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:4#p3",
+      "type": "lookup",
+      "question": "What is the present monthly expenditure on Datadog?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:list:1",
+      "type": "list",
+      "question": "What cities are on Alex and Jordan's Japan itinerary?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:1#p1",
+      "type": "list",
+      "question": "Which cities appear on the Japan itinerary for Alex and Jordan?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:1#p2",
+      "type": "list",
+      "question": "What cities are included in Alex and Jordan's Japan travel plan?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:1#p3",
+      "type": "list",
+      "question": "On Alex and Jordan's Japan itinerary, which cities are listed?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:list:2",
+      "type": "list",
+      "question": "What tools and services does Northwind's stack run on AWS?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:2#p1",
+      "type": "list",
+      "question": "Which tools and services make up Northwind's stack on AWS?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:2#p2",
+      "type": "list",
+      "question": "What tools and services does Northwind's AWS stack consist of?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:2#p3",
+      "type": "list",
+      "question": "Northwind's stack runs on AWS\u2014what tools and services does it include?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:list:3",
+      "type": "list",
+      "question": "What languages does Alex prefer for services and for internal tooling?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:3#p1",
+      "type": "list",
+      "question": "Which languages does Alex favor for services and for internal tooling?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:3#p2",
+      "type": "list",
+      "question": "What languages does Alex prefer to use for services and internal tooling?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:3#p3",
+      "type": "list",
+      "question": "For services and internal tooling, which languages does Alex prefer?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:list:5",
+      "type": "list",
+      "question": "What are the steps in the cutover checklist the assistant drafted?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:5#p1",
+      "type": "list",
+      "question": "What steps are included in the cutover checklist that the assistant drafted?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:5#p2",
+      "type": "list",
+      "question": "Which steps make up the cutover checklist the assistant prepared?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:list:5#p3",
+      "type": "list",
+      "question": "The assistant drafted a cutover checklist\u2014what steps does it contain?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:1",
+      "type": "lookup",
+      "question": "What is the name of Alex's manager, and what is that person's title?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:1#p1",
+      "type": "lookup",
+      "question": "What is the name of Alex's manager, and what title does that person hold?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:1#p2",
+      "type": "lookup",
+      "question": "Who manages Alex, and what is that manager's title?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:1#p3",
+      "type": "lookup",
+      "question": "What is Alex's manager called, and what is the manager's job title?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:2",
+      "type": "multi-hop",
+      "question": "Who is covering Alex's on-call week of 2026-10-26, and what is that person's role at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:2#p1",
+      "type": "multi-hop",
+      "question": "Who is covering Alex's on-call week of 2026-10-26, and what role does that person have at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:2#p2",
+      "type": "multi-hop",
+      "question": "Which person is covering Alex's on-call week of 2026-10-26, and what is that person's position at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:2#p3",
+      "type": "multi-hop",
+      "question": "For Alex's on-call week of 2026-10-26, who is the cover, and what is that person's role at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:3",
+      "type": "multi-hop",
+      "question": "What is the name of the person who found the replica lag risk that pushed the production cutover back a week?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:3#p1",
+      "type": "multi-hop",
+      "question": "Who found the replica lag risk that caused the production cutover to be pushed back a week?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:3#p2",
+      "type": "multi-hop",
+      "question": "What is the name of the person who discovered the replica lag risk that delayed the production cutover by a week?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:3#p3",
+      "type": "multi-hop",
+      "question": "The replica lag risk that moved the production cutover back a week was found by whom?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:4",
+      "type": "lookup",
+      "question": "What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:4#p1",
+      "type": "lookup",
+      "question": "What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:4#p2",
+      "type": "lookup",
+      "question": "Who is Alex's partner, and which dietary restriction of theirs affects the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:4#p3",
+      "type": "lookup",
+      "question": "Alex's partner has a dietary restriction that affects the Japan trip\u2014what is the partner's name and what is the restriction?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:5",
+      "type": "lookup",
+      "question": "Which database did Alex reject for the shipment_events migration, and why was it ruled out?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:5#p1",
+      "type": "lookup",
+      "question": "Which database did Alex reject for the shipment_events migration, and why was it ruled out?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:5#p2",
+      "type": "lookup",
+      "question": "What database was rejected by Alex for the shipment_events migration, and for what reason was it ruled out?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:5#p3",
+      "type": "lookup",
+      "question": "For the shipment_events migration, which database did Alex turn down, and why was it excluded?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:temporal:1",
+      "type": "temporal",
+      "question": "When did Alex move to Denver?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:1#p1",
+      "type": "temporal",
+      "question": "When did Alex relocate to Denver?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:1#p2",
+      "type": "temporal",
+      "question": "At what time did Alex move to Denver?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:1#p3",
+      "type": "temporal",
+      "question": "What date did Alex move to Denver?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:temporal:2",
+      "type": "temporal",
+      "question": "Did Alex join Northwind before or after leaving Meridian Freight?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:2#p1",
+      "type": "temporal",
+      "question": "Did Alex join Northwind before leaving Meridian Freight, or after?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:2#p2",
+      "type": "temporal",
+      "question": "Was Alex's start at Northwind before or after Alex left Meridian Freight?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:2#p3",
+      "type": "temporal",
+      "question": "Relative to leaving Meridian Freight, did Alex join Northwind earlier or later?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:temporal:3",
+      "type": "temporal",
+      "question": "When is the production cutover now scheduled, after the date change?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:3#p1",
+      "type": "temporal",
+      "question": "After the date change, when is the production cutover now scheduled?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:3#p2",
+      "type": "temporal",
+      "question": "What is the new scheduled date for the production cutover following the change?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:3#p3",
+      "type": "temporal",
+      "question": "When is the production cutover scheduled now that the date has changed?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:temporal:4",
+      "type": "temporal",
+      "question": "When did Alex accept leading the observability rewrite?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:4#p1",
+      "type": "temporal",
+      "question": "When did Alex agree to lead the observability rewrite?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:4#p2",
+      "type": "temporal",
+      "question": "On what date did Alex accept leading the observability rewrite?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:4#p3",
+      "type": "temporal",
+      "question": "At what point did Alex take on leading the observability rewrite?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:temporal:5",
+      "type": "temporal",
+      "question": "What are the dates of the Japan trip after the change?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:5#p1",
+      "type": "temporal",
+      "question": "After the change, what are the dates of the Japan trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:5#p2",
+      "type": "temporal",
+      "question": "What dates does the Japan trip now have following the change?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:temporal:5#p3",
+      "type": "temporal",
+      "question": "Following the change, when does the Japan trip take place?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:correction:1",
+      "type": "correction",
+      "question": "When is the production cutover for the shipment_events migration?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:1#p1",
+      "type": "correction",
+      "question": "When is the production cutover scheduled for the shipment_events migration?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:1#p2",
+      "type": "correction",
+      "question": "What is the date of the production cutover for the shipment_events migration?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:1#p3",
+      "type": "correction",
+      "question": "For the shipment_events migration, when does the production cutover occur?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:correction:4",
+      "type": "correction",
+      "question": "How does Alex feel about pair programming?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:4#p1",
+      "type": "correction",
+      "question": "What is Alex's opinion of pair programming?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:4#p2",
+      "type": "correction",
+      "question": "How does Alex feel regarding pair programming?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:4#p3",
+      "type": "correction",
+      "question": "What are Alex's feelings about pair programming?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:negation:1",
+      "type": "negation",
+      "question": "Does Alex want Java code examples when asking for code?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:1#p1",
+      "type": "negation",
+      "question": "When Alex asks for code, does Alex want Java examples?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:1#p2",
+      "type": "negation",
+      "question": "Does Alex want Java code examples included when requesting code?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:1#p3",
+      "type": "negation",
+      "question": "Is Alex interested in Java code examples when asking for code?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:negation:3",
+      "type": "negation",
+      "question": "Which city did Alex drop from the Japan itinerary?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:3#p1",
+      "type": "negation",
+      "question": "Which city was removed from the Japan itinerary by Alex?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:3#p2",
+      "type": "negation",
+      "question": "What city did Alex take out of the Japan itinerary?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:3#p3",
+      "type": "negation",
+      "question": "Alex dropped a city from the Japan itinerary\u2014which one was it?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:negation:4",
+      "type": "negation",
+      "question": "Does Alex want to use an ORM for new services?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:4#p1",
+      "type": "negation",
+      "question": "Does Alex want an ORM used for new services?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:4#p2",
+      "type": "negation",
+      "question": "Is Alex in favor of using an ORM for new services?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:4#p3",
+      "type": "negation",
+      "question": "For new services, does Alex want to use an ORM?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:negation:5",
+      "type": "negation",
+      "question": "Does Alex want to be on call during the production cutover week?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:5#p1",
+      "type": "negation",
+      "question": "Does Alex want to be on call during the week of the production cutover?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:5#p2",
+      "type": "negation",
+      "question": "Is Alex willing to be on call during the production cutover week?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:negation:5#p3",
+      "type": "negation",
+      "question": "During the production cutover week, does Alex want to be on call?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:aggregation:5",
+      "type": "aggregation",
+      "question": "Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:5#p1",
+      "type": "aggregation",
+      "question": "Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:5#p2",
+      "type": "aggregation",
+      "question": "What programming languages does Alex favor for services and internal tooling, and what languages does Alex not like?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:5#p3",
+      "type": "aggregation",
+      "question": "For services and internal tooling, which programming languages does Alex prefer, and which does Alex dislike?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:1",
+      "type": "lookup",
+      "question": "What's the name of Dana's dog?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:1#p1",
+      "type": "lookup",
+      "question": "What is the name of the dog that belongs to Dana?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:1#p2",
+      "type": "lookup",
+      "question": "Dana's dog goes by what name?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:1#p3",
+      "type": "lookup",
+      "question": "What name does Dana's dog have?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:2",
+      "type": "lookup",
+      "question": "What time did Dana finish the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:2#p1",
+      "type": "lookup",
+      "question": "At what time did Dana complete the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:2#p2",
+      "type": "lookup",
+      "question": "What was Dana's finishing time for the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:2#p3",
+      "type": "lookup",
+      "question": "When did Dana cross the finish line in the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:3",
+      "type": "lookup",
+      "question": "What's the name of Dana's sister's new baby?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:3#p1",
+      "type": "lookup",
+      "question": "What is the name of the new baby of Dana's sister?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:3#p2",
+      "type": "lookup",
+      "question": "Dana's sister's new baby is called what?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:3#p3",
+      "type": "lookup",
+      "question": "What name has Dana's sister given her new baby?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:4",
+      "type": "lookup",
+      "question": "When does Dana start her new job as analytics manager at Brightpath?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:4#p1",
+      "type": "lookup",
+      "question": "When will Dana begin her new position as analytics manager at Brightpath?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:4#p2",
+      "type": "lookup",
+      "question": "At what point does Dana start her new job as analytics manager at Brightpath?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:4#p3",
+      "type": "lookup",
+      "question": "What is the start date for Dana's new analytics manager role at Brightpath?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:list:1",
+      "type": "list",
+      "question": "Who are the members of Dana's household in Denver?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:1#p1",
+      "type": "list",
+      "question": "Which people make up Dana's household in Denver?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:1#p2",
+      "type": "list",
+      "question": "Who lives with Dana in her Denver household?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:1#p3",
+      "type": "list",
+      "question": "What are the names of the members of Dana's household in Denver?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:list:4",
+      "type": "list",
+      "question": "What races and finishing times are mentioned for Dana and Melanie?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:4#p1",
+      "type": "list",
+      "question": "Which races and finishing times are listed for Dana and Melanie?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:4#p2",
+      "type": "list",
+      "question": "What races and times are given for Dana and Melanie?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:4#p3",
+      "type": "list",
+      "question": "For Dana and Melanie, what races and finishing times are mentioned?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:list:5",
+      "type": "list",
+      "question": "What programming tools or languages come up in Dana's work context?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:5#p1",
+      "type": "list",
+      "question": "Which programming languages or tools are referenced in Dana's work context?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:5#p2",
+      "type": "list",
+      "question": "What programming tools or languages appear in the context of Dana's work?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:list:5#p3",
+      "type": "list",
+      "question": "In Dana's work context, what programming languages or tools come up?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:1",
+      "type": "lookup",
+      "question": "What is the name of the person who convinced Dana to sign up for the Cherry Creek Half Marathon?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:1#p1",
+      "type": "lookup",
+      "question": "Who persuaded Dana to sign up for the Cherry Creek Half Marathon?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:1#p2",
+      "type": "lookup",
+      "question": "What is the name of the person who got Dana to register for the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:1#p3",
+      "type": "lookup",
+      "question": "Who was it that convinced Dana to enter the Cherry Creek Half Marathon?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:2",
+      "type": "lookup",
+      "question": "What is the name of Dana's manager at Northwind who asked for weekly dashboards?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:2#p1",
+      "type": "lookup",
+      "question": "Who was Dana's manager at Northwind that requested weekly dashboards?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:2#p2",
+      "type": "lookup",
+      "question": "What is the name of the Northwind manager who asked Dana for weekly dashboards?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:2#p3",
+      "type": "lookup",
+      "question": "At Northwind, which manager asked Dana for weekly dashboards?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:4",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's partner who works night shifts as a nurse at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:4#p1",
+      "type": "multi-hop",
+      "question": "Who is Dana's partner that works night shifts as a nurse at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:4#p2",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's partner, the nurse at Denver Health who works night shifts?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:4#p3",
+      "type": "multi-hop",
+      "question": "Dana's partner, who works night shifts as a nurse at Denver Health, is named what?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:5",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's golden retriever who ate one of Sam's running shoes?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:5#p1",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's golden retriever that ate one of Sam's running shoes?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:5#p2",
+      "type": "multi-hop",
+      "question": "Which of Dana's golden retrievers ate one of Sam's running shoes?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:5#p3",
+      "type": "multi-hop",
+      "question": "Dana's golden retriever that ate one of Sam's running shoes is called what?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:temporal:1",
+      "type": "temporal",
+      "question": "When did I start my new job at Brightpath?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:1#p1",
+      "type": "temporal",
+      "question": "When did I begin my new job at Brightpath?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:1#p2",
+      "type": "temporal",
+      "question": "What was the start date of my new job at Brightpath?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:1#p3",
+      "type": "temporal",
+      "question": "At what time did I start my new position at Brightpath?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:temporal:3",
+      "type": "temporal",
+      "question": "When is the Cherry Creek Half Marathon that I signed up for?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:3#p1",
+      "type": "temporal",
+      "question": "When does the Cherry Creek Half Marathon that I signed up for take place?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:3#p2",
+      "type": "temporal",
+      "question": "What is the date of the Cherry Creek Half Marathon I registered for?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:3#p3",
+      "type": "temporal",
+      "question": "When is the Cherry Creek Half Marathon I entered?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:temporal:5",
+      "type": "temporal",
+      "question": "When did my sister Rachel have her baby Ivy?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:5#p1",
+      "type": "temporal",
+      "question": "When did my sister Rachel give birth to her baby Ivy?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:5#p2",
+      "type": "temporal",
+      "question": "What was the date when my sister Rachel had her baby Ivy?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:temporal:5#p3",
+      "type": "temporal",
+      "question": "At what time did Rachel, my sister, have her baby Ivy?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:1",
+      "type": "correction",
+      "question": "What's my current diet \u2014 am I still vegetarian?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:1#p1",
+      "type": "correction",
+      "question": "What is my current diet \u2014 do I still follow a vegetarian diet?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:1#p2",
+      "type": "correction",
+      "question": "Am I still vegetarian, or has my current diet changed?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:1#p3",
+      "type": "correction",
+      "question": "What diet am I on now \u2014 am I still a vegetarian?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:2",
+      "type": "correction",
+      "question": "Where do I work now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:2#p1",
+      "type": "correction",
+      "question": "Where am I working now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:2#p2",
+      "type": "correction",
+      "question": "What is my current workplace?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:2#p3",
+      "type": "correction",
+      "question": "At which place do I work now?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:4",
+      "type": "correction",
+      "question": "What's the longest run I've done?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:4#p1",
+      "type": "correction",
+      "question": "What is the longest run I have completed?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:4#p2",
+      "type": "correction",
+      "question": "Which run is the longest one I've done?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:4#p3",
+      "type": "correction",
+      "question": "What is my longest run so far?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:negation:1",
+      "type": "negation",
+      "question": "What kind of coffee does Dana drink now?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:1#p1",
+      "type": "negation",
+      "question": "What type of coffee does Dana drink these days?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:1#p2",
+      "type": "negation",
+      "question": "Which coffee does Dana currently drink?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:1#p3",
+      "type": "negation",
+      "question": "What kind of coffee is Dana drinking now?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:negation:2",
+      "type": "negation",
+      "question": "Does Dana eat meat?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:2#p1",
+      "type": "negation",
+      "question": "Does Dana consume meat?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:2#p2",
+      "type": "negation",
+      "question": "Is meat part of Dana's diet?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:2#p3",
+      "type": "negation",
+      "question": "Does Dana eat any meat?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:negation:3",
+      "type": "negation",
+      "question": "Is Dana still working at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:3#p1",
+      "type": "negation",
+      "question": "Is Dana still employed at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:3#p2",
+      "type": "negation",
+      "question": "Does Dana still work for Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:3#p3",
+      "type": "negation",
+      "question": "Is Dana still working for Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:negation:4",
+      "type": "negation",
+      "question": "Is Sam coming on the Portland trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:4#p1",
+      "type": "negation",
+      "question": "Is Sam going to come on the Portland trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:4#p2",
+      "type": "negation",
+      "question": "Will Sam be joining the Portland trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:4#p3",
+      "type": "negation",
+      "question": "Is Sam coming along on the trip to Portland?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:negation:5",
+      "type": "negation",
+      "question": "Does Dana want to keep using Tableau for her dashboards?",
+      "route": [
+        [
+          {
+            "relation": "owns"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:5#p1",
+      "type": "negation",
+      "question": "Does Dana still want to use Tableau for her dashboards?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:5#p2",
+      "type": "negation",
+      "question": "Is Dana interested in continuing to use Tableau for her dashboards?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:negation:5#p3",
+      "type": "negation",
+      "question": "Does Dana wish to keep using Tableau for her dashboards?",
+      "route": [
+        [
+          {
+            "relation": "owns"
+          },
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:aggregation:1",
+      "type": "aggregation",
+      "question": "How many half marathons has Melanie run, and what was her finishing time at the Cherry Creek Half?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:1#p1",
+      "type": "aggregation",
+      "question": "How many half marathons has Melanie completed, and what was her finishing time at the Cherry Creek Half?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:1#p2",
+      "type": "aggregation",
+      "question": "What is the number of half marathons Melanie has run, and what time did she finish the Cherry Creek Half in?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:1#p3",
+      "type": "aggregation",
+      "question": "Melanie has run how many half marathons, and what was her Cherry Creek Half finishing time?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:aggregation:2",
+      "type": "aggregation",
+      "question": "Which jobs has Dana held or been offered across these conversations, and at which companies?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:2#p1",
+      "type": "aggregation",
+      "question": "Which jobs has Dana held or been offered in these conversations, and at which companies?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:2#p2",
+      "type": "aggregation",
+      "question": "What positions has Dana had or been offered across these conversations, and at what companies?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:aggregation:2#p3",
+      "type": "aggregation",
+      "question": "Across these conversations, which jobs has Dana held or been offered, and at which companies?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:r2.1",
+      "type": "lookup",
+      "question": "What company does Alex Rivera work for?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.1#p1",
+      "type": "lookup",
+      "question": "Which company is Alex Rivera employed by?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.1#p2",
+      "type": "lookup",
+      "question": "What company does Alex Rivera work at?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.1#p3",
+      "type": "lookup",
+      "question": "Alex Rivera works for which company?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:r2.5",
+      "type": "lookup",
+      "question": "How long did the staging dry run of the migration take?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.5#p1",
+      "type": "lookup",
+      "question": "How long did the staging dry run of the migration last?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.5#p2",
+      "type": "lookup",
+      "question": "What was the duration of the migration's staging dry run?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.5#p3",
+      "type": "lookup",
+      "question": "The staging dry run of the migration took how long?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:r2.8",
+      "type": "lookup",
+      "question": "What is the budget for the Japan trip, excluding flights?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.8#p1",
+      "type": "lookup",
+      "question": "What is the Japan trip budget, not counting flights?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.8#p2",
+      "type": "lookup",
+      "question": "Excluding flights, what is the budget for the Japan trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.8#p3",
+      "type": "lookup",
+      "question": "How much is budgeted for the Japan trip, excluding flights?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:r2.9",
+      "type": "lookup",
+      "question": "What race did Alex sign up for in Fruita?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.9#p1",
+      "type": "lookup",
+      "question": "Which race in Fruita did Alex sign up for?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.9#p2",
+      "type": "lookup",
+      "question": "What Fruita race did Alex register for?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.9#p3",
+      "type": "lookup",
+      "question": "Alex signed up for which race in Fruita?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:lookup:r2.10",
+      "type": "lookup",
+      "question": "What book is Alex currently reading?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.10#p1",
+      "type": "lookup",
+      "question": "What book is Alex reading at the moment?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.10#p2",
+      "type": "lookup",
+      "question": "Which book is Alex currently reading?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:lookup:r2.10#p3",
+      "type": "lookup",
+      "question": "At present, what book is Alex reading?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:correction:r2.3",
+      "type": "correction",
+      "question": "What are the dates of Alex and Jordan's Japan trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:r2.3#p1",
+      "type": "correction",
+      "question": "What are the dates for Alex and Jordan's Japan trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:r2.3#p2",
+      "type": "correction",
+      "question": "When does Alex and Jordan's Japan trip take place?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:correction:r2.3#p3",
+      "type": "correction",
+      "question": "For Alex and Jordan's Japan trip, what are the dates?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:r2.1",
+      "type": "multi-hop",
+      "question": "What is the name of the manager Alex meets with every Tuesday at 10:00 Mountain time?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.1#p1",
+      "type": "multi-hop",
+      "question": "What is the name of the manager Alex meets with every Tuesday at 10:00 Mountain time?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.1#p2",
+      "type": "multi-hop",
+      "question": "Who is the manager that Alex meets every Tuesday at 10:00 Mountain time?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.1#p3",
+      "type": "multi-hop",
+      "question": "Alex meets a manager every Tuesday at 10:00 Mountain time\u2014what is that manager's name?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:r2.2",
+      "type": "multi-hop",
+      "question": "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.2#p1",
+      "type": "multi-hop",
+      "question": "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.2#p2",
+      "type": "multi-hop",
+      "question": "Who took over Alex's on-call week of 2026-10-26 to keep the cutover from falling during Alex's shift?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "owns"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.2#p3",
+      "type": "multi-hop",
+      "question": "To avoid the cutover falling during Alex's shift, which engineer took over Alex's on-call week of 2026-10-26?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:r2.4",
+      "type": "multi-hop",
+      "question": "What is the name of Alex's partner, who needs a Japanese allergy card because of a shellfish allergy?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.4#p1",
+      "type": "multi-hop",
+      "question": "What is the name of Alex's partner, who needs a Japanese allergy card because of a shellfish allergy?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.4#p2",
+      "type": "multi-hop",
+      "question": "Who is Alex's partner, the person who needs a Japanese allergy card due to a shellfish allergy?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.4#p3",
+      "type": "multi-hop",
+      "question": "Alex's partner needs a Japanese allergy card because of a shellfish allergy\u2014what is that person's name?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:multi-hop:r2.6",
+      "type": "multi-hop",
+      "question": "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.6#p1",
+      "type": "multi-hop",
+      "question": "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.6#p2",
+      "type": "multi-hop",
+      "question": "What observability backend was selected by Alex for the rewrite Alex agreed to lead on 2026-10-14?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:multi-hop:r2.6#p3",
+      "type": "multi-hop",
+      "question": "For the rewrite that Alex agreed to lead on 2026-10-14, which observability backend did Alex pick?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:aggregation:r2.1",
+      "type": "aggregation",
+      "question": "How many distinct cities is Alex planning to visit on the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.1#p1",
+      "type": "aggregation",
+      "question": "How many distinct cities is Alex planning to visit on the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.1#p2",
+      "type": "aggregation",
+      "question": "What is the number of distinct cities Alex plans to visit on the Japan trip?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.1#p3",
+      "type": "aggregation",
+      "question": "On the Japan trip, how many different cities does Alex plan to visit?",
+      "route": [
+        [
+          {
+            "relation": "visits"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "store-v1:aggregation:r2.3",
+      "type": "list",
+      "question": "Which editors does Alex currently use, and for what?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.3#p1",
+      "type": "list",
+      "question": "Which editors does Alex currently use, and for what?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.3#p2",
+      "type": "list",
+      "question": "What editors is Alex using at present, and for what purposes?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "store-v1:aggregation:r2.3#p3",
+      "type": "list",
+      "question": "For what does Alex currently use which editors?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:r2.5",
+      "type": "lookup",
+      "question": "What does Sam do for a living?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.5#p1",
+      "type": "lookup",
+      "question": "What is Sam's occupation?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.5#p2",
+      "type": "lookup",
+      "question": "What does Sam do for work?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.5#p3",
+      "type": "lookup",
+      "question": "What kind of work does Sam do for a living?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:r2.7",
+      "type": "lookup",
+      "question": "What food allergy does Sam have?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.7#p1",
+      "type": "lookup",
+      "question": "What food allergy does Sam have?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.7#p2",
+      "type": "lookup",
+      "question": "Which food is Sam allergic to?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.7#p3",
+      "type": "lookup",
+      "question": "What food allergy is Sam affected by?",
+      "route": [
+        [
+          {
+            "relation": "allergic_to"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:lookup:r2.10",
+      "type": "lookup",
+      "question": "What is Dana's current diet called now that she eats fish again?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.10#p1",
+      "type": "lookup",
+      "question": "What is Dana's current diet called now that she eats fish again?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.10#p2",
+      "type": "lookup",
+      "question": "Now that Dana eats fish again, what is her current diet called?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:lookup:r2.10#p3",
+      "type": "lookup",
+      "question": "What name is given to Dana's current diet since she has resumed eating fish?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:r2.5",
+      "type": "lookup",
+      "question": "Did I actually run the Cherry Creek Half, and what was my time?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.5#p1",
+      "type": "lookup",
+      "question": "Did I actually run the Cherry Creek Half, and what was my time?",
+      "route": [
+        [
+          {
+            "relation": "friend_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.5#p2",
+      "type": "lookup",
+      "question": "Did I really complete the Cherry Creek Half, and what was my finishing time?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.5#p3",
+      "type": "lookup",
+      "question": "Did I in fact run the Cherry Creek Half, and what time did I get?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:r2.6",
+      "type": "lookup",
+      "question": "What's Biscuit's age?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.6#p1",
+      "type": "lookup",
+      "question": "What is Biscuit's age?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.6#p2",
+      "type": "lookup",
+      "question": "How old is Biscuit?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.6#p3",
+      "type": "lookup",
+      "question": "What age is Biscuit?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:r2.7",
+      "type": "lookup",
+      "question": "Is Sam still working night shifts at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.7#p1",
+      "type": "lookup",
+      "question": "Is Sam still working night shifts at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.7#p2",
+      "type": "lookup",
+      "question": "Does Sam still work night shifts at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.7#p3",
+      "type": "lookup",
+      "question": "Is Sam still employed on night shifts at Denver Health?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:correction:r2.8",
+      "type": "correction",
+      "question": "What's the status of my job at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.8#p1",
+      "type": "correction",
+      "question": "What is the status of my job at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.8#p2",
+      "type": "correction",
+      "question": "What is the current state of my job at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:correction:r2.8#p3",
+      "type": "correction",
+      "question": "What's the situation with my job at Northwind?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:r2.2",
+      "type": "multi-hop",
+      "question": "What tool does Dana's former employer Northwind use as its standard for dashboards?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.2#p1",
+      "type": "multi-hop",
+      "question": "What tool does Northwind, Dana's former employer, use as its standard for dashboards?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.2#p2",
+      "type": "multi-hop",
+      "question": "Which tool is the dashboard standard at Dana's former employer, Northwind?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.2#p3",
+      "type": "multi-hop",
+      "question": "What dashboard tool does Dana's former employer Northwind use as its standard?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:r2.3",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's dog, who is a 3-year-old golden retriever?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.3#p1",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's dog, a 3-year-old golden retriever?",
+      "route": null
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.3#p2",
+      "type": "multi-hop",
+      "question": "Dana's 3-year-old golden retriever is called what?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.3#p3",
+      "type": "multi-hop",
+      "question": "What name does Dana's dog, who is a 3-year-old golden retriever, have?",
+      "route": null
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:r2.4",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.4#p1",
+      "type": "multi-hop",
+      "question": "What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.4#p2",
+      "type": "multi-hop",
+      "question": "Dana's sister's baby, whom Dana plans to meet on her July trip to Portland, is named what?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.4#p3",
+      "type": "multi-hop",
+      "question": "What name does Dana's sister's baby have, the one Dana plans to meet on her July trip to Portland?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1",
+      "id": "chat-v1:multi-hop:r2.6",
+      "type": "multi-hop",
+      "question": "What is the name of Melanie's fianc\u00e9, whom she got engaged to around the time of the half marathon?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.6#p1",
+      "type": "multi-hop",
+      "question": "What is the name of Melanie's fianc\u00e9, whom she got engaged to around the time of the half marathon?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.6#p2",
+      "type": "multi-hop",
+      "question": "Melanie's fianc\u00e9, to whom she got engaged around the time of the half marathon, is called what?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v1:paraphrase",
+      "id": "chat-v1:multi-hop:r2.6#p3",
+      "type": "multi-hop",
+      "question": "What name does Melanie's fianc\u00e9 have, the one she got engaged to around the time of the half marathon?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:1",
+      "type": "lookup",
+      "question": "What is Noor's partner's name?",
+      "route": [
+        [
+          {
+            "relation": "partner_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:2",
+      "type": "lookup",
+      "question": "What is the name of Noor's cat?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:3",
+      "type": "lookup",
+      "question": "Where does Noor's sister Lina live?",
+      "route": [
+        [
+          {
+            "relation": "kin_of",
+            "roles": [
+              "sister"
+            ]
+          }
+        ],
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:4",
+      "type": "lookup",
+      "question": "Who is Noor's manager at Lumen Health?",
+      "route": [
+        [
+          {
+            "relation": "manager_of",
+            "roles": [
+              "manager"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:5",
+      "type": "lookup",
+      "question": "What is the budget for the Patient Portal redesign?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:6",
+      "type": "lookup",
+      "question": "What is the name of the new design system?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:7",
+      "type": "lookup",
+      "question": "What is the budget for the Portugal trip, excluding flights?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:8",
+      "type": "lookup",
+      "question": "What book is Noor currently reading?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:9",
+      "type": "lookup",
+      "question": "What is the name of the gym where Noor goes bouldering?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:10",
+      "type": "lookup",
+      "question": "What is the name of the design engineer on the platform team?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:lookup:12",
+      "type": "lookup",
+      "question": "What is the name of the telehealth startup where Noor works?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:1",
+      "type": "list",
+      "question": "What tools does Noor like for work?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:2",
+      "type": "list",
+      "question": "Which cities are on Noor and Idris's Portugal itinerary?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:3",
+      "type": "list",
+      "question": "What times does Pepper eat?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:4",
+      "type": "list",
+      "question": "What technologies does Lumen Health's product use?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:8",
+      "type": "list",
+      "question": "What are Noor's preferences around coffee?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:2",
+      "type": "lookup",
+      "question": "Which city did Noor move from when relocating for the Lumen Health job, and where does she live now?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:4",
+      "type": "multi-hop",
+      "question": "Who covers the usability sessions while Tilda is on leave, and what is that person's role?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:5",
+      "type": "lookup",
+      "question": "What is the new design system for the Patient Portal called, and which tool did Noor reject for it?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:6",
+      "type": "lookup",
+      "question": "When is the Patient Portal launch now scheduled, and why was it moved?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:8",
+      "type": "lookup",
+      "question": "What did the Patient Portal prototype score on the System Usability Scale, and what is the target?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:9",
+      "type": "lookup",
+      "question": "Where does Noor go bouldering, and when is her competition there?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:11",
+      "type": "multi-hop",
+      "question": "When is the Portugal trip now planned, and which cities are on the itinerary?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:12",
+      "type": "multi-hop",
+      "question": "What is the budget for the Portugal trip, and what flight did Noor book?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:1",
+      "type": "temporal",
+      "question": "When did Noor join Lumen Health?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:3",
+      "type": "temporal",
+      "question": "When did Noor move from Austin to Minneapolis?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:4",
+      "type": "temporal",
+      "question": "What is the current scheduled date for the Patient Portal launch?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:5",
+      "type": "temporal",
+      "question": "When does Noor present the Atlas roadmap at the company all-hands?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:6",
+      "type": "temporal",
+      "question": "When did Noor accept leading the accessibility audit?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:7",
+      "type": "temporal",
+      "question": "When is Noor's bouldering competition at Granite Gym?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:8",
+      "type": "temporal",
+      "question": "When did Noor sprain a wrist?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:9",
+      "type": "temporal",
+      "question": "What are the current dates for the Portugal trip?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:10",
+      "type": "temporal",
+      "question": "When does Noor's flight from Minneapolis to Lisbon depart?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:temporal:11",
+      "type": "temporal",
+      "question": "When is Tilda on leave?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:correction:1",
+      "type": "correction",
+      "question": "When is the Patient Portal launch now scheduled?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:correction:2",
+      "type": "correction",
+      "question": "How does Noor feel about leading the weekly stand-up?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:correction:3",
+      "type": "correction",
+      "question": "When is the Portugal trip happening?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:correction:4",
+      "type": "correction",
+      "question": "Did Noor end up leading the accessibility audit?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:1",
+      "type": "negation",
+      "question": "Which design tool has Noor decided not to use for the Atlas design system?",
+      "route": [
+        [
+          {
+            "relation": "decided"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:2",
+      "type": "negation",
+      "question": "Which city did Noor and Idris drop from their Portugal itinerary?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:4",
+      "type": "negation",
+      "question": "What does Noor dislike for work?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:5",
+      "type": "negation",
+      "question": "What presentation format does Noor dislike?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:6",
+      "type": "negation",
+      "question": "What kind of design review does Noor not prefer?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:7",
+      "type": "negation",
+      "question": "What meeting format does Noor no longer want to lead?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          },
+          {
+            "relation": "prefers"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:8",
+      "type": "negation",
+      "question": "What did Noor initially decline to lead?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:9",
+      "type": "negation",
+      "question": "What does Noor avoid drinking after 3 pm?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:10",
+      "type": "negation",
+      "question": "What is Noor skipping for three weeks after spraining a wrist?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:11",
+      "type": "negation",
+      "question": "Which food must Noor make sure is avoided when eating out in Portugal?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:negation:12",
+      "type": "negation",
+      "question": "What does Noor not want to use for timelines?",
+      "route": [
+        [
+          {
+            "relation": "prefers"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:5",
+      "type": "aggregation",
+      "question": "Which cities has Noor lived in, according to her memories?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:6",
+      "type": "aggregation",
+      "question": "What are the key dates for the Patient Portal launch and Noor's Atlas roadmap presentation?",
+      "route": [
+        [
+          {
+            "relation": "involved_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:9",
+      "type": "aggregation",
+      "question": "What dates is Noor's Portugal trip, and what is its budget excluding flights?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:10",
+      "type": "aggregation",
+      "question": "Which of Noor's scheduled events fall in November 2026?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:r2.3",
+      "type": "list",
+      "question": "Who are the people on Noor's team that are mentioned by name?",
+      "route": [
+        [
+          {
+            "relation": "member_of"
+          },
+          {
+            "relation": "part_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:r2.5",
+      "type": "list",
+      "question": "What are the names of Noor's family members mentioned?",
+      "route": [
+        [
+          {
+            "relation": "kin_of"
+          },
+          {
+            "relation": "partner_of"
+          }
+        ],
+        [
+          {
+            "relation": "member_of"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:r2.8",
+      "type": "list",
+      "question": "What cities did Noor live in, and when?",
+      "route": [
+        [
+          {
+            "relation": "lives_in"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:list:r2.9",
+      "type": "list",
+      "question": "What are Noor's roles and titles at Lumen Health?",
+      "route": [
+        [
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:r2.4",
+      "type": "lookup",
+      "question": "Who covers the usability sessions while Tilda is on leave?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:r2.7",
+      "type": "lookup",
+      "question": "What tool did Noor agree to use for documenting Atlas components?",
+      "route": [
+        [
+          {
+            "relation": "part_of"
+          },
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:multi-hop:r2.8",
+      "type": "lookup",
+      "question": "When is Noor presenting the Atlas roadmap, and at what event?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:r2.2",
+      "type": "aggregation",
+      "question": "Which cities are on Noor and Idris's Portugal itinerary, and which one did they drop?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:r2.3",
+      "type": "aggregation",
+      "question": "How many evenings a week does Noor go bouldering, and where?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:r2.4",
+      "type": "aggregation",
+      "question": "Which tools does Noor like for work, and which one does she dislike?",
+      "route": [
+        [
+          {
+            "relation": "prefers",
+            "polarity": "negative"
+          },
+          {
+            "relation": "works_at"
+          }
+        ]
+      ]
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:r2.9",
+      "type": "aggregation",
+      "question": "Which recurring meetings does Noor have on Mondays and Thursdays, and at what times?",
+      "route": null
+    },
+    {
+      "set": "blind-v2",
+      "id": "draw2-v1:aggregation:r2.10",
+      "type": "lookup",
+      "question": "What tech stack does Lumen Health use for its product, and where is it hosted?",
+      "route": [
+        [
+          {
+            "relation": "uses"
+          }
+        ]
+      ]
+    }
+  ]
+}

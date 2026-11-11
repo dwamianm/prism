@@ -219,8 +219,71 @@ def round3() -> None:
     print("\n".join(lines))
 
 
+# Before: round 3's builds measured at ee0130a9 (results/round3/union-<probe>.json). After: the rebuilt arms
+# measured with the fixed router; "old build, new router" measures round 3's builds again with the fixed router, so a
+# difference from "after" would be rebuild noise, not routing.
+ROUTER_FIX = (("round3", "fx-M1", "M1 before"), ("round3", "tx-B1", "tx-B1 before"),
+              ("router-fix", "rf-M1", "M1 after"), ("router-fix", "rf-B1", "tx-B1 after"),
+              ("router-fix", "fx-M1", "M1 old build, new router"), ("router-fix", "tx-B1", "tx-B1 old build, new router"))
+
+
+def router_fix() -> None:
+    """Task 12: M1 and tx-B1 before the router fix (ee0130a9) and after, per probe, then every question whose route
+    or rank changed.
+
+    Reads ``results/round3/union-<probe>.json`` (before), ``results/router-fix/union-<probe>.json``
+    (``union_ranks.py`` with fx-M1, tx-B1, rf-M1 and rf-B1, all measured with the fixed router) and
+    ``results/router-fix/routes-before.json`` and ``routes-after.json`` (``routes.py``).
+    """
+    results = HERE / "results"
+    unions = {(folder, name): json.loads((results / folder / f"union-{name}.json").read_text())
+              for folder in ("round3", "router-fix") for name in NAMES}
+    routes = {side: {(row["set"], row["question"]): row["route"]
+                     for row in json.loads((results / "router-fix" / f"routes-{side}.json").read_text())["questions"]}
+              for side in ("before", "after")}
+
+    def rows(folder: str, label: str, name: str) -> list[dict]:
+        return unions[(folder, name)][label]
+
+    def count(found: list[dict], k: int) -> int:
+        return sum(1 for row in found if row["probe_rank"] is not None and row["probe_rank"] <= k)
+
+    def short(route) -> str:
+        if route is None:
+            return "not routed"
+        return " then ".join(", ".join(step["relation"] + (f" ({'/'.join(step['roles'])})" if step.get("roles") else "")
+                                       + (" negative" if step.get("polarity") == "negative" else "")
+                                       for step in steps) for steps in route)
+
+    lines = ["## Top 3 / top 5 per probe", "",
+             "| Probe | " + " | ".join(name for _, _, name in ROUTER_FIX) + " |", "|---|" + "---|" * len(ROUTER_FIX)]
+    for name in NAMES:
+        total = len(rows("round3", "tx-B1", name))
+        lines.append(f"| {name} | " + " | ".join(
+            f"{count(rows(folder, label, name), 3)}/{total} / {count(rows(folder, label, name), 5)}/{total}"
+            for folder, label, _ in ROUTER_FIX) + " |")
+    lines += ["", "## Every question whose route or rank changed (answer rank)", "",
+              "| Probe | Question | Route before | Route after | " + " | ".join(n for _, _, n in ROUTER_FIX) + " |",
+              "|---|---|---|---|" + "---:|" * len(ROUTER_FIX)]
+    for name in NAMES:
+        first = rows("round3", "tx-B1", name)
+        for index, row in enumerate(first):
+            if any(rows(folder, label, name)[index]["question"] != row["question"] for folder, label, _ in ROUTER_FIX):
+                raise ValueError(f"{name}: questions out of step at {index}")
+            key = (f"probe:{name}", row["question"])
+            before, after = routes["before"][key], routes["after"][key]
+            ranks = [rows(folder, label, name)[index]["probe_rank"] for folder, label, _ in ROUTER_FIX]
+            # Changed: a new route, or an arm whose rank before differs from any of its ranks after.
+            if before != after or len({ranks[0], ranks[2], ranks[4]}) > 1 or len({ranks[1], ranks[3], ranks[5]}) > 1:
+                lines.append(f"| {name} | {row['question']} | {short(before)} | {short(after)} | " + " | ".join(
+                    "none" if rank is None else str(rank) for rank in ranks) + " |")
+    print("\n".join(lines))
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "round3":
         round3()
+    elif len(sys.argv) > 1 and sys.argv[1] == "router-fix":
+        router_fix()
     else:
         main()

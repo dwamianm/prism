@@ -1,0 +1,16 @@
+2026-11-11 17:39:51 [info     ] write_queue.started
+2026-11-11 17:39:52 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:39:52 [info     ] write_queue.stopped
+2026-11-11 17:39:52 [info     ] write_queue.started
+2026-11-11 17:39:52 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:39:52 [info     ] write_queue.stopped
+2026-11-11 17:39:52 [info     ] write_queue.started
+2026-11-11 17:39:53 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:39:53 [info     ] write_queue.stopped
+2026-11-11 17:39:53 [info     ] write_queue.started
+2026-11-11 17:39:53 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:39:53 [info     ] write_queue.stopped
+defects-v1 fx-M1: probe top 3 7/7, top 5 7/7; union top 3 7/7, top 5 7/7
+defects-v1 tx-B1: probe top 3 6/7, top 5 6/7; union top 3 6/7, top 5 6/7
+defects-v1 rf-M1: probe top 3 7/7, top 5 7/7; union top 3 7/7, top 5 7/7
+defects-v1 rf-B1: probe top 3 6/7, top 5 6/7; union top 3 6/7, top 5 6/7

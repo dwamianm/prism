@@ -31,7 +31,7 @@ import re
 # The version of the routing rule recorded in receipts. Change it with any
 # change to the vocabulary, the cues, the normalizer, the concepts, the router
 # or the walk that can change a route or its candidates.
-ROUTING_VERSION = 2
+ROUTING_VERSION = 3
 
 # The closed vocabulary (benchmarks/graph_oracle/DESIGN.md, "The relation
 # vocabulary"), with each relation's subject and object kinds and definition.
@@ -397,6 +397,9 @@ def normalize_concepts(concepts: Mapping[str, Sequence[str]] | None) -> dict[str
 # Words of a question that say it asks about dislikes, not likes.
 _NEGATIVE_WORDS = frozenset("dislike dislikes disliked avoid avoids avoided hate hates hated".split())
 _POSSESSIVE_WORDS = frozenset({"my", "our", "your", "his", "her", "their"})
+# Words that ask for a name ("what is it called?", "who is the dog named after?") say nothing about the relation;
+# the router skips them. "call" stays a cue ("Who is on call?"): only these forms ask for a name.
+_NAME_WORDS = frozenset("name names named called".split())
 # A question about when asks for a time, which the text ranking answers better
 # than a relation (the graph oracle's blind sets lost temporal questions to the
 # walk), so it is never routed.
@@ -410,7 +413,11 @@ def route_question(question: str, concepts: Mapping[str, Sequence[str]] | None =
     A people word ("husband", "children") routes to its relation and role, a
     concept word to the concept's relations, and any other word whose stem is
     a derived cue (``DERIVED_CUES``) to the cued relations, with negative
-    polarity for prefers on "dislike" or "avoid". When a people or concept word
+    polarity for prefers on "dislike" or "avoid". A word the predicate
+    normalizer maps to a relation (``_PREDICATE_WORDS``: "dog", "hates",
+    "manages") also routes to that relation, with the word's polarity and
+    role, so a word that stores a relation also asks for it. A word that asks
+    for a name ("called", "named") is skipped. When a people or concept word
     belongs to someone ("Dana's sister", "my sister") and the question asks for
     more ("Where does Dana's sister live?", "Who is my sister's husband?"), the
     route is two steps: the possessed words first, then the rest. Otherwise it is one step that accepts
@@ -438,10 +445,14 @@ def route_question(question: str, concepts: Mapping[str, Sequence[str]] | None =
             found.add(_step(*people))
         elif singular(word) in known:
             found.update(known[singular(word)])
-        elif word not in _STOPWORDS:
+        elif word not in _STOPWORDS and word not in _NAME_WORDS:
             for name, cues in DERIVED_CUES.items():
                 if name not in UNROUTED_RELATIONS and stem(word) in cues:
                     found.add(_step(name, polarity="negative" if name == "prefers" and negative else "positive"))
+            # A word the store maps to a relation asks for it too, with that word's polarity and role.
+            stated = _PREDICATE_WORDS.get(word)
+            if stated is not None:
+                found.add(_step(stated.relation, stated.role, "negative" if stated.negative else "positive"))
             owned = False
         (possessed if owned else rest).update(found)
     if not possessed and not rest:

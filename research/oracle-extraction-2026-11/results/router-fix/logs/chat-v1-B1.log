@@ -1,0 +1,419 @@
+2026-11-11 17:40:13 [info     ] write_queue.started
+2026-11-11 17:40:13 [info     ] ingestion.phase1_complete      event_id=dcf0ce9f-a6f4-4283-bb20-6343d5b71783 role=user session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:13 [info     ] Created new entity             entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:13 [info     ] Created new entity             entity_id=cab0e31f-51a0-474b-8035-c08e748bbf6b entity_type=person name=Sam user_id=chat-v1-dana
+2026-11-11 17:40:13 [info     ] Created new entity             entity_id=6c21f301-06aa-428c-b013-9c53d1274e9f entity_type=location name=Denver user_id=chat-v1-dana
+2026-11-11 17:40:13 [info     ] Created new entity             entity_id=24532ce9-13d7-4aeb-b7f1-6da28b354edc entity_type=concept name=Biscuit user_id=chat-v1-dana
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9d25328e-96e3-44aa-a295-cb91aaa7ff30
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=a7f6e7dd-fae9-42af-8c5c-9b033bec62da
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=48f5a548-18cc-446b-a609-aeeade7f255b
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=26ad3742-ed9b-4a60-8b2b-d02921e75377
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=59914980-d511-4aee-8938-72fb75899ded
+2026-11-11 17:40:13 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=e303feed-4c92-4f5a-a6d5-48d6a79f32c1
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=dcf0ce9f-a6f4-4283-bb20-6343d5b71783
+rf-B1: s1-intro#0 user 0.5s
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=fc2b9f9c-dac7-4227-84ce-2695395f8202 role=assistant session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.extraction_batch_saved batch_id=8f7b877f-11d8-52bf-9558-c1c252793b70 event_id=fc2b9f9c-dac7-4227-84ce-2695395f8202 turns=1
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=fc2b9f9c-dac7-4227-84ce-2695395f8202
+rf-B1: s1-intro#1 assistant 0.1s
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=d905e0be-9f63-4d58-8075-b915ce776885 role=user session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] Created new entity             entity_id=c89f36d0-f897-477e-8e3d-a07e65001a07 entity_type=organization name=Northwind user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] Created new entity             entity_id=60ca56e9-77c6-437b-8acd-eebe3fccb9e9 entity_type=person name=Priya user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] Created new entity             entity_id=fd52f34c-0145-46bc-bfe7-d7867c8cda0b entity_type=concept name='weekly dashboards' user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=cc34778f-4335-484a-b4af-3fb0870b36d9
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=670bbfc8-0454-4c58-9f14-53713bcff9b4
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=d4533b1a-f86c-4b23-9493-39f27c6c5ecf
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=d905e0be-9f63-4d58-8075-b915ce776885
+rf-B1: s1-intro#2 user 0.2s
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=84824aba-09b2-4a3f-ba96-fda79a343105 role=assistant session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.extraction_batch_saved batch_id=0d3084d6-97a3-502c-9b7c-bc417f3780cc event_id=84824aba-09b2-4a3f-ba96-fda79a343105 turns=1
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=84824aba-09b2-4a3f-ba96-fda79a343105
+rf-B1: s1-intro#3 assistant 0.0s
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=e6bf8f07-b159-409b-a940-d1c33cd74c16 role=user session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] Created new entity             entity_id=080fc433-b823-4f15-a3d0-304d41d6cd41 entity_type=product name=Tableau user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=c89f36d0-f897-477e-8e3d-a07e65001a07 entity_type=organization name=Northwind user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] Created new entity             entity_id=f959c556-e4d3-4618-8b50-decc3a529535 entity_type=product name=Python user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=4e6c320b-df0d-46c4-8daa-8739d55e5109
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=7ede782c-0321-4004-af41-46d494806f1c
+2026-11-11 17:40:14 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=305ae238-c3d3-47d4-bb14-a846713a4d4a
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=e6bf8f07-b159-409b-a940-d1c33cd74c16
+rf-B1: s1-intro#4 user 0.2s
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=1647b97e-f37b-477b-bd9a-3586822ae578 role=assistant session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.extraction_batch_saved batch_id=43e6edca-159c-5aaf-97bc-8d5fdb702044 event_id=1647b97e-f37b-477b-bd9a-3586822ae578 turns=1
+2026-11-11 17:40:14 [info     ] ingestion.phase2_complete      event_id=1647b97e-f37b-477b-bd9a-3586822ae578
+rf-B1: s1-intro#5 assistant 0.0s
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:14 [info     ] ingestion.phase1_complete      event_id=653fa525-8163-4a72-ad1f-fb7c6a4382d4 role=user session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=3a6ee83d-25a5-41b6-8056-35ba27a22d3f
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=653fa525-8163-4a72-ad1f-fb7c6a4382d4
+rf-B1: s1-intro#6 user 0.1s
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=754bb92c-c004-49b7-a976-b668e817adb0 role=assistant session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.extraction_batch_saved batch_id=5dee37e0-7c20-5b62-b76f-505dd5b70484 event_id=754bb92c-c004-49b7-a976-b668e817adb0 turns=1
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=754bb92c-c004-49b7-a976-b668e817adb0
+rf-B1: s1-intro#7 assistant 0.0s
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=36d0cf18-0a03-4552-b4ff-a06d898036f7 role=user session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=cab0e31f-51a0-474b-8035-c08e748bbf6b entity_type=person name=Sam user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] Created new entity             entity_id=4876a479-f614-422e-914d-8d95809798c4 entity_type=organization name='Denver Health' user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=42fe3a25-5b1e-4ab4-81ca-7aeaf79450da
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=4aeadf2f-1d98-465f-8f59-d1c554fdcc22
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=36d0cf18-0a03-4552-b4ff-a06d898036f7
+rf-B1: s1-intro#8 user 0.2s
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=3609df88-d8cb-4332-89a0-76c5ef9ded5e role=assistant session_id=s1-intro user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.extraction_batch_saved batch_id=7520f585-11c9-5cf6-982e-5543bfe7c2e9 event_id=3609df88-d8cb-4332-89a0-76c5ef9ded5e turns=1
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=3609df88-d8cb-4332-89a0-76c5ef9ded5e
+rf-B1: s1-intro#9 assistant 0.0s
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=c74aee36-e8e0-441b-a553-d6feeea388bd role=user session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] Created new entity             entity_id=f6a55aa4-cd7c-45e9-a3c9-4c8495e2381d entity_type=event name='Cherry Creek Half Marathon' user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] Created new entity             entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=76c50c29-efa4-4c35-8fdc-8c9cb45ea9c0
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=24d1dc55-a353-465a-955c-e1670919ec22
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=36b4d3a6-45cf-4e7a-8ae2-4babef3685ee
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=c74aee36-e8e0-441b-a553-d6feeea388bd
+rf-B1: s2-running#0 user 0.3s
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=df3f6b55-295d-44a4-927c-ce36ba14f358 role=assistant session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.extraction_batch_saved batch_id=1a2d81d7-92a8-565a-8569-2dfedac48692 event_id=df3f6b55-295d-44a4-927c-ce36ba14f358 turns=1
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=df3f6b55-295d-44a4-927c-ce36ba14f358
+rf-B1: s2-running#1 assistant 0.0s
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=e664b8a0-8e24-449a-a38c-650d0170d258 role=user session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] Created new entity             entity_id=55dcf69c-e647-464e-9980-bdd7df5982b9 entity_type=concept name='training plan' user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=786ba42c-8ba1-4f05-bad5-3ca9b10582ec
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=ed451628-10f0-4c3f-b595-53253a6669e3
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9a586a37-6466-4ec5-969e-59b8dee4c11a
+2026-11-11 17:40:15 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=50e1f7e9-c92d-4ccd-8df6-657f0a11cc5c
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=e664b8a0-8e24-449a-a38c-650d0170d258
+rf-B1: s2-running#2 user 0.3s
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=dda667b9-a035-42a2-a75c-15915fb5603b role=assistant session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.extraction_batch_saved batch_id=878b3e46-5534-5fa2-83aa-ad70211660c7 event_id=dda667b9-a035-42a2-a75c-15915fb5603b turns=1
+2026-11-11 17:40:15 [info     ] ingestion.phase2_complete      event_id=dda667b9-a035-42a2-a75c-15915fb5603b
+rf-B1: s2-running#3 assistant 0.0s
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:15 [info     ] ingestion.phase1_complete      event_id=8f887b38-6d5e-4189-b01c-1118142f818c role=user session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=aa1f392b-cd0f-4089-bc94-05ee01758373 entity_type=product name='green tea' user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=4dedd9c9-7758-4c2b-996b-df8883e9a8a7 entity_type=product name=coffee user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=5e540245-90a8-4940-b24b-47556ec0c7a8
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=49cfb774-f395-4694-a4d6-0c8e9b26f2fe
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=b3e16bad-e56d-4318-806a-02a59c23e8ce
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=8f887b38-6d5e-4189-b01c-1118142f818c
+rf-B1: s2-running#4 user 0.3s
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=0364b11e-a51c-44f1-a6f6-1cc8df88dd06 role=assistant session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] ingestion.extraction_batch_saved batch_id=6f0aab72-a074-5737-b033-7157a7ea9e72 event_id=0364b11e-a51c-44f1-a6f6-1cc8df88dd06 turns=1
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=0364b11e-a51c-44f1-a6f6-1cc8df88dd06
+rf-B1: s2-running#5 assistant 0.0s
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=c2109d14-1782-4142-b2c0-d3b51a4e3b3b role=user session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=cab0e31f-51a0-474b-8035-c08e748bbf6b entity_type=person name=Sam user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=5a9e7647-4613-4ab8-8e3a-962699e5df47 entity_type=product name=peanuts user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=c2a16bb4-c633-4aba-8a54-d47900987a52
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=c2109d14-1782-4142-b2c0-d3b51a4e3b3b
+rf-B1: s2-running#6 user 0.2s
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=b2b5cb28-835b-47e8-a65e-f8e192cc10e1 role=assistant session_id=s2-running user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] ingestion.extraction_batch_saved batch_id=b7fe1f41-152c-57b4-afde-27d38ee83e7e event_id=b2b5cb28-835b-47e8-a65e-f8e192cc10e1 turns=1
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=b2b5cb28-835b-47e8-a65e-f8e192cc10e1
+rf-B1: s2-running#7 assistant 0.0s
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=86ce1f16-e694-4c4a-aa3e-1827d06518d7 role=user session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=e3184905-0189-4f97-9bb1-e2d0c0f09f05 entity_type=person name=Rachel user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=ae57164c-5395-4e1c-a167-c0e50d073f9d entity_type=person name=Ivy user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=697fa67a-0928-4ac3-8690-9dbc5f886f4f
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=c189c570-7001-460d-8a7f-b02f6e87f172
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=86ce1f16-e694-4c4a-aa3e-1827d06518d7
+rf-B1: s3-family-and-jobs#0 user 0.2s
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=91211f6b-a49c-4411-add4-2b2885da68bb role=assistant session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=ae57164c-5395-4e1c-a167-c0e50d073f9d entity_type=person name=Ivy user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=2a464110-17a5-4343-bccf-1b4b48a098cf
+2026-11-11 17:40:16 [info     ] ingestion.phase2_complete      event_id=91211f6b-a49c-4411-add4-2b2885da68bb
+rf-B1: s3-family-and-jobs#1 assistant 0.2s
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] ingestion.phase1_complete      event_id=8c9be33f-e00c-4438-9b04-df411a1fe864 role=user session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=e3184905-0189-4f97-9bb1-e2d0c0f09f05 entity_type=person name=Rachel user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] Created new entity             entity_id=ea070fb4-f17d-4644-9603-8ce42d59d125 entity_type=location name=Portland user_id=chat-v1-dana
+2026-11-11 17:40:16 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:16 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=6c9f4257-15ae-4cc4-99fc-712da7d71e6a
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=35a5f1e3-7a86-480b-807f-4a1ebd095b03
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=8c9be33f-e00c-4438-9b04-df411a1fe864
+rf-B1: s3-family-and-jobs#2 user 0.2s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=85c35938-c458-4324-8374-6ea112f6b257 role=assistant session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] ingestion.extraction_batch_saved batch_id=a58f3664-adb4-5416-b111-c65146743ac0 event_id=85c35938-c458-4324-8374-6ea112f6b257 turns=1
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=85c35938-c458-4324-8374-6ea112f6b257
+rf-B1: s3-family-and-jobs#3 assistant 0.0s
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=25b79cde-c779-4370-a9e3-a5972e463544 role=user session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] Created new entity             entity_id=35f49958-5097-4050-8280-37274275132f entity_type=concept name='analytics manager role' user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] Created new entity             entity_id=9230b7dd-c682-4fdb-9835-110d8bf092db entity_type=concept name='first interview' user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=5dbf5ee6-6395-4d40-bc3a-0c358be3e73f
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=74300bbf-abee-4661-981c-0da1de553eb2
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=25b79cde-c779-4370-a9e3-a5972e463544
+rf-B1: s3-family-and-jobs#4 user 0.3s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=dcefcab0-9ae3-4552-a50d-c3107bd341c9 role=assistant session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] ingestion.extraction_batch_saved batch_id=0b71c815-9207-5eae-9b2c-96c1fa0c1f11 event_id=dcefcab0-9ae3-4552-a50d-c3107bd341c9 turns=1
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=dcefcab0-9ae3-4552-a50d-c3107bd341c9
+rf-B1: s3-family-and-jobs#5 assistant 0.0s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=c89067c5-1faa-4f0a-a974-924587822587 role=user session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] Created new entity             entity_id=2d05a59c-4d4d-4a27-b491-8b9029aec112 entity_type=organization name=Brightpath user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=f959c556-e4d3-4618-8b50-decc3a529535 entity_type=product name=Python user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=72f533af-9528-47b3-8e23-ff74f472a3f6
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=c89067c5-1faa-4f0a-a974-924587822587
+rf-B1: s3-family-and-jobs#6 user 0.2s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=8b51f7f3-81a4-42c0-ab2d-f6adefd176bd role=assistant session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] ingestion.extraction_batch_saved batch_id=1340a13a-f32c-5520-8882-6ba9b8a26ab1 event_id=8b51f7f3-81a4-42c0-ab2d-f6adefd176bd turns=1
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=8b51f7f3-81a4-42c0-ab2d-f6adefd176bd
+rf-B1: s3-family-and-jobs#7 assistant 0.0s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=28293227-8ce6-4223-b9eb-b00e06d22fee role=user session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=cab0e31f-51a0-474b-8035-c08e748bbf6b entity_type=person name=Sam user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] Created new entity             entity_id=5636cbe8-ad9d-4be0-b835-ece48e8f59ad entity_type=product name='running shoes' user_id=chat-v1-dana
+2026-11-11 17:40:17 [debug    ] Reusing existing entity        entity_id=24532ce9-13d7-4aeb-b7f1-6da28b354edc entity_type=concept name=Biscuit user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] Created new entity             entity_id=911855b0-6cdd-49e4-acdb-ecb1988f4683 entity_type=product name="Sam's running shoes" user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=ee3abaaa-6fa4-478a-b56a-e8642cc9a10a
+2026-11-11 17:40:17 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=8f8676a7-ec1d-46eb-85b1-8558392776ba
+2026-11-11 17:40:17 [info     ] ingestion.phase2_complete      event_id=28293227-8ce6-4223-b9eb-b00e06d22fee
+rf-B1: s3-family-and-jobs#8 user 0.3s
+2026-11-11 17:40:17 [info     ] ingestion.phase1_complete      event_id=cff39762-8193-4cd2-b719-d2646a3e75eb role=assistant session_id=s3-family-and-jobs user_id=chat-v1-dana
+2026-11-11 17:40:17 [info     ] ingestion.extraction_batch_saved batch_id=df392e0b-dfd4-593a-8974-ad2d4726f12e event_id=cff39762-8193-4cd2-b719-d2646a3e75eb turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=cff39762-8193-4cd2-b719-d2646a3e75eb
+rf-B1: s3-family-and-jobs#9 assistant 0.0s
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=c443b99d-0927-421a-9968-96c2ef6cf9d1 role=user session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=2d05a59c-4d4d-4a27-b491-8b9029aec112 entity_type=organization name=Brightpath user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9ab109c1-bf34-4b32-9f2e-6600fa41cf69
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=c443b99d-0927-421a-9968-96c2ef6cf9d1
+rf-B1: s4-offer#0 user 0.2s
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=4d5171bf-2277-40fa-8a63-0f58f316b2f5 role=assistant session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.extraction_batch_saved batch_id=ce8fe816-4b67-5501-adce-6c6af0a62eed event_id=4d5171bf-2277-40fa-8a63-0f58f316b2f5 turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=4d5171bf-2277-40fa-8a63-0f58f316b2f5
+rf-B1: s4-offer#1 assistant 0.0s
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=793512a1-6292-4702-8d18-cff7d34538a0 role=user session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=c89f36d0-f897-477e-8e3d-a07e65001a07 entity_type=organization name=Northwind user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=df73e5e5-98d6-43f7-81fb-a2b4c7c7bee0
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=793512a1-6292-4702-8d18-cff7d34538a0
+rf-B1: s4-offer#2 user 0.2s
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=19cd773c-5dcc-4b41-ac9c-26dfce66c632 role=assistant session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.extraction_batch_saved batch_id=8a0e4c33-4e57-5746-8e84-9a5ab7627ff9 event_id=19cd773c-5dcc-4b41-ac9c-26dfce66c632 turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=19cd773c-5dcc-4b41-ac9c-26dfce66c632
+rf-B1: s4-offer#3 assistant 0.0s
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=62b5ee9a-100c-441e-a11b-fece08356823 role=user session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] Created new entity             entity_id=0435f8d4-9e59-47cb-a68a-b6a5f91eaa9a entity_type=event name='10 mile long run' user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=f4f09a13-e65d-41b5-a16a-56f0f4d3baaf
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=afa1ca5f-f51e-489b-a620-bb481beacb59
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=a6996c3b-ce16-457f-8eaa-a0a1c0e3a580
+2026-11-11 17:40:18 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=4edb526e-05d9-4df2-90d9-87151be23695
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=62b5ee9a-100c-441e-a11b-fece08356823
+rf-B1: s4-offer#4 user 0.3s
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=44ba9c29-b605-4be9-93db-36797f633a11 role=assistant session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.extraction_batch_saved batch_id=139100c1-00dd-59a8-9d7b-f1c88554c8ea event_id=44ba9c29-b605-4be9-93db-36797f633a11 turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=44ba9c29-b605-4be9-93db-36797f633a11
+rf-B1: s4-offer#5 assistant 0.0s
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=1d85fe79-da48-409b-bd4b-c6c17617992d role=user session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.extraction_batch_saved batch_id=199a4aad-16db-5efe-a0f8-0e0a51684815 event_id=1d85fe79-da48-409b-bd4b-c6c17617992d turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=1d85fe79-da48-409b-bd4b-c6c17617992d
+rf-B1: s4-offer#6 user 0.0s
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=a08efe75-ceb2-4d42-a9ff-e4488a6739b8 role=assistant session_id=s4-offer user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.extraction_batch_saved batch_id=e379f59c-0f26-5ea2-a00e-240db30766a8 event_id=a08efe75-ceb2-4d42-a9ff-e4488a6739b8 turns=1
+2026-11-11 17:40:18 [info     ] ingestion.phase2_complete      event_id=a08efe75-ceb2-4d42-a9ff-e4488a6739b8
+rf-B1: s4-offer#7 assistant 0.0s
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=f6a55aa4-cd7c-45e9-a3c9-4c8495e2381d entity_type=event name='Cherry Creek Half Marathon' user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=f6a55aa4-cd7c-45e9-a3c9-4c8495e2381d entity_type=event name='Cherry Creek Half Marathon' user_id=chat-v1-dana
+2026-11-11 17:40:18 [info     ] ingestion.phase1_complete      event_id=83f2d756-cae8-4f8b-a2f4-1736bf99a453 role=user session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:18 [debug    ] Reusing existing entity        entity_id=f6a55aa4-cd7c-45e9-a3c9-4c8495e2381d entity_type=event name='Cherry Creek Half Marathon' user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=26e85cf8-d80e-4207-adb4-a079d9138705
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9a9e5746-d159-4291-9647-94ef3472f6fd
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=83f2d756-cae8-4f8b-a2f4-1736bf99a453
+rf-B1: s5-race#0 user 0.3s
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=c188cc58-0f04-433d-83ae-c85d4acf9fae role=assistant session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] ingestion.extraction_batch_saved batch_id=7810711c-d995-54f0-9b38-027899e0695d event_id=c188cc58-0f04-433d-83ae-c85d4acf9fae turns=1
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=c188cc58-0f04-433d-83ae-c85d4acf9fae
+rf-B1: s5-race#1 assistant 0.0s
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=6510d0ca-14e7-4db7-9fa5-7b3f9120344f role=user session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=8f1d7f70-8439-49fd-8019-22623a605057 entity_type=person name=Melanie user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] Created new entity             entity_id=981d592e-cb8a-4daa-8524-f695fde14ffe entity_type=person name=Tom user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=258bc33d-b453-435c-a59a-f5e276b69536
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=63e4f954-f3e8-48ba-b404-72da3cb5756a
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=6510d0ca-14e7-4db7-9fa5-7b3f9120344f
+rf-B1: s5-race#2 user 0.2s
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=98076100-8fc3-4c4b-9131-6a1c28c9c597 role=assistant session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] ingestion.extraction_batch_saved batch_id=108cfcf5-9325-5436-85f5-15c1ce44660f event_id=98076100-8fc3-4c4b-9131-6a1c28c9c597 turns=1
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=98076100-8fc3-4c4b-9131-6a1c28c9c597
+rf-B1: s5-race#3 assistant 0.0s
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=1201bf89-4850-4c48-8387-5601d5dccf4f role=user session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=2d05a59c-4d4d-4a27-b491-8b9029aec112 entity_type=organization name=Brightpath user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=699aa51c-986c-4a29-9585-07426552edfd
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=1201bf89-4850-4c48-8387-5601d5dccf4f
+rf-B1: s5-race#4 user 0.2s
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=face3078-a54b-4250-8d3c-8ab09c62a824 role=assistant session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] ingestion.extraction_batch_saved batch_id=b546fbaf-9543-5167-aec4-48a7a43fa142 event_id=face3078-a54b-4250-8d3c-8ab09c62a824 turns=1
+2026-11-11 17:40:19 [info     ] ingestion.phase2_complete      event_id=face3078-a54b-4250-8d3c-8ab09c62a824
+rf-B1: s5-race#5 assistant 0.0s
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] ingestion.phase1_complete      event_id=f2103e51-af0f-4f83-b5f5-b7dda84f797e role=user session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:19 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=bcdb3a9a-36ec-4c2c-97e0-740a45fabd7c
+2026-11-11 17:40:19 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=e20713b8-a8ce-4f83-ba1d-5adcb33418f6
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=f2103e51-af0f-4f83-b5f5-b7dda84f797e
+rf-B1: s5-race#6 user 0.3s
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=77377a25-6956-418d-80de-fac4f1ce565d role=assistant session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.extraction_batch_saved batch_id=9a72b2ca-d485-5dec-99c3-459f18633dab event_id=77377a25-6956-418d-80de-fac4f1ce565d turns=1
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=77377a25-6956-418d-80de-fac4f1ce565d
+rf-B1: s5-race#7 assistant 0.0s
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=aaabcb1d-9223-4ce0-bab5-13a732500caa role=user session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.extraction_batch_saved batch_id=2461e2df-f2b4-5c90-a80e-58afdd411f7c event_id=aaabcb1d-9223-4ce0-bab5-13a732500caa turns=1
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=aaabcb1d-9223-4ce0-bab5-13a732500caa
+rf-B1: s5-race#8 user 0.0s
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=6578b7da-192d-47af-a95e-40addc2c4051 role=assistant session_id=s5-race user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.extraction_batch_saved batch_id=b6b49f33-3cc2-5ebb-b67a-e09ca8c554bd event_id=6578b7da-192d-47af-a95e-40addc2c4051 turns=1
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=6578b7da-192d-47af-a95e-40addc2c4051
+rf-B1: s5-race#9 assistant 0.0s
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=40835630-24bb-47d3-bf80-c54de900b389 role=user session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] Created new entity             entity_id=a5dbb170-4e38-42dc-94ae-3a1a32ebf1cb entity_type=event name='Portland trip' user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=24532ce9-13d7-4aeb-b7f1-6da28b354edc entity_type=concept name=Biscuit user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=cab0e31f-51a0-474b-8035-c08e748bbf6b entity_type=person name=Sam user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=53836642-271c-4d12-b0df-fc639866029b
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=f8286027-164a-4f94-8410-ecfc501aac41
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=6b4c8e94-6ffc-4a8b-8e1f-cb08bd7b1f83
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=0d184c26-ebcd-48be-aaf9-d82a340a1262
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=40835630-24bb-47d3-bf80-c54de900b389
+rf-B1: s6-trip#0 user 0.3s
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=bb07c40c-6e63-4197-a2e4-b5656e50c396 role=assistant session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.extraction_batch_saved batch_id=26691981-b58e-5627-b625-e040d905e75c event_id=bb07c40c-6e63-4197-a2e4-b5656e50c396 turns=1
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=bb07c40c-6e63-4197-a2e4-b5656e50c396
+rf-B1: s6-trip#1 assistant 0.0s
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=2f5bd575-d449-4cb0-9215-b7dede4bc458 role=user session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=24532ce9-13d7-4aeb-b7f1-6da28b354edc entity_type=concept name=Biscuit user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=fd7bc005-4fe7-4e3e-9b2a-b517ae6fd337
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=7cfdba97-10be-44a1-98c8-a149b162ef30
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=f9200632-a16d-4a0c-8562-7681029ac342
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=2f5bd575-d449-4cb0-9215-b7dede4bc458
+rf-B1: s6-trip#2 user 0.3s
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=67fead49-aba6-405b-8f4d-ffe979b73555 role=assistant session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.extraction_batch_saved batch_id=8d31b45d-a86e-5609-b7fc-f810899d584a event_id=67fead49-aba6-405b-8f4d-ffe979b73555 turns=1
+2026-11-11 17:40:20 [info     ] ingestion.phase2_complete      event_id=67fead49-aba6-405b-8f4d-ffe979b73555
+rf-B1: s6-trip#3 assistant 0.0s
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] ingestion.phase1_complete      event_id=cd754d11-8c6b-45f2-b586-801e7e87a4ec role=user session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:20 [debug    ] Reusing existing entity        entity_id=3821ecf2-405a-460c-be59-53bf2b0bb2d6 entity_type=person name=Dana user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] Created new entity             entity_id=eaa1a63d-a119-411c-b4d8-98ba9be2842c entity_type=location name=Boise user_id=chat-v1-dana
+2026-11-11 17:40:20 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9a40ff2d-3bfc-4488-8543-e76e1e28c441
+2026-11-11 17:40:21 [info     ] ingestion.phase2_complete      event_id=cd754d11-8c6b-45f2-b586-801e7e87a4ec
+rf-B1: s6-trip#4 user 0.2s
+2026-11-11 17:40:21 [info     ] ingestion.phase1_complete      event_id=a3ae12d0-1ea2-4fd2-8a69-4c3ecff2cd3b role=assistant session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:21 [info     ] ingestion.extraction_batch_saved batch_id=0e50846d-13c0-5782-915d-b6f7958a5cc7 event_id=a3ae12d0-1ea2-4fd2-8a69-4c3ecff2cd3b turns=1
+2026-11-11 17:40:21 [info     ] ingestion.phase2_complete      event_id=a3ae12d0-1ea2-4fd2-8a69-4c3ecff2cd3b
+rf-B1: s6-trip#5 assistant 0.0s
+2026-11-11 17:40:21 [info     ] ingestion.phase1_complete      event_id=f90fa806-334c-4fb0-9dec-b4bcd231e319 role=user session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:21 [info     ] ingestion.extraction_batch_saved batch_id=33527b25-dde3-5e13-a6d6-9c8f124a4fd8 event_id=f90fa806-334c-4fb0-9dec-b4bcd231e319 turns=1
+2026-11-11 17:40:21 [info     ] ingestion.phase2_complete      event_id=f90fa806-334c-4fb0-9dec-b4bcd231e319
+rf-B1: s6-trip#6 user 0.0s
+2026-11-11 17:40:21 [info     ] ingestion.phase1_complete      event_id=3e6145b2-a287-4d11-b340-70b38d0cf8ee role=assistant session_id=s6-trip user_id=chat-v1-dana
+2026-11-11 17:40:21 [info     ] ingestion.extraction_batch_saved batch_id=5407164b-7bcc-5393-b37f-f6e47df26caf event_id=3e6145b2-a287-4d11-b340-70b38d0cf8ee turns=1
+2026-11-11 17:40:21 [info     ] ingestion.phase2_complete      event_id=3e6145b2-a287-4d11-b340-70b38d0cf8ee
+rf-B1: s6-trip#7 assistant 0.0s
+2026-11-11 17:40:22 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:40:22 [info     ] write_queue.stopped
+2026-11-11 17:40:22 [info     ] write_queue.started
+2026-11-11 17:40:23 [info     ] ingestion.pipeline_shutdown
+2026-11-11 17:40:23 [info     ] write_queue.stopped
+{
+ "label": "rf-B1",
+ "folder": "/Users/dwamianm/Sites/prism/data/chat-probe-v1/chat-v1/rf-B1",
+ "oracle": {
+  "model_calls": 0,
+  "turns": {
+   "with assertions": 25,
+   "without assertions": 29
+  },
+  "empty_extractions": 29,
+  "tally": {
+   "assertions": 57,
+   "accepted": 57,
+   "refused": 0,
+   "refused_by_reason": {},
+   "accepted_needing": {
+    "text only": 25,
+    "speaker": 0,
+    "memory": 32,
+    "closure": 1
+   }
+  },
+  "check_disagrees_with_the_build": []
+ },
+ "summary": {
+  "extraction calls": 0,
+  "active claims": 55,
+  "distinct claim texts": 40,
+  "claims whose text repeats another's": 15,
+  "claims repeating a subject, predicate and object": 3,
+  "claims whose text is the whole message": 3,
+  "claims from assistant turns only": 1,
+  "user claims attached to the named owner": 28,
+  "user claims attached to a first-person pronoun": 0,
+  "entities": 28,
+  "entities with no link": 0,
+  "pronoun entities": 0,
+  "key entities found / split / missing": "17/0/0",
+  "key links linked / via pronoun / not linked / missing": "14/0/0/0",
+  "probes with the answer in context": "18/18",
+  "probes with the answer ranked in the top 3": "17/18",
+  "probes with the answer ranked in the top 5": "17/18",
+  "probes with a stale value in context": 3,
+  "repeated records in contexts": "0/1278"
+ }
+}
