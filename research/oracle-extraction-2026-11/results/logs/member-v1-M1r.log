@@ -1,0 +1,142 @@
+ox-M1r: s1-dependents#0 user 0.3s
+ox-M1r: s1-dependents#1 assistant 0.0s
+Confidence matrix missing combination (inferred, user_stated), using fallback 0.50
+ox-M1r: s1-dependents#2 user 0.1s
+ox-M1r: s1-dependents#3 assistant 0.0s
+ox-M1r: s1-dependents#4 user 0.2s
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=relationships[1] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s1-dependents#5 assistant 0.0s
+Confidence matrix missing combination (inferred, user_stated), using fallback 0.50
+ox-M1r: s1-dependents#6 user 0.1s
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+2026-11-11 12:42:47 [warning  ] extraction_claim_discarded     path=relationships[1] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s1-dependents#7 assistant 0.0s
+ox-M1r: s1-dependents#8 user 0.3s
+ox-M1r: s1-dependents#9 assistant 0.1s
+ox-M1r: s1-dependents#10 user 0.0s
+ox-M1r: s1-dependents#11 assistant 0.0s
+ox-M1r: s2-benefits#0 user 0.2s
+ox-M1r: s2-benefits#1 assistant 0.2s
+ox-M1r: s2-benefits#2 user 0.2s
+2026-11-11 12:42:48 [warning  ] extraction_claim_discarded     path=facts[0] reason='facts[0].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+2026-11-11 12:42:48 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s2-benefits#3 assistant 0.2s
+2026-11-11 12:42:48 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:48 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s2-benefits#4 user 0.1s
+ox-M1r: s2-benefits#5 assistant 0.7s
+2026-11-11 12:42:49 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s2-benefits#6 user 0.6s
+ox-M1r: s2-benefits#7 assistant 0.4s
+ox-M1r: s2-benefits#8 user 0.6s
+ox-M1r: s2-benefits#9 assistant 0.2s
+ox-M1r: s2-benefits#10 user 0.3s
+2026-11-11 12:42:51 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s2-benefits#11 assistant 0.2s
+Confidence matrix missing combination (inferred, user_stated), using fallback 0.50
+ox-M1r: s3-return#0 user 0.2s
+2026-11-11 12:42:51 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:51 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:51 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+2026-11-11 12:42:51 [warning  ] extraction_claim_discarded     path=relationships[1] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s3-return#1 assistant 0.1s
+ox-M1r: s3-return#2 user 0.1s
+ox-M1r: s3-return#3 assistant 0.2s
+ox-M1r: s3-return#4 user 0.1s
+ox-M1r: s3-return#5 assistant 0.2s
+# Chat probe: member-v1 / ox-M1r
+
+Settings: `{"overrides": {"enable_speaker_grounding": true, "memory_mode": "address_first"}, "speaker": true, "organize": false}`
+
+| Measure | Value |
+|---|---|
+| extraction calls | 0 |
+| active claims | 32 |
+| distinct claim texts | 31 |
+| claims whose text repeats another's | 1 |
+| claims repeating a subject, predicate and object | 3 |
+| claims whose text is the whole message | 6 |
+| claims from assistant turns only | 19 |
+| user claims attached to the named owner | 7 |
+| user claims attached to a first-person pronoun | 1 |
+| entities | 36 |
+| entities with no link | 0 |
+| pronoun entities | 3 |
+| key entities found / split / missing | 6/0/0 |
+| key links linked / via pronoun / not linked / missing | 4/0/0/0 |
+| probes with the answer in context | 12/12 |
+| probes with the answer ranked in the top 3 | 11/12 |
+| probes with the answer ranked in the top 5 | 12/12 |
+| probes with a stale value in context | 0 |
+| repeated records in contexts | 60/624 |
+
+## Records
+
+| Type/state | Count |
+|---|---|
+| entity/tentative | 36 |
+| fact/tentative | 32 |
+| note/tentative | 30 |
+
+## What the owner's claims are attached to
+
+| Subject | Claims from user turns |
+|---|---|
+| first_person_pronoun | 1 |
+| other_entity | 5 |
+| owner_named | 7 |
+
+## Facts the conversation repeats
+
+| Fact | User mentions | Claims stating it | From assistant only | Records showing its text |
+|---|---|---|---|---|
+| Maya's dependents are Theo and Nico | 1 | 0 | 0 | 1 |
+| The individual deductible is $1,500 | 0 | 2 | 2 | 2 |
+
+## Links of the answer key
+
+| Link | Status | Connecting claims |
+|---|---|---|
+| Maya's husband is Theo | linked | Theo → is_husband_of → Maya Okafor (tentative) |
+| Maya's child is Nico | linked | Nico → is_child_of → Maya Okafor (tentative); Theo → is_husband_of → Maya Okafor (tentative) |
+| Maya is planning a trip to Jamaica | linked | I → planning_trip_to → Jamaica (tentative) |
+| Maya was diagnosed with breast cancer | linked | I → diagnosed_with → breast cancer (tentative) |
+
+## Entities of the answer key
+
+| Entity | Nodes | Status |
+|---|---|---|
+| maya | 1 | found |
+| theo | 1 | found |
+| nico | 1 | found |
+| jamaica | 1 | found |
+| breast-cancer | 1 | found |
+| dana | 1 | found |
+
+Entities with no link (0): none
+
+Pronoun entities (3): I, You, we
+
+## Probe questions
+
+| Probe | Answer in context | Answer rank | Stale value | Records | Repeated records | Tokens |
+|---|---|---|---|---|---|---|
+| Who is Maya's husband? | yes | 1 |  | 52 | 5 (10%) | 1802/4096 |
+| What is the name of Maya's child? | yes | 1 |  | 52 | 5 (10%) | 1805/4096 |
+| What are the names of Maya's dependents? | yes | 1 |  | 52 | 5 (10%) | 1805/4096 |
+| Do you remember the names of my dependents? | yes | 1 |  | 52 | 5 (10%) | 1805/4096 |
+| What was Maya diagnosed with? | yes | 2 |  | 52 | 5 (10%) | 1805/4096 |
+| What did I tell you about my health? | yes | 1 |  | 52 | 5 (10%) | 1802/4096 |
+| Where is Maya planning a trip? | yes | 1 |  | 52 | 5 (10%) | 1805/4096 |
+| When is Maya's trip to Jamaica? | yes | 1 |  | 52 | 5 (10%) | 1864/4096 |
+| Is Maya expecting a baby? | yes | 3 |  | 52 | 5 (10%) | 1805/4096 |
+| What life event did Maya mention? | yes | 4 |  | 52 | 5 (10%) | 1805/4096 |
+| What is my deductible? | yes | 1 |  | 52 | 5 (10%) | 1805/4096 |
+| What did Maya's coworker Dana ask about? | yes | 2 |  | 52 | 5 (10%) | 1805/4096 |
+

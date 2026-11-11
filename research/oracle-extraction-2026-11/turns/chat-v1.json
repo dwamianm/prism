@@ -1,0 +1,315 @@
+{
+ "name": "chat-v1",
+ "user_name": "Dana",
+ "owner": "chat-v1-dana",
+ "reference_time": "2026-06-25T12:00:00+00:00",
+ "speaker_named": false,
+ "sessions": [
+  {
+   "id": "s1-intro",
+   "start": "2026-02-03T19:00:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Nice to meet you, Dana! Denver with Sam and a golden retriever named Biscuit sounds like a lovely household. What would you like help with?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Got it, weekly dashboards for Priya at Northwind. I can help you template those so they take less time each week. Which tool do you build them in?"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "We use Tableau at Northwind. Honestly I'd rather use Python, but Tableau is the standard there."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Understood: Tableau is the standard at Northwind, even though you prefer Python. We could script the data prep in Python and keep Tableau just for the visuals."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Good idea. Also, food-wise, I've been vegetarian for about six years, so keep that in mind if I ask about recipes."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "Noted: vegetarian for about six years. I'll keep recipe suggestions meat-free."
+    },
+    {
+     "index": 8,
+     "role": "user",
+     "text": "Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
+    },
+    {
+     "index": 9,
+     "role": "assistant",
+     "text": "Opposite schedules can be tough. With Sam on nights at Denver Health, would it help to plan shared time around Sam's days off?"
+    }
+   ]
+  },
+  {
+   "id": "s2-running",
+   "start": "2026-02-24T20:10:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my running partner."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "That's exciting! The Cherry Creek Half on May 17 gives you about twelve weeks. Training with Melanie should help you stay consistent."
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Mel has run like ten half marathons, so she's making me a training plan. We're doing three runs a week."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Three runs a week on a plan from an experienced runner is a solid base. How long is your current long run?"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Switching from coffee to green tea while ramping up training is a lot at once! Green tea still gives you a little caffeine for those morning runs."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Can you suggest a quick vegetarian dinner I can make after runs? Nothing with peanuts though, Sam is allergic to peanuts."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "Sure: a chickpea and spinach curry with rice takes about 25 minutes, is vegetarian and has no peanuts. I'll leave peanuts out of suggestions since Sam is allergic."
+    }
+   ]
+  },
+  {
+   "id": "s3-family-and-jobs",
+   "start": "2026-03-19T18:30:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Congratulations, Aunt Dana! Welcome to the world, Ivy. How are Rachel and the baby doing?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Both healthy. Rachel lives in Portland, so I haven't met Ivy yet. I'm hoping to visit this summer."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Wonderful that they're both healthy. A summer trip to Portland to meet Ivy sounds like a great plan."
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "Work is getting interesting too. I had a first interview with Brightpath on Monday for an analytics manager role."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "An analytics manager role at Brightpath would be a step up. How did the first interview go?"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Really well. If Brightpath makes an offer, I'll probably take it. Their team uses Python for everything, which I love."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "That sounds like a great fit, given that you prefer Python. Let me know if you want help preparing for the next round."
+    },
+    {
+     "index": 8,
+     "role": "user",
+     "text": "Will do. Biscuit is being a menace this week, by the way. My dog ate one of Sam's running shoes."
+    },
+    {
+     "index": 9,
+     "role": "assistant",
+     "text": "Oh no, Biscuit! Golden retrievers do love to chew. A few tougher chew toys might help."
+    }
+   ]
+  },
+  {
+   "id": "s4-offer",
+   "start": "2026-04-14T21:00:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Congratulations, Dana! Accepting the analytics manager offer at Brightpath is a big move, and starting on May 4 gives you a few weeks to wrap up."
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "I gave notice at Northwind yesterday. Priya was really nice about it."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "It's great that Priya took it well. Leaving Northwind on good terms matters."
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "Training update: Mel and I did a 10 mile long run on Saturday. Longest run of my life."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Ten miles is a huge milestone! You and Mel are right on track for the half in May."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Sam has been great about all the changes, even while working nights as a nurse."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "It sounds like Sam has been a big support through the job change and the training."
+    }
+   ]
+  },
+  {
+   "id": "s5-race",
+   "start": "2026-05-20T19:45:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Amazing, Dana! 1:58:30 for your first half marathon, and under two hours. Congratulations!"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "What a stretch for Melanie: a 1:41 half and an engagement to Tom! Please pass on my congratulations."
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at Northwind."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "That's a great sign two weeks in. What do you like most about the Brightpath team?"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "They're all Python people and nobody asks for weekly dashboards. Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "Noted: you're pescatarian now rather than vegetarian. Should I include fish dishes in suggestions from now on?"
+    },
+    {
+     "index": 8,
+     "role": "user",
+     "text": "Yes please. Still no peanuts for Sam, though."
+    },
+    {
+     "index": 9,
+     "role": "assistant",
+     "text": "Got it: fish is fine, and peanuts are still out because of Sam's allergy."
+    }
+   ]
+  },
+  {
+   "id": "s6-trip",
+   "start": "2026-06-18T20:20:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "I'm planning the Portland trip for July to finally meet Ivy. Sam can't come because of work, so it'll be just me and Biscuit."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "A July trip to Portland to meet Ivy sounds lovely. Are you planning to drive with Biscuit or fly?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Drive. It's about 18 hours from Denver, so I'll split it over two days. Biscuit is a great road trip dog, he's our 3 year old golden."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Splitting the 18-hour drive over two days makes sense, especially with Biscuit along. Do you want help finding dog-friendly places to stay?"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to tell Rachel about it."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "In February you signed up for the Cherry Creek Half Marathon on May 17, and you finished it in 1:58:30. For Boise, I'd look at pet-friendly hotels near the interstate."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "She'll be impressed! Have a great trip, and enjoy meeting Ivy."
+    }
+   ]
+  }
+ ]
+}

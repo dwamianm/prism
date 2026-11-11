@@ -1,0 +1,810 @@
+[
+ {
+  "id": "job-now",
+  "question": "Where does Dana work now?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "works_at"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Two weeks in at Brightpath and I already like my team more than the one at Northwind."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I gave notice at Northwind yesterday."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   }
+  ]
+ },
+ {
+  "id": "title-now",
+  "question": "What is Dana's job title now?",
+  "answer_rank": 7,
+  "report_rank": 7,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "works_at"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Two weeks in at Brightpath and I already like my team more than the one at Northwind."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I gave notice at Northwind yesterday."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Green tea now."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at Northwind."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+   }
+  ]
+ },
+ {
+  "id": "start-date",
+  "question": "When did Dana start the new job?",
+  "answer_rank": 10,
+  "report_rank": 10,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I had a first interview with Brightpath on Monday for an analytics manager role."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Congratulations, Aunt Dana! Welcome to the world, Ivy."
+   }
+  ]
+ },
+ {
+  "id": "old-manager",
+  "question": "Who was Dana's manager at Northwind?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "manager_of (manager)"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "We use Tableau at Northwind."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I gave notice at Northwind yesterday."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "I gave notice at Northwind yesterday. Priya was really nice about it."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
+   }
+  ]
+ },
+ {
+  "id": "partner-job",
+  "question": "What does Dana's partner do for work?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "partner_of",
+   "works_at"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Work is getting interesting too. I had a first interview with Brightpath on Monday for an analytics manager role."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy. Sam can't come because of work, so it'll be just me and Biscuit."
+   }
+  ]
+ },
+ {
+  "id": "allergy",
+  "question": "What is Sam allergic to?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "allergic_to"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Nothing with peanuts though, Sam is allergic to peanuts."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Biscuit is being a menace this week, by the way. My dog ate one of Sam's running shoes."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Can you suggest a quick vegetarian dinner I can make after runs? Nothing with peanuts though, Sam is allergic to peanuts."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "My dog ate one of Sam's running shoes."
+   }
+  ]
+ },
+ {
+  "id": "dog",
+  "question": "What kind of dog does Dana have, and what is it called?",
+  "answer_rank": 9,
+  "report_rank": 9,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "involved_in"
+  ],
+  "route_candidates": 5,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I'm so happy I got under two hours."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Training update: Mel and I did a 10 mile long run on Saturday."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana involved in first interview."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I had a first interview with Brightpath on Monday for an analytics manager role."
+   }
+  ]
+ },
+ {
+  "id": "niece-name",
+  "question": "What is the name of Dana's niece?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Congratulations, Aunt Dana! Welcome to the world, Ivy."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+   }
+  ]
+ },
+ {
+  "id": "niece-born",
+  "question": "When was Ivy born?",
+  "answer_rank": null,
+  "report_rank": null,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Congratulations, Aunt Dana! Welcome to the world, Ivy."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy. Sam can't come because of work, so it'll be just me and Biscuit."
+   }
+  ]
+ },
+ {
+  "id": "sister-city",
+  "question": "Where does Dana's sister live?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (sister)",
+   "lives_in"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Big news: my sister Rachel had her baby last Thursday!"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   }
+  ]
+ },
+ {
+  "id": "running-partner",
+  "question": "Who is Dana's running partner?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "friend_of",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "My friend Melanie talked me into it."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "We're doing three runs a week."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Training update: Mel and I did a 10 mile long run on Saturday."
+   }
+  ]
+ },
+ {
+  "id": "race-time",
+  "question": "What was Dana's half marathon finishing time?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it."
+   },
+   {
+    "rank": 2,
+    "type": "note",
+    "content": "I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my running partner."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I finished the Cherry Creek Half on Sunday in 1:58:30!"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Mel has run like ten half marathons, so she's making me a training plan."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+   }
+  ]
+ },
+ {
+  "id": "coffee",
+  "question": "Does Dana drink coffee?",
+  "answer_rank": 9,
+  "report_rank": 9,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana diet vegetarian."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   }
+  ]
+ },
+ {
+  "id": "diet",
+  "question": "What is Dana's diet now?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana diet vegetarian."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Green tea now."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+   }
+  ]
+ },
+ {
+  "id": "mel-news",
+  "question": "What news did Melanie share after the race?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Training update: Mel and I did a 10 mile long run on Saturday."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Big news: my sister Rachel had her baby last Thursday!"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Mel has run like ten half marathons, so she's making me a training plan."
+   }
+  ]
+ },
+ {
+  "id": "trip",
+  "question": "What is Dana planning for July?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I'm planning the Portland trip for July to finally meet Ivy. Sam can't come because of work, so it'll be just me and Biscuit."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   }
+  ]
+ },
+ {
+  "id": "overnight",
+  "question": "Where will Dana stop overnight on the drive?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Yes, somewhere around Boise for the overnight stop."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana visits Portland."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Rachel lives in Portland, so I haven't met Ivy yet."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retriever, Biscuit."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   }
+  ]
+ },
+ {
+  "id": "language",
+  "question": "Which programming language does Dana prefer?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "prefers"
+  ],
+  "route_candidates": 3,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Green tea now."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Honestly I'd rather use Python, but Tableau is the standard there."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Also I quit coffee last month, so mornings are rough."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Priya manager of Dana."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "I had a first interview with Brightpath on Monday for an analytics manager role."
+   }
+  ]
+ }
+]

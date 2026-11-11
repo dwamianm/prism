@@ -1,0 +1,230 @@
+ox-M1r: s1-intro#0 user 0.9s
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=relationships[1] reason='relationship endpoints must occur in evidence_quote'
+2026-11-11 12:42:55 [warning  ] extraction_claim_discarded     path=relationships[2] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s1-intro#1 assistant 0.1s
+ox-M1r: s1-intro#2 user 0.3s
+ox-M1r: s1-intro#3 assistant 0.2s
+2026-11-11 12:42:56 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+Confidence matrix missing combination (inferred, user_stated), using fallback 0.50
+ox-M1r: s1-intro#4 user 0.3s
+ox-M1r: s1-intro#5 assistant 0.2s
+2026-11-11 12:42:56 [warning  ] extraction_claim_discarded     path=facts[0] reason='an explicit if/unless condition requires epistemic_type conditional'
+ox-M1r: s1-intro#6 user 0.1s
+2026-11-11 12:42:56 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+ox-M1r: s1-intro#7 assistant 0.2s
+2026-11-11 12:42:57 [warning  ] extraction_claim_discarded     path=facts[3] reason='facts[3].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s1-intro#8 user 0.2s
+ox-M1r: s1-intro#9 assistant 0.2s
+2026-11-11 12:42:57 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:57 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:42:57 [warning  ] extraction_claim_discarded     path=relationships[1] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s2-running#0 user 0.2s
+ox-M1r: s2-running#1 assistant 0.2s
+2026-11-11 12:42:57 [warning  ] extraction_quantity_discarded  reason='Quantity is not an exact supported value and unit in the claim object' subject=Mel
+2026-11-11 12:42:57 [warning  ] extraction_quantity_discarded  reason='Quantity is not an exact supported value and unit in the claim object' subject=we
+ox-M1r: s2-running#2 user 0.4s
+ox-M1r: s2-running#3 assistant 0.1s
+2026-11-11 12:42:58 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s2-running#4 user 0.2s
+ox-M1r: s2-running#5 assistant 0.3s
+2026-11-11 12:42:58 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s2-running#6 user 0.2s
+ox-M1r: s2-running#7 assistant 0.2s
+ox-M1r: s3-family-and-jobs#0 user 0.7s
+ox-M1r: s3-family-and-jobs#1 assistant 0.3s
+2026-11-11 12:43:00 [warning  ] extraction_claim_discarded     path=facts[2] reason='an attempt or intention requires a predicate that preserves the non-completed speech act'
+ox-M1r: s3-family-and-jobs#2 user 1.0s
+2026-11-11 12:43:01 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s3-family-and-jobs#3 assistant 0.2s
+2026-11-11 12:43:01 [warning  ] extraction_claim_discarded     path=facts[2] reason='facts[2].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s3-family-and-jobs#4 user 0.4s
+ox-M1r: s3-family-and-jobs#5 assistant 0.2s
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationships[0].source_entity is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s3-family-and-jobs#6 user 0.3s
+ox-M1r: s3-family-and-jobs#7 assistant 0.2s
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationships[0].target_entity is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s3-family-and-jobs#8 user 0.2s
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:02 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s3-family-and-jobs#9 assistant 0.1s
+2026-11-11 12:43:03 [warning  ] extraction_claim_discarded     path=facts[3] reason='subject and object must occur in evidence_quote'
+ox-M1r: s4-offer#0 user 0.4s
+2026-11-11 12:43:03 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:03 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:03 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s4-offer#1 assistant 0.1s
+ox-M1r: s4-offer#2 user 0.4s
+2026-11-11 12:43:03 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s4-offer#3 assistant 0.3s
+2026-11-11 12:43:04 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+ox-M1r: s4-offer#4 user 0.3s
+2026-11-11 12:43:04 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:04 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:04 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s4-offer#5 assistant 0.1s
+ox-M1r: s4-offer#6 user 0.2s
+ox-M1r: s4-offer#7 assistant 0.2s
+ox-M1r: s5-race#0 user 0.5s
+ox-M1r: s5-race#1 assistant 0.3s
+2026-11-11 12:43:05 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:05 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s5-race#2 user 0.6s
+ox-M1r: s5-race#3 assistant 0.3s
+2026-11-11 12:43:06 [warning  ] extraction_claim_discarded     path=facts[2] reason='facts[2].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s5-race#4 user 0.4s
+ox-M1r: s5-race#5 assistant 0.1s
+2026-11-11 12:43:07 [warning  ] extraction_claim_discarded     path=facts[1] reason='facts[1].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+ox-M1r: s5-race#6 user 0.8s
+ox-M1r: s5-race#7 assistant 0.4s
+ox-M1r: s5-race#8 user 0.2s
+ox-M1r: s5-race#9 assistant 0.3s
+2026-11-11 12:43:08 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+ox-M1r: s6-trip#0 user 0.6s
+2026-11-11 12:43:09 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:09 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s6-trip#1 assistant 0.2s
+2026-11-11 12:43:09 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s6-trip#2 user 0.5s
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+ox-M1r: s6-trip#3 assistant 0.1s
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s6-trip#4 user 0.4s
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=relationships[0] reason='relationship endpoints must occur in evidence_quote'
+ox-M1r: s6-trip#5 assistant 0.1s
+2026-11-11 12:43:10 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+ox-M1r: s6-trip#6 user 0.2s
+ox-M1r: s6-trip#7 assistant 0.2s
+# Chat probe: chat-v1 / ox-M1r
+
+Settings: `{"overrides": {"memory_mode": "address_first"}, "speaker": false, "organize": false}`
+
+| Measure | Value |
+|---|---|
+| extraction calls | 0 |
+| active claims | 101 |
+| distinct claim texts | 101 |
+| claims whose text repeats another's | 0 |
+| claims repeating a subject, predicate and object | 4 |
+| claims whose text is the whole message | 5 |
+| claims from assistant turns only | 31 |
+| user claims attached to the named owner | 35 |
+| user claims attached to a first-person pronoun | 3 |
+| entities | 58 |
+| entities with no link | 0 |
+| pronoun entities | 14 |
+| key entities found / split / missing | 15/2/0 |
+| key links linked / via pronoun / not linked / missing | 14/0/0/0 |
+| probes with the answer in context | 17/18 |
+| probes with the answer ranked in the top 3 | 15/18 |
+| probes with the answer ranked in the top 5 | 16/18 |
+| probes with a stale value in context | 3 |
+| repeated records in contexts | 18/1632 |
+
+## Records
+
+| Type/state | Count |
+|---|---|
+| decision/tentative | 3 |
+| entity/tentative | 58 |
+| fact/superseded | 1 |
+| fact/tentative | 91 |
+| note/tentative | 54 |
+| preference/tentative | 7 |
+
+## What the owner's claims are attached to
+
+| Subject | Claims from user turns |
+|---|---|
+| first_person_pronoun | 3 |
+| other_entity | 30 |
+| other_pronoun | 2 |
+| owner_named | 35 |
+
+## Facts the conversation repeats
+
+| Fact | User mentions | Claims stating it | From assistant only | Records showing its text |
+|---|---|---|---|---|
+| Biscuit is a golden retriever | 2 | 3 | 1 | 5 |
+| Sam is a nurse | 2 | 2 | 0 | 2 |
+| Sam is allergic to peanuts | 2 | 6 | 4 | 7 |
+| Dana prefers Python | 3 | 6 | 2 | 7 |
+| The half marathon is on May 17 | 1 | 1 | 1 | 2 |
+
+## Links of the answer key
+
+| Link | Status | Connecting claims |
+|---|---|---|
+| Dana's partner is Sam | linked | I → has_partner → Sam (tentative); I → lives_in → Denver (tentative) |
+| Dana's dog is Biscuit | linked | I → traveling_with → Biscuit (tentative); I → has_pet → Biscuit (tentative); I → lives_in → Denver (tentative) |
+| Dana lives in Denver | linked | I → travels_from → Denver (tentative); I → lives_in → Denver (tentative) |
+| Rachel is Dana's sister | linked | I → wants_to_tell → Rachel (tentative); Rachel → is_sister_of → I (tentative) |
+| Ivy is Rachel's daughter | linked | Rachel → lives_in → Portland (tentative); Rachel → had_baby → Ivy (tentative) |
+| Rachel lives in Portland | linked | Rachel → lives_in → Portland (tentative) |
+| Melanie is Dana's friend and running partner | linked | I → ran_with → Mel (tentative); Melanie → friend_of → I (tentative) |
+| Melanie got engaged to Tom | linked | Melanie → engaged_to → Tom (tentative); Melanie → ran_half_marathon_time → 1:41 half (tentative) |
+| Dana worked at Northwind (past) | linked | I → likes_team_more_than → the one at Northwind (tentative); I → works_at → Brightpath (tentative); I → gave_notice_at → Northwind (tentative); and 4 more |
+| Dana works at Brightpath (current) | linked | I → works_at → Brightpath (tentative); I → accepted_offer_from → Brightpath (tentative); I → received_offer_from → Brightpath (tentative); and 2 more |
+| Priya was Dana's manager | linked | Priya → manager_of → I (tentative); I → role → data analyst (tentative) |
+| Sam is a nurse at Denver Health | linked | Sam → works_at → Denver Health (tentative); Sam → works_at → Denver Health (tentative); Sam → role → nurse (tentative) |
+| Dana ran the Cherry Creek Half Marathon | linked | I → completed → Cherry Creek Half (tentative); I → signed_up_for → Cherry Creek Half Marathon (tentative) |
+| Dana prefers Python | linked | I → likes → Python (tentative); I → would_rather_use → Python (tentative) |
+
+## Entities of the answer key
+
+| Entity | Nodes | Status |
+|---|---|---|
+| dana | 1 | found |
+| sam | 1 | found |
+| biscuit | 1 | found |
+| rachel | 1 | found |
+| ivy | 1 | found |
+| melanie | 2 | split |
+| tom | 1 | found |
+| priya | 1 | found |
+| northwind | 1 | found |
+| brightpath | 1 | found |
+| denver-health | 1 | found |
+| denver | 1 | found |
+| portland | 1 | found |
+| boise | 1 | found |
+| half-marathon | 2 | split |
+| tableau | 1 | found |
+| python | 1 | found |
+
+Entities with no link (0): none
+
+Pronoun entities (14): I, I, I, I, They, it, it, they, we, we, you, you, you, you
+
+## Probe questions
+
+| Probe | Answer in context | Answer rank | Stale value | Records | Repeated records | Tokens |
+|---|---|---|---|---|---|---|
+| Where does Dana work now? | yes | 2 | Northwind | 91 | 1 (1%) | 3102/4096 |
+| What is Dana's job title now? | yes | 12 | data analyst | 91 | 1 (1%) | 3102/4096 |
+| When did Dana start the new job? | yes | 2 |  | 90 | 1 (1%) | 3129/4096 |
+| Who was Dana's manager at Northwind? | yes | 3 |  | 90 | 1 (1%) | 3073/4096 |
+| What does Dana's partner do for work? | yes | 2 |  | 94 | 1 (1%) | 3167/4096 |
+| What is Sam allergic to? | yes | 1 |  | 91 | 1 (1%) | 3095/4096 |
+| What kind of dog does Dana have, and what is it called? | yes | 3 |  | 91 | 1 (1%) | 3108/4096 |
+| What is the name of Dana's niece? | yes | 1 |  | 90 | 1 (1%) | 3070/4096 |
+| When was Ivy born? | no | none |  | 90 | 1 (1%) | 3129/4096 |
+| Where does Dana's sister live? | yes | 2 |  | 90 | 1 (1%) | 3070/4096 |
+| Who is Dana's running partner? | yes | 2 |  | 91 | 1 (1%) | 3093/4096 |
+| What was Dana's half marathon finishing time? | yes | 1 |  | 90 | 1 (1%) | 3073/4096 |
+| Does Dana drink coffee? | yes | 5 |  | 90 | 1 (1%) | 3070/4096 |
+| What is Dana's diet now? | yes | 1 | vegetarian | 91 | 1 (1%) | 3098/4096 |
+| What news did Melanie share after the race? | yes | 2 |  | 90 | 1 (1%) | 3129/4096 |
+| What is Dana planning for July? | yes | 1 |  | 92 | 1 (1%) | 3125/4096 |
+| Where will Dana stop overnight on the drive? | yes | 3 |  | 90 | 1 (1%) | 3073/4096 |
+| Which programming language does Dana prefer? | yes | 3 |  | 90 | 1 (1%) | 3070/4096 |
+

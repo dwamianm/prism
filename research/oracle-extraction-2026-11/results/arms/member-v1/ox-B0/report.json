@@ -1,0 +1,525 @@
+{
+  "kind": "prme-chat-probe-report",
+  "schema_version": 1,
+  "label": "ox-B0",
+  "conversation": "member-v1",
+  "owner": "member-v1-maya",
+  "build": {
+    "turns": 30,
+    "seconds": 1.942648581978574,
+    "calls": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "cache_hits": 0,
+    "cache_unreproduced": 0
+  },
+  "settings": {
+    "overrides": {
+      "enable_speaker_grounding": true
+    },
+    "speaker": true,
+    "organize": false
+  },
+  "graph": {
+    "records": {
+      "entity/tentative": 4,
+      "fact/tentative": 9,
+      "note/tentative": 30
+    },
+    "claims": {
+      "active": 9,
+      "distinct_texts": 9,
+      "texts_shared_by_several_claims": 0,
+      "extra_copies_of_a_text": 0,
+      "same_claim_groups": 0,
+      "extra_copies_of_a_claim": 0,
+      "text_is_a_whole_message": 1,
+      "from_user_turns": 5,
+      "from_assistant_turns_only": 4,
+      "user_claim_subjects": {
+        "owner_named": 5
+      }
+    },
+    "entities": {
+      "active": 4,
+      "with_no_link": [],
+      "pronouns": [],
+      "key": {
+        "maya": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "theo": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "nico": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "jamaica": {
+          "nodes": 0,
+          "status": "missing"
+        },
+        "breast-cancer": {
+          "nodes": 0,
+          "status": "missing"
+        },
+        "dana": {
+          "nodes": 0,
+          "status": "missing"
+        }
+      }
+    },
+    "links": [
+      {
+        "id": "husband",
+        "label": "Maya's husband is Theo",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Maya Okafor \u2192 partner_of \u2192 Theo",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "child",
+        "label": "Maya's child is Nico",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Maya Okafor \u2192 kin_of \u2192 Nico",
+            "state": "tentative"
+          },
+          {
+            "claim": "Maya Okafor \u2192 partner_of \u2192 Theo",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip",
+        "label": "Maya is planning a trip to Jamaica",
+        "status": "entity_missing",
+        "claims": []
+      },
+      {
+        "id": "diagnosis",
+        "label": "Maya was diagnosed with breast cancer",
+        "status": "entity_missing",
+        "claims": []
+      }
+    ],
+    "repeats": [
+      {
+        "id": "dependents",
+        "label": "Maya's dependents are Theo and Nico",
+        "user_mentions": 1,
+        "claims_stating_it": 0,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 1,
+        "claims": []
+      },
+      {
+        "id": "deductible",
+        "label": "The individual deductible is $1,500",
+        "user_mentions": 0,
+        "claims_stating_it": 1,
+        "from_assistant_only": 1,
+        "records_showing_its_text": 1,
+        "claims": [
+          "Maya Okafor \u2192 deductible \u2192 $1,500"
+        ]
+      }
+    ]
+  },
+  "probes": [
+    {
+      "id": "husband",
+      "question": "Who is Maya's husband?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "note: OK. My husband is Theo and my child is Nico.",
+        "note: My coworker Dana asked whether dental is included for her son. Is it?",
+        "fact: Open enrollment is coming up.",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "child",
+      "question": "What is the name of Maya's child?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Nico"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "note: Do you remember the names of my dependents?",
+        "note: Do you remember the names of my dependents?",
+        "note: OK. My husband is Theo and my child is Nico."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "dependents",
+      "question": "What are the names of Maya's dependents?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo",
+        "Nico"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "note: Do you remember the names of my dependents?",
+        "note: Do you remember the names of my dependents?",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: Prenatal visits are covered in full in network, and delivery counts toward your deductible."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "dependents-first-person",
+      "question": "Do you remember the names of my dependents?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo",
+        "Nico"
+      ],
+      "answer_rank": 5,
+      "top_results": [
+        "note: Do you remember the names of my dependents?",
+        "note: Do you remember the names of my dependents?",
+        "note: Do you have information on my dependents?",
+        "note: Hi Kai. Do you remember me?",
+        "fact: My husband is Theo and my child is Nico."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "diagnosis",
+      "question": "What was Maya diagnosed with?",
+      "answer_in_context": true,
+      "terms_found": [
+        "breast cancer"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I was just diagnosed with breast cancer?",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "fact: My husband is Theo and my child is Nico.",
+        "note: I was just diagnosed with breast cancer? How does this plan cover it?",
+        "note: What is the first question I asked you today?"
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "diagnosis-first-person",
+      "question": "What did I tell you about my health?",
+      "answer_in_context": true,
+      "terms_found": [
+        "breast cancer",
+        "pregnant"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I am pregnant, how does my plan cover this?",
+        "fact: I was just diagnosed with breast cancer?",
+        "note: What is the first question I asked you today?",
+        "note: Do you have information on my dependents?",
+        "note: Do you remember the names of my dependents?"
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "trip",
+      "question": "Where is Maya planning a trip?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Jamaica"
+      ],
+      "answer_rank": 6,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "fact: I am pregnant, how does my plan cover this?",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: Open enrollment is coming up."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "trip-when",
+      "question": "When is Maya's trip to Jamaica?",
+      "answer_in_context": true,
+      "terms_found": [
+        "December"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: Open enrollment is coming up.",
+        "note: I am planning a trip for us in December to Jamaica. Do we need vaccines?",
+        "fact: My husband is Theo and my child is Nico.",
+        "note: My coworker Dana asked whether dental is included for her son. Is it?",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1379,
+      "token_budget": 4096
+    },
+    {
+      "id": "pregnant",
+      "question": "Is Maya expecting a baby?",
+      "answer_in_context": true,
+      "terms_found": [
+        "pregnant",
+        "newborn"
+      ],
+      "answer_rank": 3,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: Open enrollment is coming up.",
+        "note: My coworker Dana asked whether dental is included for her son. Is it?"
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "marriage",
+      "question": "What life event did Maya mention?",
+      "answer_in_context": true,
+      "terms_found": [
+        "married",
+        "marriage"
+      ],
+      "answer_rank": 5,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "note: What is the first question I asked you today?",
+        "note: I am getting married. What plan will be best for our new family?"
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "deductible",
+      "question": "What is my deductible?",
+      "answer_in_context": true,
+      "terms_found": [
+        "1,500"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "note: How much is my deductible?",
+        "note: How much is my deductible?",
+        "fact: I am pregnant, how does my plan cover this?",
+        "fact: Open enrollment is coming up."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    },
+    {
+      "id": "coworker",
+      "question": "What did Maya's coworker Dana ask about?",
+      "answer_in_context": true,
+      "terms_found": [
+        "dental"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "note: My coworker Dana asked whether dental is included for her son. Is it?",
+        "note: What is the first question I asked you today?",
+        "note: I am getting married. What plan will be best for our new family?",
+        "note: Open enrollment is coming up. What plan will be best for us?",
+        "note: You first asked whether I remember you, and then whether I have information on your dependents."
+      ],
+      "stale_in_context": [],
+      "records": 35,
+      "record_types": {
+        "entity": 2,
+        "fact": 3,
+        "note": 30
+      },
+      "distinct_texts": 32,
+      "repeated_records": 3,
+      "repeated_share": 0.08571428571428572,
+      "record_lines": 35,
+      "repeated_lines": 0,
+      "tokens_used": 1320,
+      "token_budget": 4096
+    }
+  ],
+  "summary": {
+    "extraction calls": 0,
+    "active claims": 9,
+    "distinct claim texts": 9,
+    "claims whose text repeats another's": 0,
+    "claims repeating a subject, predicate and object": 0,
+    "claims whose text is the whole message": 1,
+    "claims from assistant turns only": 4,
+    "user claims attached to the named owner": 5,
+    "user claims attached to a first-person pronoun": 0,
+    "entities": 4,
+    "entities with no link": 0,
+    "pronoun entities": 0,
+    "key entities found / split / missing": "3/0/3",
+    "key links linked / via pronoun / not linked / missing": "2/0/0/2",
+    "probes with the answer in context": "12/12",
+    "probes with the answer ranked in the top 3": "9/12",
+    "probes with the answer ranked in the top 5": "11/12",
+    "probes with a stale value in context": 0,
+    "repeated records in contexts": "36/420"
+  }
+}

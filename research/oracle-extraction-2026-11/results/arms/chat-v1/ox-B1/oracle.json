@@ -1,0 +1,37 @@
+{
+  "kind": "oracle-extraction-build",
+  "label": "ox-B1",
+  "conversation": "chat-v1",
+  "levels": [
+    "O1",
+    "O2"
+  ],
+  "facts": "research/oracle-extraction-2026-11/facts/chat-v1.json",
+  "facts_sha256": "a0f277d47f7d8d122e914840d35c93426be50a3785c17d6d356bc324fd2b9e06",
+  "overrides": {
+    "memory_mode": "address_first"
+  },
+  "speaker": false,
+  "model_calls": 0,
+  "turns": {
+    "with assertions": 25,
+    "without assertions": 29
+  },
+  "empty_extractions": 29,
+  "mention_patch_uses": 217,
+  "tally": {
+    "assertions": 58,
+    "turns": 25,
+    "accepted": 57,
+    "refused": 1,
+    "refused_by_reason": {
+      "literal value not in the turn": 1
+    },
+    "accepted_needing": {
+      "turn only": 26,
+      "owner": 27,
+      "carried": 5,
+      "closure": 1
+    }
+  }
+}

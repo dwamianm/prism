@@ -1,0 +1,97 @@
+{
+ "name": "defects-v1",
+ "user_name": "Alex Rivera",
+ "owner": "defects-v1-alex",
+ "reference_time": "2026-10-19T12:00:00+00:00",
+ "speaker_named": false,
+ "sessions": [
+  {
+   "id": "s1-trip",
+   "start": "2026-10-05T19:00:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "That is cherry blossom season. Which places are you thinking about?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "We chose Tokyo, Kyoto, Kanazawa, and Osaka. We dropped Hiroshima to save time."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "A shorter list makes for a calmer trip. Is there anything about getting around that you want to sort out?"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Both are easy to arrange ahead of time. Let me know when you want to start on the details."
+    }
+   ]
+  },
+  {
+   "id": "s2-learning",
+   "start": "2026-10-12T20:00:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "On weekends I am learning Rust. I am reading Rust for Rustaceans."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Good book. Do you write Go at work?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Yes, I write Go for services and TypeScript for tooling."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "That sounds like a practical mix. How are the weekend sessions going so far?"
+    }
+   ]
+  },
+  {
+   "id": "s3-work",
+   "start": "2026-10-16T16:30:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Good to have that settled. Is there anything else on your plate this week?"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "My manager Dana wants the runbook reviewed by Sam before Friday."
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Do you want help putting together a review checklist?"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,177 @@
+{
+ "name": "member-v1",
+ "user_name": "Maya Okafor",
+ "owner": "member-v1-maya",
+ "reference_time": "2026-11-04T12:00:00+00:00",
+ "speaker_named": true,
+ "sessions": [
+  {
+   "id": "s1-dependents",
+   "start": "2026-11-02T19:30:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "Hi Kai. Do you remember me?"
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Hello! I keep notes on what you tell me, so remind me of anything I should know."
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Do you have information on my dependents?"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Not yet. Who is on your plan with you?"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "OK. My husband is Theo and my child is Nico."
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Got it: Theo is your husband and Nico is your child. I will remember both of them."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "Do you remember the names of my dependents?"
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "Yes. Your dependents are Theo and Nico."
+    },
+    {
+     "index": 8,
+     "role": "user",
+     "text": "I am planning a trip for us in December to Jamaica. Do we need vaccines?"
+    },
+    {
+     "index": 9,
+     "role": "assistant",
+     "text": "For Jamaica, routine vaccines are enough for most travelers, and hepatitis A is recommended. Travel vaccines at an in-network pharmacy are covered as preventive care."
+    },
+    {
+     "index": 10,
+     "role": "user",
+     "text": "What is the first question I asked you today?"
+    },
+    {
+     "index": 11,
+     "role": "assistant",
+     "text": "You first asked whether I remember you, and then whether I have information on your dependents."
+    }
+   ]
+  },
+  {
+   "id": "s2-benefits",
+   "start": "2026-11-03T11:50:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "How much is my deductible?"
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care."
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "I am pregnant, how does my plan cover this? How do I enroll my newborn?"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Congratulations. Prenatal visits are covered in full in network, and delivery counts toward your deductible. You can add a newborn within 30 days of the birth as a qualifying life event."
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "I am getting married. What plan will be best for our new family?"
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Marriage is also a qualifying life event, so you can change plans within 30 days. With a spouse and a child on the plan, the family plan with the $3,000 deductible usually costs less over a year than two individual plans."
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "text": "I was just diagnosed with breast cancer? How does this plan cover it?"
+    },
+    {
+     "index": 7,
+     "role": "assistant",
+     "text": "I am sorry to hear that. Oncology visits, chemotherapy and radiation are covered in network after the deductible, with the out-of-pocket maximum of $6,000 as the limit for the year. Prior authorization is needed for some infusions."
+    },
+    {
+     "index": 8,
+     "role": "user",
+     "text": "Open enrollment is coming up. What plan will be best for us?"
+    },
+    {
+     "index": 9,
+     "role": "assistant",
+     "text": "With your treatment ahead, the plan with the lowest out-of-pocket maximum will likely cost the least. I can compare the two family plans when you have the enrollment guide."
+    },
+    {
+     "index": 10,
+     "role": "user",
+     "text": "My coworker Dana asked whether dental is included for her son. Is it?"
+    },
+    {
+     "index": 11,
+     "role": "assistant",
+     "text": "Dental is a separate plan. A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+    }
+   ]
+  },
+  {
+   "id": "s3-return",
+   "start": "2026-11-03T13:55:00+00:00",
+   "turns": [
+    {
+     "index": 0,
+     "role": "user",
+     "text": "Do you remember the names of my dependents?"
+    },
+    {
+     "index": 1,
+     "role": "assistant",
+     "text": "Yes. Your dependents are Theo, your husband, and Nico, your child."
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "text": "Dental"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "text": "Dental coverage is a separate plan with its own premium. Preventive cleanings are covered twice a year."
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "text": "How much is my deductible?"
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "text": "Your individual deductible is $1,500 and the family deductible is $3,000."
+    }
+   ]
+  }
+ ]
+}

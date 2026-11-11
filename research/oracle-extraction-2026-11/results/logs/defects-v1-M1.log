@@ -1,0 +1,114 @@
+ox-M1: s1-trip#0 user 1.0s
+ox-M1: s1-trip#1 assistant 0.0s
+ox-M1: s1-trip#2 user 0.3s
+ox-M1: s1-trip#3 assistant 0.0s
+ox-M1: s1-trip#4 user 0.3s
+ox-M1: s1-trip#5 assistant 0.0s
+ox-M1: s2-learning#0 user 0.6s
+ox-M1: s2-learning#1 assistant 0.1s
+ox-M1: s2-learning#2 user 0.3s
+ox-M1: s2-learning#3 assistant 0.0s
+ox-M1: s3-work#0 user 0.4s
+ox-M1: s3-work#1 assistant 0.0s
+ox-M1: s3-work#2 user 0.7s
+ox-M1: s3-work#3 assistant 0.0s
+# Chat probe: defects-v1 / ox-M1
+
+Settings: `{"overrides": {"memory_mode": "address_first"}, "speaker": false, "organize": false}`
+
+| Measure | Value |
+|---|---|
+| extraction calls | 0 |
+| active claims | 24 |
+| distinct claim texts | 24 |
+| claims whose text repeats another's | 0 |
+| claims repeating a subject, predicate and object | 0 |
+| claims whose text is the whole message | 2 |
+| claims from assistant turns only | 0 |
+| user claims attached to the named owner | 12 |
+| user claims attached to a first-person pronoun | 5 |
+| entities | 25 |
+| entities with no link | 0 |
+| pronoun entities | 2 |
+| key entities found / split / missing | 11/0/0 |
+| key links linked / via pronoun / not linked / missing | 9/0/5/0 |
+| probes with the answer in context | 7/7 |
+| probes with the answer ranked in the top 3 | 7/7 |
+| probes with the answer ranked in the top 5 | 7/7 |
+| probes with a stale value in context | 0 |
+| repeated records in contexts | 0/108 |
+
+## Records
+
+| Type/state | Count |
+|---|---|
+| decision/tentative | 5 |
+| entity/tentative | 25 |
+| fact/tentative | 16 |
+| note/tentative | 14 |
+| preference/tentative | 3 |
+
+## What the owner's claims are attached to
+
+| Subject | Claims from user turns |
+|---|---|
+| first_person_pronoun | 5 |
+| other_entity | 7 |
+| owner_named | 12 |
+
+## Facts the conversation repeats
+
+| Fact | User mentions | Claims stating it | From assistant only | Records showing its text |
+|---|---|---|---|---|
+
+## Links of the answer key
+
+| Link | Status | Connecting claims |
+|---|---|---|
+| Jordan is Alex's partner | linked | We → dropped_to_save_time → Hiroshima (tentative); We → dropped → Hiroshima (tentative); We → chose → Tokyo, Kyoto, Kanazawa, and Osaka (tentative); and 1 more |
+| Alex is planning a trip to Japan | linked | I → planning_trip_to → Japan (tentative); Jordan → partner_of → I (tentative) |
+| Jordan is going on the trip to Japan | linked | Jordan → planning_trip_to → Japan (tentative); Jordan → partner_of → I (tentative) |
+| Tokyo is a city of the trip to Japan | not_linked |  |
+| Kyoto is a city of the trip to Japan | not_linked |  |
+| Kanazawa is a city of the trip to Japan | not_linked |  |
+| Osaka is a city of the trip to Japan | not_linked |  |
+| Dana is Alex's manager | not_linked |  |
+| Dana wants Sam to review the runbook | linked | Dana → role → manager (tentative) |
+| Alex chose Tokyo for the trip ("We chose Tokyo, ...") | linked | We → chose → Tokyo, Kyoto, Kanazawa, and Osaka (tentative) |
+| Jordan chose Tokyo for the trip ("We chose Tokyo, ...") | linked | We → chose → Tokyo, Kyoto, Kanazawa, and Osaka (tentative) |
+| Alex dropped Hiroshima from the trip ("We dropped Hiroshima") | linked | We → dropped_to_save_time → Hiroshima (tentative); We → dropped → Hiroshima (tentative) |
+| Jordan dropped Hiroshima from the trip ("We dropped Hiroshima") | linked | We → dropped_to_save_time → Hiroshima (tentative); We → dropped → Hiroshima (tentative) |
+| Alex's team chose Postgres partitioning over TimescaleDB ("We chose ...") | linked | We → chose → Postgres partitioning over TimescaleDB for the shipment table (tentative) |
+
+## Entities of the answer key
+
+| Entity | Nodes | Status |
+|---|---|---|
+| alex | 1 | found |
+| jordan | 1 | found |
+| japan | 1 | found |
+| tokyo | 1 | found |
+| kyoto | 1 | found |
+| kanazawa | 1 | found |
+| osaka | 1 | found |
+| dana | 1 | found |
+| sam | 1 | found |
+| hiroshima | 1 | found |
+| timescaledb | 1 | found |
+
+Entities with no link (0): none
+
+Pronoun entities (2): We, We
+
+## Probe questions
+
+| Probe | Answer in context | Answer rank | Stale value | Records | Repeated records | Tokens |
+|---|---|---|---|---|---|---|
+| Which cities will Alex and Jordan visit in Japan? | yes | 2 |  | 15 | 0 (0%) | 531/4096 |
+| What coding language is Alex learning? | yes | 3 |  | 17 | 0 (0%) | 575/4096 |
+| Which languages does Alex write at work? | yes | 2 |  | 16 | 0 (0%) | 559/4096 |
+| How does Alex prefer to travel in Japan? | yes | 3 |  | 15 | 0 (0%) | 531/4096 |
+| Who is allergic to shellfish? | yes | 1 |  | 15 | 0 (0%) | 531/4096 |
+| What did the team choose for the shipment table? | yes | 1 |  | 15 | 0 (0%) | 531/4096 |
+| Who should review the runbook? | yes | 1 |  | 15 | 0 (0%) | 531/4096 |
+

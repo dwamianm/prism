@@ -1,0 +1,39 @@
+{
+  "kind": "oracle-extraction-build",
+  "label": "ox-B1r",
+  "conversation": "member-v1",
+  "levels": [
+    "O1",
+    "O2"
+  ],
+  "facts": "research/oracle-extraction-2026-11/facts/member-v1.json",
+  "facts_sha256": "786213ef3ccfd55685a2f19030787b49846c8cb3725c184e05c631da016264ae",
+  "overrides": {
+    "enable_speaker_grounding": true,
+    "memory_mode": "address_first"
+  },
+  "speaker": true,
+  "model_calls": 0,
+  "turns": {
+    "without assertions": 24,
+    "with assertions": 6
+  },
+  "empty_extractions": 24,
+  "mention_patch_uses": 57,
+  "tally": {
+    "assertions": 24,
+    "turns": 12,
+    "accepted": 9,
+    "refused": 15,
+    "refused_by_reason": {
+      "subject not in the turn, not the owner, not named earlier": 11,
+      "object not in the turn, not the owner, not named earlier": 4
+    },
+    "accepted_needing": {
+      "turn only": 0,
+      "owner": 9,
+      "carried": 0,
+      "closure": 0
+    }
+  }
+}

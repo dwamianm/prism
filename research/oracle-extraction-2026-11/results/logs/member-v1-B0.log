@@ -1,0 +1,199 @@
+2026-11-11 12:41:42 [info     ] write_queue.started
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=82192831-1e09-40de-b155-e0bbc0a82e40 role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=ab986266-6ca8-5027-b5bf-84b316ce8499 event_id=82192831-1e09-40de-b155-e0bbc0a82e40 turns=1
+2026-11-11 12:41:42 [info     ] Created new entity             entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=82192831-1e09-40de-b155-e0bbc0a82e40
+ox-B0: s1-dependents#0 user 0.2s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=3dd487fd-9fa3-4f83-86a5-e09ee6704c4f role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=9c626f60-b847-5cdd-9bae-d49da3137c7c event_id=3dd487fd-9fa3-4f83-86a5-e09ee6704c4f turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=3dd487fd-9fa3-4f83-86a5-e09ee6704c4f
+ox-B0: s1-dependents#1 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=a01798b6-aa37-4430-a87e-95bd25231696 role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=087cccf2-dbd5-5e5e-ada4-b4c1ee52ed9f event_id=a01798b6-aa37-4430-a87e-95bd25231696 turns=1
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=a01798b6-aa37-4430-a87e-95bd25231696
+ox-B0: s1-dependents#2 user 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=419a0f8c-0fad-4273-94a9-18027e7ab73d role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=0525dcae-43f2-50f3-99e9-99a4ce824aa6 event_id=419a0f8c-0fad-4273-94a9-18027e7ab73d turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=419a0f8c-0fad-4273-94a9-18027e7ab73d
+ox-B0: s1-dependents#3 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=9988dace-52cb-40e1-97f6-3ebf46a19bc3 role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] Created new entity             entity_id=94a00cd1-c8c8-4ab8-8d28-a63eed625d57 entity_type=person name=Theo user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] Created new entity             entity_id=2164a7e5-dcdc-4406-af0d-325559120480 entity_type=person name=Nico user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=fbe5825a-8ab1-406e-9568-45b6fdb25fcb
+2026-11-11 12:41:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=8cd5200b-974f-46bd-bdce-3c389d494f9c
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=9988dace-52cb-40e1-97f6-3ebf46a19bc3
+ox-B0: s1-dependents#4 user 0.2s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=dc127dea-558d-46b6-88d2-c5733cd3a929 role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=5baf32df-0076-5243-a285-b5a0a86717e4 event_id=dc127dea-558d-46b6-88d2-c5733cd3a929 turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=dc127dea-558d-46b6-88d2-c5733cd3a929
+ox-B0: s1-dependents#5 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=ba060b78-62c5-4669-a708-d01b15f566f4 role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=daf26e69-df74-500a-b7e6-ecffc0aafc81 event_id=ba060b78-62c5-4669-a708-d01b15f566f4 turns=1
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=ba060b78-62c5-4669-a708-d01b15f566f4
+ox-B0: s1-dependents#6 user 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=ef985ea4-7a82-474c-b9fb-4141286d9f80 role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=f3c8119b-43d3-5884-8ab9-eec05c2c8a13 event_id=ef985ea4-7a82-474c-b9fb-4141286d9f80 turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=ef985ea4-7a82-474c-b9fb-4141286d9f80
+ox-B0: s1-dependents#7 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=6f158276-2cdd-4c91-84e1-e342a43fecb3 role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=c8e67fda-4fd3-5e66-bb43-2c0d277ad398 event_id=6f158276-2cdd-4c91-84e1-e342a43fecb3 turns=1
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=6f158276-2cdd-4c91-84e1-e342a43fecb3
+ox-B0: s1-dependents#8 user 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=35b10461-ef78-4dd5-a164-8ff58ca4990b role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=22ec81cb-5baa-5d9a-bae4-e2437bbd8724 event_id=35b10461-ef78-4dd5-a164-8ff58ca4990b turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=35b10461-ef78-4dd5-a164-8ff58ca4990b
+ox-B0: s1-dependents#9 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=bd2a26e0-fbea-42b2-9a07-bae2a3edba0a role=user session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=3d8653ec-0a32-5d85-b455-0d6f1266e926 event_id=bd2a26e0-fbea-42b2-9a07-bae2a3edba0a turns=1
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=bd2a26e0-fbea-42b2-9a07-bae2a3edba0a
+ox-B0: s1-dependents#10 user 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=9bd60a3a-5cef-4a67-b252-4780e5510d05 role=assistant session_id=s1-dependents user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=a2989e13-a32a-5a81-9b21-35e6c4965ca3 event_id=9bd60a3a-5cef-4a67-b252-4780e5510d05 turns=1
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=9bd60a3a-5cef-4a67-b252-4780e5510d05
+ox-B0: s1-dependents#11 assistant 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=c3c6c54a-ba48-4c80-b023-3afa318a9e92 role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.extraction_batch_saved batch_id=922b1c76-0e88-50e5-8386-3fa4f6d64e22 event_id=c3c6c54a-ba48-4c80-b023-3afa318a9e92 turns=1
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] ingestion.phase2_complete      event_id=c3c6c54a-ba48-4c80-b023-3afa318a9e92
+ox-B0: s2-benefits#0 user 0.0s
+2026-11-11 12:41:42 [info     ] ingestion.phase1_complete      event_id=2679c8e0-c0cb-4a3e-a2df-bd55e492aa25 role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:42 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=4f3a275d-92bd-4235-8f7b-9e1850ef3bf9
+2026-11-11 12:41:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=688a7f74-c92e-4a3a-980b-776c5e045fbb
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=2679c8e0-c0cb-4a3e-a2df-bd55e492aa25
+ox-B0: s2-benefits#1 assistant 0.1s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=8458ae04-be38-4159-9a32-9d5758932eb7 role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=fc8defae-e623-4cd3-92bf-47ec1eb469e0
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=8458ae04-be38-4159-9a32-9d5758932eb7
+ox-B0: s2-benefits#2 user 0.1s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=0beddcff-1f6d-4388-87fd-59b3117f7942 role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=143a9fe0-41f9-434f-9cd0-c9e4bda49fa2
+2026-11-11 12:41:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bf09a4e5-e40d-475e-97c7-18e69f747e70
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=0beddcff-1f6d-4388-87fd-59b3117f7942
+ox-B0: s2-benefits#3 assistant 0.1s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=b79583f0-9de3-4d0c-9896-0986d582c21b role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=8dd9c401-c185-5005-b8e1-8c5c7ea9f7c2 event_id=b79583f0-9de3-4d0c-9896-0986d582c21b turns=1
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=b79583f0-9de3-4d0c-9896-0986d582c21b
+ox-B0: s2-benefits#4 user 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=a0499ea6-478e-4d59-b523-7291e15c450d role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=84e8beb5-18a2-5d8b-a440-bfa3485e8f97 event_id=a0499ea6-478e-4d59-b523-7291e15c450d turns=1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=a0499ea6-478e-4d59-b523-7291e15c450d
+ox-B0: s2-benefits#5 assistant 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=eb30e04d-1981-478e-9c38-ad5be1755ef3 role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=e450d7a6-e371-4c43-8529-908d27316c03
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=eb30e04d-1981-478e-9c38-ad5be1755ef3
+ox-B0: s2-benefits#6 user 0.1s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=786d57e0-12f2-458c-bde5-37ef15b32fd1 role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=303c010a-ae93-5f90-b32c-6d6a47a13427 event_id=786d57e0-12f2-458c-bde5-37ef15b32fd1 turns=1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=786d57e0-12f2-458c-bde5-37ef15b32fd1
+ox-B0: s2-benefits#7 assistant 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=f1081b49-974b-4209-a4db-d91f510bb176 role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] Created new entity             entity_id=f7234a75-5672-43d8-925c-4de1e2c3fe24 entity_type=event name='open enrollment' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=95264286-b4ae-4802-9e7e-9a5fb941c4f1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=f1081b49-974b-4209-a4db-d91f510bb176
+ox-B0: s2-benefits#8 user 0.1s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=a2febbb3-30a7-4fed-b009-694069226281 role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=c0d23a40-061f-534a-a487-d9230792ec97 event_id=a2febbb3-30a7-4fed-b009-694069226281 turns=1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=a2febbb3-30a7-4fed-b009-694069226281
+ox-B0: s2-benefits#9 assistant 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=6bfb5a14-87d9-44ed-a77d-c2bf37380a0e role=user session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=8f2ae9b9-6347-588a-ac3b-e222ef603bc3 event_id=6bfb5a14-87d9-44ed-a77d-c2bf37380a0e turns=1
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=6bfb5a14-87d9-44ed-a77d-c2bf37380a0e
+ox-B0: s2-benefits#10 user 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=811ffc8a-a445-4973-9d65-1f177a6f4c76 role=assistant session_id=s2-benefits user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=f010b5a6-c8a2-55e2-bf26-53df9f41a12f event_id=811ffc8a-a445-4973-9d65-1f177a6f4c76 turns=1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=811ffc8a-a445-4973-9d65-1f177a6f4c76
+ox-B0: s2-benefits#11 assistant 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=8d2657d2-b84d-4e42-8fe5-afeede257d20 role=user session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=ac1e84c2-914c-5b75-90a6-f25a63850a32 event_id=8d2657d2-b84d-4e42-8fe5-afeede257d20 turns=1
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=8d2657d2-b84d-4e42-8fe5-afeede257d20
+ox-B0: s3-return#0 user 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=e900adb5-2d2c-4b3a-be85-b3221ba50b17 role=assistant session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=f8052787-9595-5ec5-a983-076903a33016 event_id=e900adb5-2d2c-4b3a-be85-b3221ba50b17 turns=1
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=e900adb5-2d2c-4b3a-be85-b3221ba50b17
+ox-B0: s3-return#1 assistant 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=716910fa-267c-417c-8166-a9d7cda170fa role=user session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=42d3d17a-671d-504a-a5cc-dc0c5f356012 event_id=716910fa-267c-417c-8166-a9d7cda170fa turns=1
+2026-11-11 12:41:43 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.phase2_complete      event_id=716910fa-267c-417c-8166-a9d7cda170fa
+ox-B0: s3-return#2 user 0.0s
+2026-11-11 12:41:43 [info     ] ingestion.phase1_complete      event_id=8dc155be-4cb2-45e7-bd34-20087748b554 role=assistant session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:43 [info     ] ingestion.extraction_batch_saved batch_id=258f34a4-bd0c-5b59-a8e1-08a466c5b20c event_id=8dc155be-4cb2-45e7-bd34-20087748b554 turns=1
+2026-11-11 12:41:44 [info     ] ingestion.phase2_complete      event_id=8dc155be-4cb2-45e7-bd34-20087748b554
+ox-B0: s3-return#3 assistant 0.0s
+2026-11-11 12:41:44 [info     ] ingestion.phase1_complete      event_id=d7728013-69b3-4f9b-91c9-81beb736737d role=user session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:44 [info     ] ingestion.extraction_batch_saved batch_id=037bd01b-9e87-5466-8109-00c95c79be1f event_id=d7728013-69b3-4f9b-91c9-81beb736737d turns=1
+2026-11-11 12:41:44 [debug    ] Reusing existing entity        entity_id=96a027b4-5adf-4226-9acc-3e430d675fef entity_type=person name='Maya Okafor' user_id=member-v1-maya
+2026-11-11 12:41:44 [info     ] ingestion.phase2_complete      event_id=d7728013-69b3-4f9b-91c9-81beb736737d
+ox-B0: s3-return#4 user 0.0s
+2026-11-11 12:41:44 [info     ] ingestion.phase1_complete      event_id=6aa90a44-5b9e-4dc3-975c-d6f813b551e9 role=assistant session_id=s3-return user_id=member-v1-maya
+2026-11-11 12:41:44 [info     ] ingestion.extraction_batch_saved batch_id=9d21819a-4f1f-5e6c-b028-518f555b300b event_id=6aa90a44-5b9e-4dc3-975c-d6f813b551e9 turns=1
+2026-11-11 12:41:44 [info     ] ingestion.phase2_complete      event_id=6aa90a44-5b9e-4dc3-975c-d6f813b551e9
+ox-B0: s3-return#5 assistant 0.0s
+2026-11-11 12:41:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 12:41:44 [info     ] write_queue.stopped
+2026-11-11 12:41:44 [info     ] write_queue.started
+2026-11-11 12:41:45 [info     ] ingestion.pipeline_shutdown
+2026-11-11 12:41:45 [info     ] write_queue.stopped
+{
+ "label": "ox-B0",
+ "folder": "/Users/dwamianm/Sites/prism/data/chat-probe-v1/member-v1/ox-B0",
+ "oracle": {
+  "model_calls": 0,
+  "turns": {
+   "without assertions": 24,
+   "with assertions": 6
+  },
+  "empty_extractions": 24,
+  "mention_patch_uses": 57,
+  "tally": {
+   "assertions": 24,
+   "turns": 12,
+   "accepted": 9,
+   "refused": 15,
+   "refused_by_reason": {
+    "subject not in the turn, not the owner, not named earlier": 11,
+    "object not in the turn, not the owner, not named earlier": 4
+   },
+   "accepted_needing": {
+    "turn only": 0,
+    "owner": 9,
+    "carried": 0,
+    "closure": 0
+   }
+  }
+ },
+ "summary": {
+  "extraction calls": 0,
+  "active claims": 9,
+  "distinct claim texts": 9,
+  "claims whose text repeats another's": 0,
+  "claims repeating a subject, predicate and object": 0,
+  "claims whose text is the whole message": 1,
+  "claims from assistant turns only": 4,
+  "user claims attached to the named owner": 5,
+  "user claims attached to a first-person pronoun": 0,
+  "entities": 4,
+  "entities with no link": 0,
+  "pronoun entities": 0,
+  "key entities found / split / missing": "3/0/3",
+  "key links linked / via pronoun / not linked / missing": "2/0/0/2",
+  "probes with the answer in context": "12/12",
+  "probes with the answer ranked in the top 3": "9/12",
+  "probes with the answer ranked in the top 5": "11/12",
+  "probes with a stale value in context": 0,
+  "repeated records in contexts": "36/420"
+ }
+}
