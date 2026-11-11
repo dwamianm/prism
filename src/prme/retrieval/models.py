@@ -153,6 +153,8 @@ class ScoreAdjustment(BaseModel):
         "neural_rank_assignment",
         "current_observation",
         "owner_profile",
+        "belief",
+        "second_round",
     ]
     coefficient: float = Field(allow_inf_nan=False)
     neural_score: float | None = Field(default=None, allow_inf_nan=False, ge=0, le=1)
@@ -178,6 +180,10 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("A current-state observation coefficient must be in (0, 1]")
         if self.kind == "owner_profile" and not 0 < self.coefficient <= 1:
             raise ValueError("An owner profile coefficient must be in (0, 1]")
+        if self.kind == "second_round" and not 0 < self.coefficient <= 1:
+            raise ValueError("A second-round coefficient must be in (0, 1]")
+        if self.kind == "belief" and not 1 < self.coefficient <= 2:
+            raise ValueError("A belief coefficient must be above one and at most two")
         return self
 
 
@@ -416,6 +422,14 @@ class RetrievalCandidate(BaseModel):
     # of the entities the walk reached its text names). None when the walk did
     # not reach it.
     route_score: tuple[int, int] | None = Field(default=None, exclude=True)
+    # Set only with enable_belief_state and omitted otherwise, so results and
+    # bundles keep their bytes: whether a claim the ledger placed holds at the
+    # question's time (prme.retrieval.beliefs).
+    belief_state: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="current, planned, earlier, ended or negated, for a claim placed by its ledger state",
+    )
     # Set only with PackingConfig.session_context_packing and omitted
     # otherwise, so results and bundles keep their bytes. Serialized so that a
     # saved candidate list packs the same way again.
@@ -426,6 +440,13 @@ class RetrievalCandidate(BaseModel):
             "The highest-ranked trigger whose session window holds this "
             "candidate, which packing uses under session_context_packing"
         ),
+    )
+    # Set only with PackingConfig.collapse_identical_text and omitted otherwise: how many records with this
+    # record's text it stands for, and the time they span (prme.retrieval.repeats).
+    repeat_note: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="How many records with identical text this one stands for, and their time span",
     )
     reranker_score: float | None = Field(
         default=None, ge=0, le=1,

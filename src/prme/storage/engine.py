@@ -882,7 +882,8 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
-                relation_routing=config.enable_relation_routing,
+                relation_routing=config.enable_relation_routing or config.enable_belief_state,
+                belief_state=config.enable_belief_state,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1076,7 +1077,8 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
-                relation_routing=config.enable_relation_routing,
+                relation_routing=config.enable_relation_routing or config.enable_belief_state,
+                belief_state=config.enable_belief_state,
                 temporal_relation_config=config.temporal_relation,
             )
 

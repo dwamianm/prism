@@ -158,8 +158,8 @@ def test_a_concept_extension_adds_a_word_and_can_replace_a_built_in_one():
     extension = {"beneficiaries": ["partner_of", "kin_of:child"], "home": ["visits"]}
     assert route_question("Who are Maya's beneficiaries?", extension) == ((CHILD, RelationStep("partner_of")),)
     assert route_question("Where is Maya's home?", extension) == ((RelationStep("visits"),),)
-    assert set(concept_map()) == {"dependent", "family", "spouse", "child", "home", "job", "allergy"}
-    assert len(CORE_CONCEPTS) == 7
+    assert set(concept_map()) == {"dependent", "family", "spouse", "child", "home", "job", "allergy", "pet"}
+    assert len(CORE_CONCEPTS) == 8
     assert normalize_concepts(extension) == {"beneficiaries": ["kin_of:child", "partner_of"], "home": ["visits"]}
     assert normalize_concepts({}) is None
 

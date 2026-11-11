@@ -410,8 +410,13 @@ class RetrievalReceipt(BaseModel):
                 )
         if self.schema_version == 17 and rank_fusion_decay is None:
             raise ValueError("Version 17 records a rank fusion session decay")
+        # With session_context_direct_first a neighbor's coefficient is the decay or a smaller, capped one.
+        capped = self.packing.session_context_direct_first is not None
         if rank_fusion_decay is not None and any(
-            adjustment.kind == "session_decay" and adjustment.coefficient != rank_fusion_decay
+            adjustment.kind == "session_decay" and (
+                not 0 < adjustment.coefficient <= rank_fusion_decay if capped
+                else adjustment.coefficient != rank_fusion_decay
+            )
             for provenance in (self.score_provenance or {}).values()
             for adjustment in provenance.adjustments
         ):

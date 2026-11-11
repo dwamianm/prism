@@ -111,6 +111,36 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.session_context_skip_entities is true and packing.session_context_window > 0",
         lambda packing: packing.session_context_skip_entities and packing.session_context_window > 0,
     ),
+    "packing.clock_window_filter": (
+        "packing.clock_window_filter",
+        "packing.clock_window_filter is true",
+        bool,
+    ),
+    "packing.collapse_identical_text": (
+        "packing.collapse_identical_text",
+        "packing.collapse_identical_text is true",
+        bool,
+    ),
+    "packing.second_round": (
+        "packing.second_round",
+        "packing.second_round is true",
+        bool,
+    ),
+    "packing.lexical_content_words": (
+        "packing.lexical_content_words",
+        "packing.lexical_content_words is true",
+        bool,
+    ),
+    "packing.session_context_direct_first": (
+        "packing.session_context_direct_first",
+        "packing.session_context_direct_first is set",
+        lambda value: value is not None,
+    ),
+    "scoring.rrf_recency_order": (
+        "scoring.rrf_recency_order",
+        "scoring.rrf_recency_order is on",
+        lambda value: value is True,
+    ),
     "packing.graph_seed_words": (
         "packing.graph_seed_words",
         "packing.graph_seed_words is true",
@@ -283,6 +313,16 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
     "enable_relation_routing": (
         "enable_relation_routing",
         "enable_relation_routing is true",
+        bool,
+    ),
+    "memory_mode": (
+        "memory_mode",
+        "memory_mode is address_first",
+        lambda value: value == "address_first",
+    ),
+    "enable_belief_state": (
+        "enable_belief_state",
+        "enable_belief_state is true",
         bool,
     ),
     "enable_typed_extraction": (

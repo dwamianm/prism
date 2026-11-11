@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import time
 import uuid
 from collections.abc import Callable, Collection, Mapping, Sequence
@@ -36,7 +37,9 @@ from prme.models.learning import RankingMultipliers
 from prme.models.speaker import normalize_speaker
 from prme.privacy.policy import PrivacyDenied
 from prme.retrieval.execution import RetrievalExecution, feature_identity, reranker_identity
+from prme.retrieval.beliefs import BELIEF_VERSION, place_beliefs, read_ledger
 from prme.retrieval.candidates import (
+    SEED_STOPWORDS,
     CandidateDiagnostics,
     _find_seed_entities,
     generate_candidates,
@@ -44,6 +47,7 @@ from prme.retrieval.candidates import (
     merge_normalized_bm25_hits,
 )
 from prme.retrieval.claim_statements import fold_claim_statements
+from prme.retrieval.clock_window import parse_clock_window
 from prme.retrieval.current_state import (
     CURRENT_STATE_PATH,
     add_current_state_observations,
@@ -103,7 +107,10 @@ from prme.retrieval.query_analysis import (
     is_current_state_question,
     is_first_person_question,
 )
-from prme.retrieval.relation_walk import MAX_SEEDS, add_route_candidates, owner_entities, walk_route
+from prme.retrieval.relation_walk import (
+    MAX_SEEDS, add_route_candidates, catalog_walk, owner_entities, walk_route,
+)
+from prme.retrieval.repeats import COLLAPSE_VERSION, collapse_identical_text
 from prme.retrieval.relations import (
     ROUTING_VERSION,
     normalize_concepts,
@@ -112,6 +119,7 @@ from prme.retrieval.relations import (
 )
 from prme.retrieval.replaced_sources import suppress_replaced_sources
 from prme.retrieval.scoring import score_and_rank
+from prme.retrieval.second_round import SECOND_ROUND_VERSION, second_round, second_round_terms
 from prme.retrieval.scope import ScopeInput, normalize_scope
 from prme.retrieval.selection import (
     rank_fusion_skips_min_score,
@@ -165,6 +173,23 @@ class _OperationConnection(Protocol):
 
 class _OperationPool(Protocol):
     def acquire(self) -> AbstractAsyncContextManager[_OperationConnection]: ...
+
+
+# A question no word routes finds its address in the catalog only when the claim it matches best is among this
+# many best semantic matches of the whole pool, so a question that is not about the named entities' claims is
+# left to the text ranking.
+CATALOG_SEMANTIC_RANK = 10
+
+_HISTORY_QUESTION_RE = re.compile(
+    r"\b(?:when|before|after|ago|since|until|first|earlier|earliest|previous|previously|formerly|originally"
+    r"|used\s+to|history|over\s+time|in\s+what\s+order|how\s+long|every|all\s+the)\b",
+    re.IGNORECASE,
+)
+
+
+def _asks_for_history(query: str) -> bool:
+    """Whether a routed question asks for the record over time, so its ledger is read in time order."""
+    return bool(_HISTORY_QUESTION_RE.search(query))
 
 
 def _apply_bitemporal_filters(
@@ -250,6 +275,7 @@ class RetrievalPipeline:
         superseded_source_suppression: bool = False,
         owner_profile_context: bool = False,
         relation_routing: bool = False,
+        belief_state: bool = False,
     ) -> None:
         self._graph_store = graph_store
         self._vector_index = vector_index
@@ -286,6 +312,7 @@ class RetrievalPipeline:
         self._superseded_source_suppression = superseded_source_suppression
         self._owner_profile_context = owner_profile_context
         self._relation_routing = relation_routing
+        self._belief_state = belief_state
         self._temporal_languages = temporal_languages
         self._temporal_relation_config = (
             temporal_relation_config or TemporalRelationConfig()
@@ -472,6 +499,15 @@ class RetrievalPipeline:
         if knowledge_at is not None and knowledge_at.utcoffset() is None:
             raise ValueError("knowledge_at must include a timezone")
         scoring_now = (reference_time or datetime.now(timezone.utc)).astimezone(timezone.utc)
+        # A clock window the question states becomes the request's event-time filter
+        # (packing.clock_window_filter), unless the caller gave one. The receipt records the window read.
+        if self._packing_config.clock_window_filter and event_time_from is None and event_time_to is None:
+            clock_window = parse_clock_window(query, reference_time or scoring_now)
+            if clock_window is not None:
+                event_time_from, event_time_to = clock_window
+                execution_features = {**execution_features, "clock_window": {
+                    "version": 1, "from": event_time_from.isoformat(), "to": event_time_to.isoformat(),
+                }}
 
         normalized_scope = normalize_scope(scope)
 
@@ -826,6 +862,8 @@ class RetrievalPipeline:
         # entities over the claims of those relations; what the walk reaches
         # forms the route list of rank fusion. A question no word routes, or
         # whose walk reaches nothing, is left exactly as it was.
+        route = None
+        route_walk = None
         if (
             self._relation_routing
             and effective_weights.fusion == "rrf"
@@ -857,6 +895,7 @@ class RetrievalPipeline:
                         exc_info=not bool(getattr(self, "_privacy_context", None)),
                     )
                 if walk is not None and walk.scores:
+                    route_walk = walk
                     added = add_route_candidates(candidates, walk)
                     if added:
                         candidate_counts["ROUTE"] = added
@@ -978,6 +1017,45 @@ class RetrievalPipeline:
                     if candidate is not None:
                         candidate.conflict_flag = True
                         candidate.contradicts_id = uuid.UUID(counterpart_id)
+
+        # --- Stage 5.5a2: A second search for what the best result points at (packing.second_round) ---
+        if effective_packing_config.second_round and scored and getattr(self, "_privacy_context", None) is None:
+            round_terms = second_round_terms(query, scored, SEED_STOPWORDS)
+            if round_terms:
+                eligible_now = self._request_filter(
+                    knowledge_at=knowledge_at, event_time_from=event_time_from, event_time_to=event_time_to,
+                    time_from=time_from, time_to=time_to, exclude_node_types=exclude_node_types,
+                    source_types=source_types, include_node_types=include_node_types,
+                    retrieval_mode=analysis.retrieval_mode,
+                )
+
+                async def _round_search(text: str) -> list[dict]:
+                    return await self._lexical_index.search(text, user_id, limit=8, scope=scope_values)
+
+                async def _round_load(node_ids: list[str]) -> list[RetrievalCandidate]:
+                    nodes = await self._graph_store.get_nodes(node_ids)
+                    return eligible_now([
+                        RetrievalCandidate(node=node, paths=[], path_count=0) for node in nodes
+                        if node.user_id == user_id and (not normalized_scope or node.scope in normalized_scope)
+                    ])
+
+                try:
+                    scored, round_placed = await second_round(
+                        scored, round_terms, search=_round_search, load=_round_load,
+                    )
+                except PrivacyDenied:
+                    raise
+                except Exception:
+                    round_placed = []
+                    candidate_diagnostics.backend_failures["SECOND_ROUND"] = "backend_error"
+                    logger.warning("Second round failed; continuing without it", exc_info=True)
+                if round_placed:
+                    ranking_policy = "score_id"
+                    candidate_counts["SECOND_ROUND"] = len(round_placed)
+                    execution_features = {**execution_features, "second_round": {
+                        "version": SECOND_ROUND_VERSION, "anchor": str(scored[0].node.id) if scored else None,
+                        "terms": round_terms, "placed": round_placed,
+                    }}
 
         # --- Stage 5.5b: Session Context Expansion ---
         # After scoring, expand top results with adjacent turns from the
@@ -1152,6 +1230,64 @@ class RetrievalPipeline:
             if added:
                 candidate_counts["CURRENT_STATE"] = added
 
+        # --- Stage 5.5f2: The claims that hold now (enable_belief_state) ---
+        # The claims a routed question reached are read as a ledger and lead
+        # the results in ledger order: what holds now first, then what is
+        # planned, then what ended. The receipt records it only when a claim
+        # was placed, so any other retrieval keeps its bytes.
+        belief_source = "route"
+        if (
+            self._belief_state and route_walk is None and scored
+            and effective_weights.fusion == "rrf"
+            and getattr(self, "_privacy_context", None) is None
+            and not analysis.is_aggregation
+        ):
+            # No word routed the question (or its walk reached nothing): find the address in the catalog of
+            # the claims on the entities it names, by the claim the question matches best.
+            try:
+                seeds = await owner_entities(
+                    self._graph_store, user_id=user_id, scopes=normalized_scope, speaker=speaker,
+                ) if is_first_person_question(query) else []
+                seeds.extend(str(node.id) for node in await _find_seed_entities(
+                    analysis, self._graph_store, user_id, normalized_scope,
+                    candidate_config.graph_seed_words,
+                ))
+                seeds = sorted(list(dict.fromkeys(seeds))[:MAX_SEEDS])
+                semantic = {str(candidate.node.id): candidate.semantic_score for candidate in scored}
+                ranked = sorted(semantic.values(), reverse=True)
+                route_walk = await catalog_walk(
+                    self._graph_store, user_id=user_id, seed_ids=seeds, semantic=semantic,
+                    floor=ranked[min(CATALOG_SEMANTIC_RANK, len(ranked)) - 1], scopes=normalized_scope,
+                ) if seeds else None
+                belief_source = "catalog"
+            except PrivacyDenied:
+                raise
+            except Exception:
+                route_walk = None
+                candidate_diagnostics.backend_failures["BELIEF"] = "backend_error"
+                logger.warning("Catalog walk failed; continuing without the ledger", exc_info=True)
+        if self._belief_state and route_walk is not None:
+            ledger = read_ledger(
+                route_walk.nodes, route_walk.claims, route_walk.pivots,
+                last_step=len(route) - 1 if belief_source == "route" else 0,
+                now=scoring_now, history=_asks_for_history(query),
+            )
+            scored, beliefs_placed = place_beliefs(
+                scored, ledger, route_walk.nodes, lead=belief_source == "route",
+            )
+            if beliefs_placed:
+                ranking_policy = "score_id"
+                candidate_counts["BELIEF"] = beliefs_placed
+                execution_features = {**execution_features, "belief_state": {
+                    "version": BELIEF_VERSION,
+                    "source": belief_source,
+                    "claims": [
+                        {"node_id": belief.node_id, "state": belief.state, "relation": belief.relation,
+                         **({"role": belief.role} if belief.role else {})}
+                        for belief in ledger
+                    ],
+                }}
+
         # --- Stage 5.5g: The owner's profile (issue #398) ---
         # It follows the top result, and packing reserves it. The receipt
         # records the feature only when the profile was placed, so any other
@@ -1168,6 +1304,15 @@ class RetrievalPipeline:
         # Enforce consumer filters after episode/projection/augmentation stages too.
         scored, type_excluded = filter_candidate_types(scored, exclude_node_types, source_types, include_node_types)
         excluded.extend(type_excluded)
+
+        # --- Stage 5.5g2: Records with identical text, shown once (packing.collapse_identical_text) ---
+        if effective_packing_config.collapse_identical_text:
+            scored, repeats_excluded = collapse_identical_text(scored)
+            if repeats_excluded:
+                excluded.extend(repeats_excluded)
+                execution_features = {**execution_features, "collapse_identical_text": {
+                    "version": COLLAPSE_VERSION, "removed": len(repeats_excluded),
+                }}
 
         # --- Stage 5.5h: Profiles that quote a retired memory (issue #462) ---
         # A profile is a derived view of the records it names in

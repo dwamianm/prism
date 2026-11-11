@@ -29,7 +29,11 @@ DEFAULT_RRF_K = 60
 # Rank fusion terms that ScoringWeights() leaves unset and PRMEConfig sets by
 # default, recorded only in version 19 receipts (issue #168).
 RANK_FUSION_OPT_INS = ("rrf_recency_boost", "rrf_tie_break", "rrf_graph_weight", "rrf_graph_seed_count",
-                       "rrf_route_weight")
+                       "rrf_route_weight", "rrf_recency_order")
+# With rrf_recency_order, recency on a current-state question is read among this many best semantic matches,
+# and decays by this much over the time they span.
+RRF_RECENCY_ORDER_SEMANTIC_TOP = 20
+RRF_RECENCY_ORDER_DECAY = 5.0
 # The graph list's weight when rrf_graph_seed_count is on and rrf_graph_weight
 # is unset (prism-monorepo issue 276). The validator writes it into the
 # settings, so receipts record the weight their scores used.
@@ -46,7 +50,7 @@ RRF_ROUTE_WEIGHT = 2.0
 # Settings that only rank fusion reads; weighted scoring drops them.
 RANK_FUSION_ONLY_SETTINGS = ("rrf_k", *RANK_FUSION_OPT_INS)
 # Rank fusion opt-ins that are on or off; off, they are not set.
-RANK_FUSION_SWITCHES = ("rrf_graph_seed_count",)
+RANK_FUSION_SWITCHES = ("rrf_graph_seed_count", "rrf_recency_order")
 # Settings that only the weighted formula reads; rank fusion drops them.
 # Receipts record them from version 20 (issue #83).
 WEIGHTED_ONLY_SETTINGS = ("recency_time",)
@@ -314,6 +318,26 @@ class ScoringWeights(BaseModel):
             "ignores a supplied value with a warning."
         ),
     )
+    rrf_recency_order: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] fusion='rrf' only, with rrf_recency_boost; off by "
+            "default. The recency of rrf_recency_boost decays by days "
+            "(lambda 0.05), so records stated minutes or hours apart all "
+            "have the same recency and the newest of them ranks by its words "
+            "alone (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md, 2.2 B). "
+            "When True, recency on a current-state question is read on the "
+            "question's own time scale: among the 20 best semantic matches "
+            "(RRF_RECENCY_ORDER_SEMANTIC_TOP), the time from the oldest to "
+            "the newest stated time is the scale, and a match has "
+            "exp(-5 x its age as a fraction of that span) "
+            "(RRF_RECENCY_ORDER_DECAY): 1.0 for the newest and under 0.01 "
+            "for the oldest, whether the span is an hour or a year. Every "
+            "other candidate has 0. The boost then applies as before. "
+            "Weighted fusion ignores it."
+        ),
+    )
     rrf_graph_weight: float | None = Field(
         default=None,
         gt=0,
@@ -524,6 +548,8 @@ class ScoringWeights(BaseModel):
                 payload += f":recency={self.rrf_recency_boost}"
             if self.rrf_tie_break is not None:
                 payload += f":tie_break={self.rrf_tie_break}"
+            if self.rrf_recency_order:
+                payload += f":recency_rule=span:top={RRF_RECENCY_ORDER_SEMANTIC_TOP}:decay={RRF_RECENCY_ORDER_DECAY}"
             if self.rrf_graph_weight is not None:
                 payload += f":graph={self.rrf_graph_weight}"
             if self.rrf_graph_seed_count:
@@ -676,6 +702,96 @@ class PackingConfig(BaseModel):
             "by default (DEFAULT_PACKING_SETTINGS) since 2026-10-19, in the "
             "alpha channel, on the fast gate; a PackingConfig built in code "
             "keeps False. [HYPOTHESIS]"
+        ),
+    )
+    clock_window_filter: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] Read a clock window a question states as its "
+            "event-time filter; off by default. 'What did the camera see "
+            "between 15:00 and 16:00 on November 3?' otherwise returns the "
+            "records whose words match, from any hour. When True, two times "
+            "of day after 'between' or 'from', at least one written as a "
+            "clock time (15:00, 3 pm), with an optional day (a month and a "
+            "day, an ISO date, today or yesterday; the reference day when "
+            "none is named) become event_time_from and event_time_to, in the "
+            "reference time's zone, unless the request gives either itself. "
+            "A day without clock times is not read as a filter, since a "
+            "conversation states what happened on a day at a later time. "
+            "The receipt records the window (prme.retrieval.clock_window)."
+        ),
+    )
+    collapse_identical_text: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] Show records with identical text once; off by "
+            "default. A sensor or a patrol stores one sentence many times, "
+            "each copy matches a question equally, and a context can be the "
+            "same line over and over. When True, among results with the same "
+            "text (case and spacing aside), node type, scope, speaker and "
+            "lifecycle state, the best ranked stays and carries a note of "
+            "how many there are and the time they span ('said 37 times, "
+            "2026-11-02 08:00 to 2026-11-02 21:40'), shown as a tag in the "
+            "reader format; the others are listed as excluded with the "
+            "reason identical_text. Entities, summaries, instructions and "
+            "records placed by another rule are left alone. Nothing stored "
+            "changes (prme.retrieval.repeats)."
+        ),
+    )
+    second_round: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] Search once more for what the best result points "
+            "at; off by default. 'Where is the thing Dana asked for?' finds "
+            "'Dana asked the robot to bring the red mug later.' and not "
+            "'The red mug is on the kitchen counter.', which shares no word "
+            "with the question. When True, the content words of the top "
+            "result that are neither in the question nor in half or more of "
+            "the next nine results (at most 6 words) go to the word index, "
+            "and its best matches (at most 3) are placed just below the "
+            "third result, with a second_round score adjustment that "
+            "replays and the SECOND_ROUND path, which packing reserves. A "
+            "match that already ranks higher keeps its place. One extra "
+            "word search, no model call (prme.retrieval.second_round)."
+        ),
+    )
+    lexical_content_words: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "[HYPOTHESIS] Search the lexical index with the question's "
+            "content words only; off by default. The whole question goes to "
+            "the word search otherwise, so a record that shares only a "
+            "function word with it ('what', 'does', 'have') is a lexical "
+            "match, and under rank fusion that match counts as much as the "
+            "best semantic match (memory_bank/"
+            "THESIS-2026-11-10-EMBODIED-MEMORY.md, 2.2 A). When True, the "
+            "question's function words (the list graph_seed_words uses, and "
+            "words of one or two letters) are left out of the word search; a "
+            "question with no other word gets no lexical candidates."
+        ),
+    )
+    session_context_direct_first: int | None = Field(
+        default=None,
+        ge=1,
+        exclude_if=lambda value: value is None,
+        description=(
+            "[HYPOTHESIS] Keep session-context neighbors below the best "
+            "direct matches; unset by default. A neighbor takes its "
+            "trigger's score times the session decay (0.6 under rank "
+            "fusion), and a record only one channel found scores at most "
+            "0.5, so the neighbors of a first result outrank every such "
+            "record, the best semantic match included (memory_bank/"
+            "THESIS-2026-11-10-EMBODIED-MEMORY.md, 2.2 A). When set to N, a "
+            "neighbor's inherited score is capped just below the score of "
+            "the N-th best candidate before expansion, so the first N "
+            "results are the records that matched the question themselves. "
+            "The cap is recorded as the session_decay coefficient, so "
+            "receipts replay. Needs session expansion "
+            "(session_context_window > 0)."
         ),
     )
     cross_scope_top_n: int = Field(

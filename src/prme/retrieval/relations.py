@@ -31,7 +31,7 @@ import re
 # The version of the routing rule recorded in receipts. Change it with any
 # change to the vocabulary, the cues, the normalizer, the concepts, the router
 # or the walk that can change a route or its candidates.
-ROUTING_VERSION = 1
+ROUTING_VERSION = 2
 
 # The closed vocabulary (benchmarks/graph_oracle/DESIGN.md, "The relation
 # vocabulary"), with each relation's subject and object kinds and definition.
@@ -342,6 +342,7 @@ CORE_CONCEPTS: dict[str, tuple[str, ...]] = {
     "home": ("lives_in",),
     "job": ("works_at",),
     "allergies": ("allergic_to",),
+    "pet": ("owns",),
 }
 
 
