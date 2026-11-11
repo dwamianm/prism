@@ -1,0 +1,326 @@
+[
+ {
+  "id": "cities",
+  "question": "Which cities will Alex and Jordan visit in Japan?",
+  "answer_rank": 6,
+  "report_rank": 6,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "visits"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "That is cherry blossom season."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "My partner Jordan and I are planning a trip to Japan in late March next year."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "My partner Jordan and I are planning a trip to Japan in late March next year."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "My partner Jordan and I are planning a trip to Japan in late March next year. (planner)"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
+   }
+  ]
+ },
+ {
+  "id": "learning",
+  "question": "What coding language is Alex learning?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "uses"
+  ],
+  "route_candidates": 4,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Yes, I write Go for services and TypeScript for tooling. (writing)"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Yes, I write Go for services and TypeScript for tooling. (writing)"
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I am reading Rust for Rustaceans."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "On weekends I am learning Rust."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
+   }
+  ]
+ },
+ {
+  "id": "work-languages",
+  "question": "Which languages does Alex write at work?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Yes, I write Go for services and TypeScript for tooling. (writing)"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Yes, I write Go for services and TypeScript for tooling. (writing)"
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "I am reading Rust for Rustaceans."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "On weekends I am learning Rust."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
+   }
+  ]
+ },
+ {
+  "id": "travel",
+  "question": "How does Alex prefer to travel in Japan?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "prefers",
+   "visits"
+  ],
+  "route_candidates": 5,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "I prefer trains to flights, so I want a JR Pass."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "I prefer trains to flights, so I want a JR Pass."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "That is cherry blossom season."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "My partner Jordan and I are planning a trip to Japan in late March next year."
+   }
+  ]
+ },
+ {
+  "id": "allergy",
+  "question": "Who is allergic to shellfish?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "allergic_to"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "That is cherry blossom season."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "We dropped Hiroshima to save time."
+   }
+  ]
+ },
+ {
+  "id": "shipments",
+  "question": "What did the team choose for the shipment table?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "member_of",
+   "part_of"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday. (reviewer)"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday."
+   }
+  ]
+ },
+ {
+  "id": "reviewer",
+  "question": "Who should review the runbook?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday. (reviewer)"
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+   }
+  ]
+ }
+]

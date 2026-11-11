@@ -25,9 +25,12 @@ How it fits the pipeline:
 - An assertion's ``time`` (an ISO date or a datetime with its offset) is when the fact starts to hold or happened.
   It becomes the claim's stated time as a resolved date of an extracted fact does; without it the claim takes the
   source's time.
-- A stated claim's text is a sentence rendered from its fields (:func:`claim_text`): the subject, the relation,
-  the object, the role, the time and the status in plain words. The source's own text stays the stored message
-  and the claim's evidence quote.
+- A stated claim's text is the source's own sentence that names its object (:func:`stated_text`): the shortest
+  run of the content's sentences that names the object, or the whole content when none does. After it, in one
+  parenthesis, come only the fields that sentence does not show: the role and the time ("... at Brightpath. (as
+  analytics manager; since 2026-05-04)"). Claims of one sentence share its text. When the caller gives no content,
+  the content is rendered from the fields (:func:`render_content`) and each claim keeps its rendered sentence
+  (:func:`claim_text`). The source's own text stays the stored message and the claim's evidence quote.
 - ``reingest()`` derives such an event again from its own metadata, never through a model, under settings of its
   own (``prme.ingestion.reingest.structured_settings``).
 
@@ -45,7 +48,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
 from prme.ingestion.claim_merge import _normalize as _fold
-from prme.ingestion.grounding import _mentioned, mentioned_or_spoken, names_speaker
+from prme.ingestion.grounding import _mentioned, claim_sentences, mentioned_or_spoken, names_speaker
 from prme.ingestion.schema import ExtractedEntity, ExtractedFact, ExtractionResult
 
 # The event metadata key holding the validated assertions. Reserved: a caller states assertions with the
@@ -54,7 +57,8 @@ ASSERTIONS_KEY = "prme_assertions_v1"
 # The version of the assertion form and of the rule that builds claims from it. Recorded in each event, in the
 # extraction record's model name and in reingest()'s settings for structured sources; change it with any change
 # to what an unchanged assertion derives. Version 2 (2026-11-11): the mention rule's speaker, memory and closure
-# (recorded per end as ``found``), ``time``, and claim text rendered from the fields.
+# (recorded per end as ``found``), ``time``, and a claim text from the source's sentence and the fields it does
+# not show (unreleased, so the claim text's change from the rendered sentence kept version 2).
 ASSERTION_VERSION = 2
 STRUCTURED_PROVIDER = "structured"
 STRUCTURED_MODEL = f"assertions-v{ASSERTION_VERSION}"
@@ -351,8 +355,8 @@ def structured_result(content: str, metadata: Mapping[str, Any]) -> ExtractionRe
     """The extraction a source's assertions state: the entities and one typed fact per assertion.
 
     Each fact cites the whole content as its evidence and carries its ``time`` as a resolved reference
-    (``temporal_ref``), which materialization turns into the claim's stated time. The claim's text is rendered
-    from the fact's fields at materialization (:func:`claim_text`).
+    (``temporal_ref``), which materialization turns into the claim's stated time. The claim's text is made at
+    materialization (:func:`fact_text`).
     """
     assertions = stored_assertions(content, metadata)
     entities: dict[tuple[str, str], ExtractedEntity] = {}
@@ -411,18 +415,75 @@ def claim_text(subject: str, relation: str, obj: str, *, predicate: str | None =
                 "planned": (f"is not going to {base}" if negative else f"is going to {base}")}[state]
         core = f"{subject} {verb} {obj}"
         qualifier = (f" as {role}" if relation == "works_at" else f" ({role})") if role else ""
-    when = ""
-    if time:
-        word = {"current": "since", "done": "on"}.get(state, "from")
-        when = f" ({word} {time})"
+    when = f" ({_time_phrase(status, time)})" if time else ""
     sentence = f"{core}{qualifier}{when}."
     return sentence[0].upper() + sentence[1:]
 
 
-def fact_text(fact: ExtractedFact) -> str:
-    """The text of a stated claim from its extracted fact (:func:`structured_result`)."""
-    return claim_text(fact.subject, fact.relation or fact.predicate, fact.object, predicate=fact.predicate,
-                      role=fact.role, status=fact.status, polarity=fact.polarity, time=fact.temporal_ref)
+def _time_phrase(status: str | None, time: str) -> str:
+    """The time as a claim says it: "since" a current fact, "on" a done one, "from" a planned or past one."""
+    state = "past" if status == "superseded" else status or "current"
+    word = {"current": "since", "done": "on"}.get(state, "from")
+    return f"{word} {time}"
+
+
+def stated_sentence(content: str, obj: str) -> str:
+    """The shortest run of ``content``'s sentences that names ``obj``, or the whole content when none does.
+
+    The run is ``grounding.claim_sentences`` with the object as both ends, so a following sentence that qualifies
+    it ("unless ...") stays with it, as it does for an extracted claim's sentence.
+    """
+    return claim_sentences(content, obj, obj) or content
+
+
+def stated_text(content: str, *, relation: str, obj: str, role: str | None = None, status: str | None = None,
+                time: str | None = None) -> str:
+    """A stated claim's text: its sentence of ``content`` (:func:`stated_sentence`), then the fields it lacks.
+
+    Only the role and the time are added, in one parenthesis, and each only when the sentence does not already
+    show it: the role as ``claim_text`` says it ("as analytics manager" at ``works_at``, the role alone
+    elsewhere), the time as stated, with "since", "on" or "from" by status. "Two weeks in at Brightpath and I
+    already like my team. (as analytics manager; since 2026-05-04)". Claims of one sentence with nothing to add
+    share its text; claim merge and the reader's folding read more than the text (see docs/RELATIONS.md).
+    """
+    sentence = stated_sentence(content, obj)
+    added = []
+    if role and not _mentioned(role, sentence):
+        added.append(f"as {role}" if relation == "works_at" else role)
+    if time and time not in sentence:
+        added.append(_time_phrase(status, time))
+    return f"{sentence} ({'; '.join(added)})" if added else sentence
+
+
+def fact_text(fact: ExtractedFact, content: str, *, rendered: bool = False) -> str:
+    """The text of a stated claim from its extracted fact (:func:`structured_result`) and its source's content.
+
+    ``rendered``: the caller gave no content, so it was rendered from the assertions (:func:`is_rendered`), and
+    the claim keeps its own rendered sentence (:func:`claim_text`).
+    """
+    if rendered:
+        return claim_text(fact.subject, fact.relation or fact.predicate, fact.object, predicate=fact.predicate,
+                          role=fact.role, status=fact.status, polarity=fact.polarity, time=fact.temporal_ref)
+    return stated_text(content, relation=fact.relation or fact.predicate, obj=fact.object, role=fact.role,
+                       status=fact.status, time=fact.temporal_ref)
+
+
+def is_rendered(content: str, metadata: Mapping[str, Any]) -> bool:
+    """Whether a stated source's content is the rendering of its own assertions, as for a caller who gave none.
+
+    Read from the stored event alone, so a rebuild from the log decides it as admission did. Content a caller
+    wrote that happens to equal the rendering is read as rendered. Stored assertions that do not validate are not
+    rendered content; :func:`structured_result` refuses them.
+    """
+    stored = metadata.get(ASSERTIONS_KEY)
+    items = stored.get("items") if isinstance(stored, Mapping) else None
+    if not isinstance(items, list) or not all(isinstance(item, Mapping) for item in items):
+        return False
+    try:
+        checked = checked_assertions([{key: value for key, value in item.items() if key != "found"} for item in items])
+    except ValueError:
+        return False
+    return content == render_content(checked)
 
 
 def render_content(assertions: Sequence[Assertion]) -> str:

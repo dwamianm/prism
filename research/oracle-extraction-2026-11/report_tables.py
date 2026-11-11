@@ -2,6 +2,7 @@
 
     uv run python research/oracle-extraction-2026-11/report_tables.py > research/oracle-extraction-2026-11/results/tables.md
     uv run python research/oracle-extraction-2026-11/report_tables.py fx results/round2 > .../results/round2/tables.md
+    uv run python research/oracle-extraction-2026-11/report_tables.py round3 > .../results/round3/tables.md
 
 Reads ``report.json``, ``build.json`` and ``oracle.json`` of each arm under the probe's build root, the B1 serve
 paths written by ``serve_paths.py --json`` into ``results/``, and checks that each B1 rebuild (``ox-B1r``) repeats
@@ -16,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from oracle import HERE, ROOT  # noqa: E402
+from oracle import HERE  # noqa: E402
 
 NAMES = ("defects-v1", "chat-v1", "member-v1")
 ARMS = ("M0", "M1", "A0", "A1", "B0", "B1")
@@ -170,5 +171,56 @@ def b1_against_b1s() -> list[str]:
     return lines
 
 
+ROUND3 = (("fx-B1", "B1 (round 2)"), ("fx-B1s", "B1s"), ("tx-B1", "tx-B1"), ("fx-M1", "M1"))
+
+
+def round3() -> None:
+    """Round 3: B1 of round 2, B1s, tx-B1 and M1, per probe and then per question where any of them differ.
+
+    Reads ``results/round3/union-<probe>.json`` (``union_ranks.py`` with fx-M1, ox-B1, fx-B1, fx-B1s and tx-B1)
+    and ``results/round3/serve-<probe>-tx-B1.json``.
+    """
+    here = HERE / "results" / "round3"
+    lines = ["## Top 3 / top 5 per probe", "",
+             "| Probe | " + " | ".join(name for _, name in ROUND3) + " | Bar (tx-B1 top 3) | Result |",
+             "|---|" + "---|" * len(ROUND3) + "---:|---|"]
+    bars = {"defects-v1": "7", "chat-v1": "17 (and M1 + 2)", "member-v1": "11"}
+    unions = {name: json.loads((here / f"union-{name}.json").read_text()) for name in NAMES}
+
+    def count(rows: list[dict], key: str, k: int) -> int:
+        return sum(1 for row in rows if row[key] is not None and row[key] <= k)
+
+    for name in NAMES:
+        union, total = unions[name], len(unions[name]["tx-B1"])
+        cells = [f"{count(union[label], 'probe_rank', 3)}/{total} / {count(union[label], 'probe_rank', 5)}/{total}"
+                 for label, _ in ROUND3]
+        top3 = count(union["tx-B1"], "probe_rank", 3)
+        bar = max(BARS[name], count(union["fx-M1"], "probe_rank", 3) + 2) if name == "chat-v1" else BARS[name]
+        lines.append(f"| {name} | " + " | ".join(cells) + f" | {bars[name]} | {'pass' if top3 >= bar else 'fail'} |")
+    lines += ["", "## Per question, every row where the four differ (answer rank; tx-B1 path from the receipts)", ""]
+    for name in NAMES:
+        union = unions[name]
+        served = json.loads((here / f"serve-{name}-tx-B1.json").read_text())
+        rows = []
+        for index, row in enumerate(served):
+            ranks = [union[label][index]["probe_rank"] for label, _ in ROUND3]
+            if union["tx-B1"][index]["question"] != row["question"]:
+                raise ValueError(f"{name}: questions out of step at {index}")
+            if len(set(ranks)) > 1:
+                rows.append(f"| {row['question']} | " + " | ".join("none" if rank is None else str(rank)
+                                                                  for rank in ranks) + f" | {_served(row)} |")
+        lines += [f"**{name}**", ""]
+        if rows:
+            lines += ["| Question | " + " | ".join(n for _, n in ROUND3) + " | tx-B1 path |",
+                      "|---|" + "---:|" * len(ROUND3) + "---|", *rows]
+        else:
+            lines.append("No row differs.")
+        lines.append("")
+    print("\n".join(lines))
+
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "round3":
+        round3()
+    else:
+        main()

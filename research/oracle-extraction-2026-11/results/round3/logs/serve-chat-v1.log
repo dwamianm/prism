@@ -1,0 +1,21 @@
+2026-11-11 16:00:41 [info     ] write_queue.started
+2026-11-11 16:00:42 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:42 [info     ] write_queue.stopped
+1 | routed via works_at; ledger from route | Where does Dana work now?
+1 | routed via works_at; ledger from route | What is Dana's job title now?
+6 | catalog; ledger from catalog | When did Dana start the new job?
+1 | routed via manager_of (manager); ledger from route | Who was Dana's manager at Northwind?
+1 | routed via partner_of, works_at; ledger from route | What does Dana's partner do for work?
+1 | routed via allergic_to; ledger from route | What is Sam allergic to?
+6 | routed via involved_in; ledger from route | What kind of dog does Dana have, and what is it called?
+1 | catalog; ledger from catalog | What is the name of Dana's niece?
+1 | catalog; ledger from catalog | When was Ivy born?
+2 | routed via kin_of (sister), lives_in; ledger from route | Where does Dana's sister live?
+1 | routed via friend_of, partner_of; ledger from route | Who is Dana's running partner?
+2 | catalog; ledger from catalog | What was Dana's half marathon finishing time?
+1 | catalog; ledger from catalog | Does Dana drink coffee?
+1 | catalog; ledger from catalog | What is Dana's diet now?
+1 | catalog; ledger from catalog | What news did Melanie share after the race?
+1 | catalog; ledger from catalog | What is Dana planning for July?
+1 | catalog; ledger from catalog | Where will Dana stop overnight on the drive?
+2 | routed via prefers; ledger from route | Which programming language does Dana prefer?

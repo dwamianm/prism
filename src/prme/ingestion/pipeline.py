@@ -32,7 +32,7 @@ import structlog
 
 from prme.epistemic.inference import OWNER_ROLES, infer_source_type
 from prme.ingestion.assertions import fact_text as stated_fact_text
-from prme.ingestion.assertions import is_structured
+from prme.ingestion.assertions import is_rendered, is_structured
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
@@ -1726,8 +1726,10 @@ class IngestionPipeline:
         planned_claims: set[tuple] = set()
         planned_fact_ids: set[str] = set()
         claim_texts: set[str] = set()
-        # A stated claim's text is rendered from its fields (ingest(assertions=...)).
+        # A stated claim's text is its source's sentence and the fields that sentence does not show, or its
+        # rendered sentence when the caller gave no content (ingest(assertions=...)).
         stated = is_structured(event.metadata)
+        rendered = stated and is_rendered(event.content, event.metadata)
         for fact, from_relationship in claims:
             fact_scope = scope
 
@@ -1839,10 +1841,10 @@ class IngestionPipeline:
                     "grounding": "object_decimal_v1",
                 }
             if stated:
-                # The claim says itself: subject, relation, object, role, time and status in one sentence, so word
+                # The source's sentence that names the object, with the role and the time it does not show, so word
                 # search, meaning search and the reader see them; the source's own text stays its evidence quote.
-                fact_content = stated_fact_text(fact)
-                fact_metadata["grounding_method"] = "stated_fields_v1"
+                fact_content = stated_fact_text(fact, fact_content, rendered=rendered)
+                fact_metadata["grounding_method"] = "stated_fields_v1" if rendered else "stated_sentence_v1"
             elif resolution is not None:
                 fact_metadata["resolution"] = resolution
                 fact_content = fact.resolved_text

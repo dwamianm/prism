@@ -4,11 +4,11 @@ Twenty objects each move 2, 5 or 12 times, all moves 10 minutes or 3 days apart,
 Six objects per pack are asked about. Known answer: the newest placement sentence is ``results[0]``.
 
 The same moves are also written as caller-stated facts (``ingest_batch()`` with ``assertions``: the object
-``located_in`` the place, status current), one pack per (spacing, moves); there the newest placement's claim
-(its text rendered from the stated fields) or its sentence must be ``results[0]``.
+``located_in`` the place, status current), one pack per (spacing, moves); there the newest placement's sentence
+must be ``results[0]``: its message, or its claim, whose text is the same sentence (the placement sentence names
+the place, and the claim adds no role or time).
 """
 
-from prme.ingestion.assertions import _name, claim_text
 from tests.contract.harness import texts
 
 
@@ -23,9 +23,8 @@ def test_newest_place_ranks_first(churn_case, robot):
 def test_newest_stated_place_ranks_first(stated_case, robot):
     label, moves, obj = stated_case.data
     scene, truth = robot.churn_stated(label, moves)
-    # The newest move's two records: its message (the placement sentence) and its claim, whose text is rendered
-    # from the stated fields (prme.ingestion.assertions.claim_text). Either one first is the newest placement.
+    # The newest move's two records, its message and its claim, both have the placement sentence as their text
+    # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
     sentence = robot.world.placed.format(obj=obj, place=truth[obj])
-    claim = claim_text(_name(obj), "located_in", _name(truth[obj]), status="current")
     ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
-    assert ranked and ranked[0] in (sentence, claim), f"newest: {sentence!r} or {claim!r}; top 5: {ranked}"
+    assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"

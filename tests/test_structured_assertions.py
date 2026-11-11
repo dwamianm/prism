@@ -23,6 +23,7 @@ from prme.ingestion.assertions import (
     Held,
     prepare_assertions,
     render_content,
+    stated_text,
     structured_result,
 )
 from prme.retrieval.beliefs import BELIEF_PATH
@@ -210,9 +211,9 @@ async def test_a_stated_fact_derives_the_records_typed_extraction_derives(tmp_pa
 
     assert asked == [[SENTENCE]] and provider.batches == asked  # the stated source asked nothing
     assert from_assertions == extracted
-    # The one difference: a stated claim's text says its fields, and the source's sentence stays its evidence.
+    # The one difference is how the text was made: a stated claim's text is the sentence naming its object.
     assert extracted_texts == [(SENTENCE, "claim_sentences_v1")]
-    assert stated_texts == [("Red mug is located in kitchen counter.", "stated_fields_v1")]
+    assert stated_texts == [(SENTENCE, "stated_sentence_v1")]
     claim = next(node for node in nodes if node.node_type == NodeType.FACT)
     assert claim.metadata["evidence_quote"] == SENTENCE
     # Typed fields are written for a stated claim with typed extraction off.
@@ -284,9 +285,9 @@ async def test_the_ledger_reads_stated_claims_with_no_special_case(config, user,
         response = await engine.retrieve("Where is the red mug now?", user_id=user,
                                          reference_time=T0 + timedelta(hours=1))
     placed = [(result.belief_state, result.node.content) for result in response.results if BELIEF_PATH in result.paths]
-    assert placed == [("current", "Red mug is located in office desk."),
-                      ("earlier", "Red mug is located in dishwasher."),
-                      ("earlier", "Red mug is located in kitchen counter.")]
+    assert placed == [("current", "The red mug is on the office desk."),
+                      ("earlier", "The red mug is on the dishwasher."),
+                      ("earlier", "The red mug is on the kitchen counter.")]
 
 
 async def test_an_exactly_repeated_stated_fact_merges_into_one_current_claim(config, user, provider):
@@ -443,8 +444,8 @@ async def test_admission_reads_the_owners_memory_in_the_sources_scope(config, us
         edges = await engine._graph_store.get_edges(source_id=str(jordan.id))
         claims = await engine._graph_store.get_nodes([str(edge.target_id) for edge in edges
                                                       if edge.edge_type == EdgeType.HAS_FACT])
-        assert sorted(claim.content for claim in claims) == ["Jordan decided on Tokyo.",
-                                                             "Jordan is going to visit Japan."]
+        assert sorted(claim.content for claim in claims) == ["My partner Jordan and I are going to Japan.",
+                                                             "We chose Tokyo."]
         stated = [{key: value for key, value in chose.items() if key != "found"}]
         for options in ({"scope": Scope.PROJECT}, {"user_id": user + "-other"}):
             with pytest.raises(ValueError, match="its subject 'Jordan', and it is neither"):
@@ -475,8 +476,9 @@ async def test_a_rebuild_from_the_log_alone_accepts_what_admission_accepted(tmp_
             original = records[events.index(event)]
             assert (again.provider, again.model, again.result) == (original.provider, original.model, original.result)
         rebuilt = await facts_with_text(engine, user + "-rebuilt")
+    # The closure's value is not in its turn, so its text is the whole turn, as the new value's is.
     assert sorted(text for text, *_ in rebuilt) == before == [
-        "Dana's diet is pescatarian.", "Dana's diet used to be vegetarian.", "Jordan decided on Tokyo."]
+        "I eat fish now, so I'm pescatarian.", "I eat fish now, so I'm pescatarian.", "We chose Tokyo."]
 
 
 async def test_reingest_derives_the_admitted_claims_again_with_no_model(config, user, provider):
@@ -562,16 +564,80 @@ def test_a_claim_sentence_says_each_status_in_plain_words(changes, text):
     assert content == text
 
 
-async def test_a_stated_claims_text_says_its_fields_and_the_turn_stays_its_evidence(config, user, provider):
+@pytest.mark.parametrize("content, changes, text", [
+    # The shortest run of sentences that names the object; the role and the time it does not show, in one
+    # parenthesis, the role as the rendered sentence says it.
+    ("I got the offer. Two weeks in at Brightpath and I like my team. Sam is jealous.",
+     {"role": "analytics manager", "time": "2026-05-04"},
+     "Two weeks in at Brightpath and I like my team. (as analytics manager; since 2026-05-04)"),
+    # A field the sentence shows is not added again.
+    ("I'm an analytics manager at Brightpath since 2026-05-04.", {"role": "analytics manager", "time": "2026-05-04"},
+     "I'm an analytics manager at Brightpath since 2026-05-04."),
+    ("Brightpath hired me.", {}, "Brightpath hired me."),
+    ("Brightpath hired me.", {"status": "planned", "time": "2026-05-04"}, "Brightpath hired me. (from 2026-05-04)"),
+    ("We had a girl last Thursday!", {"relation": "kin_of", "object": "Ivy", "object_type": "person",
+                                      "role": "niece", "time": "2026-03-12"},
+     "We had a girl last Thursday! (niece; since 2026-03-12)"),
+])
+def test_a_stated_claims_text_is_its_sentence_with_the_fields_it_does_not_show(content, changes, text):
+    item = dana(**changes)
+    assert stated_text(content, relation=item["relation"], obj=item["object"], role=item.get("role"),
+                       status=item.get("status"), time=item.get("time")) == text
+
+
+async def test_a_stated_claims_text_is_its_sentence_and_the_turn_stays_its_evidence(config, user, provider):
     turn = "Two weeks in at Brightpath and I already like my team."
     async with MemoryEngine.open(config) as engine:
         event_id = await engine.ingest(turn, user_id=user, role="user", speaker="Dana", event_time=T0,
                                        wait_for_extraction=True,
                                        assertions=[dana(role="analytics manager", time="2026-05-04")])
+        await engine.ingest(None, user_id=user, event_time=T0 + timedelta(hours=1), wait_for_extraction=True,
+                            assertions=[dana(subject="Sam", object="Northwind", role="engineer")])
         event = await engine._event_store.get(event_id)
-        [claim] = await facts(engine, user)
+        stated, rendered = await facts(engine, user)
     assert event.content == turn
-    assert claim.content == "Dana works at Brightpath as analytics manager (since 2026-05-04)."
-    assert (claim.metadata["evidence_quote"], claim.metadata["grounding_method"]) == (turn, "stated_fields_v1")
-    assert (claim.metadata["relation"], claim.metadata["role"], claim.metadata["status"]) == (
+    assert stated.content == f"{turn} (as analytics manager; since 2026-05-04)"
+    assert (stated.metadata["evidence_quote"], stated.metadata["grounding_method"]) == (turn, "stated_sentence_v1")
+    assert (stated.metadata["relation"], stated.metadata["role"], stated.metadata["status"]) == (
         "works_at", "analytics manager", "current")
+    # With no content, the content and the claim's text are the rendered sentence.
+    assert (rendered.content, rendered.metadata["grounding_method"]) == (
+        "Sam works at Northwind as engineer.", "stated_fields_v1")
+    assert rendered.metadata["evidence_quote"] == rendered.content
+
+
+async def test_claims_of_one_sentence_share_its_text_and_stay_separate_claims(config, user, provider):
+    """Claim merge reads the claim's fields, never its text: two claims of one sentence stay two claims."""
+    turn = "My husband is Theo and my child is Nico."
+    settings = config.model_copy(update={"enable_claim_merge": True})
+    async with MemoryEngine.open(settings) as engine:
+        await engine.ingest(turn, user_id=user, role="user", speaker="Maya", event_time=T0, wait_for_extraction=True,
+                            assertions=[
+                                dana(subject="Maya", relation="partner_of", object="Theo", object_type="person"),
+                                dana(subject="Maya", relation="kin_of", object="Nico", object_type="person",
+                                     role="child")])
+        claims = await facts(engine, user, every=True)
+    # The sentence shows the role "child", so neither claim adds anything: both have the sentence as their text.
+    assert sorted((claim.content, claim.metadata["object"], claim.lifecycle_state.value) for claim in claims) == [
+        (turn, "Nico", "tentative"), (turn, "Theo", "tentative")]
+
+
+async def test_the_reader_keeps_a_stated_claim_whose_parenthesis_its_turn_lacks(config, user, provider):
+    """fold_repeated_text folds a record only into one whose text holds it: a claim that adds a field stays."""
+    turn = "I finished the Cherry Creek Half on Sunday in 1:58:30! Melanie ran it with me."
+    settings = config.model_copy(update={"packing": config.packing.model_copy(update={
+        "context_format": "reader", "fold_repeated_text": True})})
+    async with MemoryEngine.open(settings) as engine:
+        await engine.ingest(turn, user_id=user, role="user", speaker="Dana", event_time=T0, wait_for_extraction=True,
+                            assertions=[
+                                {"subject": "Dana", "subject_type": "person", "relation": "has",
+                                 "predicate": "race_time", "object": "1:58:30", "status": "done",
+                                 "time": "2026-05-17"},
+                                dana(relation="friend_of", object="Melanie", object_type="person")])
+        response = await engine.retrieve("What was Dana's half marathon time?", user_id=user,
+                                         reference_time=T0 + timedelta(days=1))
+    context = response.bundle.rendered_context
+    dated = "I finished the Cherry Creek Half on Sunday in 1:58:30! (on 2026-05-17)"
+    assert dated in context
+    # The other claim's text is its sentence alone, which the turn shows: it folds into the turn.
+    assert context.count("Melanie ran it with me.") == 1

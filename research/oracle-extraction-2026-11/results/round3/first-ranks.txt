@@ -1,0 +1,24 @@
+defects-v1 fx-B1s cities: Which cities will Alex and Jordan visit in Japan?
+  'Tokyo': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kyoto': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kanazawa': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Osaka': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+defects-v1 tx-B1 cities: Which cities will Alex and Jordan visit in Japan?
+  'Tokyo': 6 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kyoto': 6 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kanazawa': 6 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Osaka': 6 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+chat-v1 fx-B1s start-date: When did Dana start the new job?
+  'May 4': 4 (note) I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4.
+  '4 May': not ranked
+  '2026-05-04': not ranked
+chat-v1 fx-B1s dog: What kind of dog does Dana have, and what is it called?
+  'Biscuit': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.
+  'golden': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.
+chat-v1 tx-B1 start-date: When did Dana start the new job?
+  'May 4': 6 (note) I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4.
+  '4 May': not ranked
+  '2026-05-04': 10 (fact) I got the offer from Brightpath and I accepted it! (as analytics manager; from 2026-05-04)
+chat-v1 tx-B1 dog: What kind of dog does Dana have, and what is it called?
+  'Biscuit': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.
+  'golden': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.

@@ -31,16 +31,13 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument("--speaker", action="store_true")
     parser.add_argument("--replace", action="store_true")
-    parser.add_argument("--sentence-text", action="store_true",
-                        help="diagnostic: a stated claim's text is its turn's sentence, not its rendered fields")
     args = parser.parse_args(argv)
     levels = tuple(level.strip() for level in args.levels.split(","))
     if levels not in {("O1",), ("O1", "O2")}:
         raise SystemExit("--levels is O1 or O1,O2")
     facts = (args.facts or HERE / "facts" / f"{args.name}.json").resolve()
     built = build(args.label, name=args.name, facts_path=facts, levels=levels,
-                  overrides=parse_overrides(args.set), speaker=args.speaker, replace=args.replace,
-                  sentence_claims=args.sentence_text)
+                  overrides=parse_overrides(args.set), speaker=args.speaker, replace=args.replace)
     summary = built["report"]["summary"]
     print(json.dumps({"label": args.label, "folder": str(built["folder"].relative_to(ROOT))
                       if built["folder"].is_relative_to(ROOT) else str(built["folder"]),

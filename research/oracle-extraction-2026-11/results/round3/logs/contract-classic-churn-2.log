@@ -1,0 +1,919 @@
+xF.FxxxxFFxxxxx.xxF..x..F..F...FxxxF                                     [100%]
+=================================== FAILURES ===================================
+______ test_newest_stated_place_ranks_first[stated-10min-2moves-yoga-mat] ______
+
+stated_case = Case(id='stated-10min-2moves-yoga-mat', data=('10min', 2, 'yoga mat'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The yoga mat is on the garage workbench.'; top 5: ['The yoga mat is on the dining table.', 'The yoga mat is on the garage workbench.', 'The tape measure is on the bookshelf.', 'The sewing kit is on the study windowsill.', 'The guitar tuner is on the bookshelf.']
+E       assert (['The yoga mat is on the dining table.', 'The yoga mat is on the garage workbench.', 'The tape measure is on the bookshelf.', 'The sewing kit is on the study windowsill.', 'The guitar tuner is on the bookshelf.'] and 'The yoga mat...dining table.' == 'The yoga mat...ge workbench.'
+E         
+E         - The yoga mat is on the garage workbench.
+E         + The yoga mat is on the dining table.)
+
+tests/contract/test_state_churn.py:30: AssertionError
+_____ test_newest_stated_place_ranks_first[stated-10min-2moves-dog-leash] ______
+
+stated_case = Case(id='stated-10min-2moves-dog-leash', data=('10min', 2, 'dog leash'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The dog leash is on the garage workbench.'; top 5: ['The dog leash is on the dining table.', 'The dog leash is on the garage workbench.', 'The flashlight is on the study windowsill.', 'The house keys is on the bookshelf.', 'The passport folder is on the hallway shelf.']
+E       assert (['The dog leash is on the dining table.', 'The dog leash is on the garage workbench.', 'The flashlight is on the study windowsill.', 'The house keys is on the bookshelf.', 'The passport folder is on the hallway shelf.'] and 'The dog leas...dining table.' == 'The dog leas...ge workbench.'
+E         
+E         - The dog leash is on the garage workbench.
+E         + The dog leash is on the dining table.)
+
+tests/contract/test_state_churn.py:30: AssertionError
+______ test_newest_stated_place_ranks_first[stated-10min-5moves-red-mug] _______
+
+stated_case = Case(id='stated-10min-5moves-red-mug', data=('10min', 5, 'red mug'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The red mug is on the balcony.'; top 5: ['The red mug is on the hallway shelf.', 'The red mug is on the balcony.', 'The red mug is on the laundry room.', 'The red mug is on the piano top.', 'The phone charger is on the dishwasher.']
+E       assert (['The red mug is on the hallway shelf.', 'The red mug is on the balcony.', 'The red mug is on the laundry room.', 'The red mug is on the piano top.', 'The phone charger is on the dishwasher.'] and 'The red mug ...allway shelf.' == 'The red mug ... the balcony.'
+E         
+E         - The red mug is on the balcony.
+E         ?                       ^  ^^^
+E         + The red mug is on the hallway shelf.
+E         ?                       ^  ^^^ ++++++)
+
+tests/contract/test_state_churn.py:30: AssertionError
+_____ test_newest_stated_place_ranks_first[stated-10min-5moves-wool-scarf] _____
+[XPASS(strict)] thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+____ test_newest_stated_place_ranks_first[stated-3days-2moves-tape-measure] ____
+
+stated_case = Case(id='stated-3days-2moves-tape-measure', data=('3days', 2, 'tape measure'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The tape measure is on the coat closet.'; top 5: ['The tape measure is on the bookshelf.', 'The tape measure is on the coat closet.', 'The reading glasses is on the balcony.', 'The guitar tuner is on the bookshelf.', 'The flashlight is on the study windowsill.']
+E       assert (['The tape measure is on the bookshelf.', 'The tape measure is on the coat closet.', 'The reading glasses is on the balcony.', 'The guitar tuner is on the bookshelf.', 'The flashlight is on the study windowsill.'] and 'The tape mea...he bookshelf.' == 'The tape mea... coat closet.'
+E         
+E         - The tape measure is on the coat closet.
+E         ?                            ^ ^^^^ ^^^^
+E         + The tape measure is on the bookshelf.
+E         ?                            ^ ^^^^^ ^)
+
+tests/contract/test_state_churn.py:30: AssertionError
+----------------------------- Captured stdout call -----------------------------
+2026-11-11 16:14:28 [info     ] write_queue.started
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=698f8b48-aa91-4919-85cc-304b4a6e29fd role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=089aaa29-a835-4d52-9640-21327eb87106 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=b82c196d-eea1-4c03-aa44-74f80a6403f6 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=d472a232-a7fa-41c0-bfb4-ae4555a59da5 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=e622e9fa-86f1-4683-87b9-047d162459f0 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=c00a531d-a958-409d-9773-4785e75c54c1 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=23d211c6-08a0-4b06-b500-0531d8672df2 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=d5921a00-b29e-42d1-b02c-4143dd6f8012 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=2c23f1b4-30b5-4949-8cae-4f7bc1c86fc9 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=6994c61b-3971-4d92-b0e6-15ebc0f9eaa1 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=93b9c700-26f2-4109-8cfb-5b110b461697 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=f634e6fa-0763-4234-a34c-ea1d0dcd73c9 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=383379a4-6ff6-4eb1-9856-c12b79418e23 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=98fe9572-a05c-4b5a-a590-3826ad8affa6 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=4aab74de-217b-4f18-937b-31e26730852b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=ced36377-a6cc-4494-bf38-55cdde36c663 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=476462b6-510a-4fb4-ad93-1b5294b34441 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=ff18de70-248a-4a76-8a0d-00c5ca5d869b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=aa8e3a54-c6a5-4680-ab1d-076cef60132a role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=0ce37ada-ca24-42cc-acd9-dd1289287a25 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=62ef7024-c843-4186-b1a8-7cdd979b6576 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=8b5fce8a-2a14-4a05-83db-f26b574b0552 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=e0590993-cdd3-4471-9ba3-967e641d03e7 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=28d28547-1c06-4821-83a9-f5a4bd240c9f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=fcd79e76-356a-47c4-9e03-580177565a13 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=42f080ec-f490-4351-9703-0ebfe4ab8be3 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=e082dd61-5a32-4494-aabe-56201ba66de6 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=22dcb126-93d0-4e72-aea3-9ce2dd288e85 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=07144d90-d913-48fa-bbeb-b963fc215041 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=2455dca8-7d59-4149-8dd9-751a4efecd5b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=4f1eefdb-0f4b-4187-b10b-a53041943874 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=79cfe8d1-3c77-418b-a939-bda4f5531854 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=1425bed0-d633-4075-9def-0c60dff22690 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=4da98738-a863-4e4e-a232-99d0ccfc1893 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=e53040a0-d017-44a2-b961-23685cb72541 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=d9c47ea7-4f8d-4a0b-b0fc-a8239a57d71c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=ab522789-5cf5-4d3a-8c2b-647e629c2f8e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=7020eed0-9cf7-46dd-9958-02215caebcbb role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=e703ce67-5312-46ef-9835-3ab1bbf374de role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] ingestion.phase1_complete      event_id=4d59776a-829d-441f-894e-4f564cc86476 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=c4cfc11a-847d-4ed6-b70c-1b77a6b18a6e entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=f1e194e4-511c-4bef-99f8-17fa5aac3183 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=f794fea6-c6b1-4e98-8a55-da747c599ba9
+2026-11-11 16:14:28 [info     ] ingestion.phase2_complete      event_id=698f8b48-aa91-4919-85cc-304b4a6e29fd
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=86ae0bc4-227f-49b3-802c-9b41ecd68a44 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=f549bf08-4f62-4f36-8c47-f0ecfae468ae entity_type=location name='guest room dresser' user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9f4f2b64-86c2-4be1-a5f7-1f2e7376ed59
+2026-11-11 16:14:28 [info     ] ingestion.phase2_complete      event_id=089aaa29-a835-4d52-9640-21327eb87106
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=71b16e39-9daa-448b-b285-b0ed1ec4f01a entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=077db483-f526-48e7-90d2-78eee7004a12 entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=2f58fd9f-94a0-4306-9807-2a4981362a36
+2026-11-11 16:14:28 [info     ] ingestion.phase2_complete      event_id=b82c196d-eea1-4c03-aa44-74f80a6403f6
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=d1813b55-6501-47b9-9dbc-34619d550dcb entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=2ac53a56-8340-44ba-b90c-bd72a3772ec1 entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=20de469c-ee15-4385-9a0d-d6f92153f650
+2026-11-11 16:14:28 [info     ] ingestion.phase2_complete      event_id=d472a232-a7fa-41c0-bfb4-ae4555a59da5
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=9e6fe95f-8522-4e1e-8c77-065e012d3947 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=7794511e-408b-45e0-af45-ec60054723f0 entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=075b2aab-3691-4afd-84f0-e6961d67a8f8
+2026-11-11 16:14:28 [info     ] ingestion.phase2_complete      event_id=e622e9fa-86f1-4683-87b9-047d162459f0
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=95bd95b5-fc53-42f5-93f7-74c8731ec0e5 entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:28 [info     ] Created new entity             entity_id=14723415-eb61-49c1-ab30-5c0409da0748 entity_type=location name='piano top' user_id=robot-1
+2026-11-11 16:14:28 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=14aa5011-4f4f-4c61-bb17-c46a12835c4a
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=c00a531d-a958-409d-9773-4785e75c54c1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=5baecd6f-1bd8-4648-8342-4521cb07f1df entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=3be3ed0a-d6f9-45ba-9706-0bba856950a2 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=2ab2b473-8646-44e9-8e52-b6362425d87a
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=23d211c6-08a0-4b06-b500-0531d8672df2
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=e7954864-0c6b-4e83-829e-ccc646b35eeb entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=4d74a83b-19e8-4342-b086-460d0839d780 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a6c417cf-e02b-48ec-8b6a-dd230e1dc235
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=d5921a00-b29e-42d1-b02c-4143dd6f8012
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=04676705-5288-4dc3-b149-e0b678b00a45 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:29 [debug    ] Reusing existing entity        entity_id=077db483-f526-48e7-90d2-78eee7004a12 entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=d776a1c7-34c1-46c1-a702-13c90c09f78b
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=2c23f1b4-30b5-4949-8cae-4f7bc1c86fc9
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=a97f254d-ea66-4f8f-a14b-940375f4b906 entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=7ea4cdca-1a4a-4287-a019-c952917b2d2b entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c5004027-f5e3-4e80-bf11-8e9a67df9e17
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=6994c61b-3971-4d92-b0e6-15ebc0f9eaa1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=e431b032-aabc-4bb6-8af5-5fab96d707a0 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:29 [debug    ] Reusing existing entity        entity_id=4d74a83b-19e8-4342-b086-460d0839d780 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=09ba8bec-567d-4178-b9f4-1844d5e30e10
+2026-11-11 16:14:29 [info     ] ingestion.phase2_complete      event_id=93b9c700-26f2-4109-8cfb-5b110b461697
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=2820a12f-8cea-49da-9363-cdf5d8b32a26 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:29 [info     ] Created new entity             entity_id=a8fa5ede-7773-4e41-a6f6-14d72ab159ec entity_type=location name='bathroom cabinet' user_id=robot-1
+2026-11-11 16:14:29 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=26fcfe5c-193a-4770-bbbc-058bd67944b9
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=f634e6fa-0763-4234-a34c-ea1d0dcd73c9
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=61ea9b8a-bc67-4be8-9841-ca1a762d2667 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:30 [debug    ] Reusing existing entity        entity_id=4d74a83b-19e8-4342-b086-460d0839d780 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=8c6d78e7-73ef-4c37-a540-69b2e6852fbf
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=383379a4-6ff6-4eb1-9856-c12b79418e23
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=231c04cc-37f9-4471-8143-cde324d35489 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:30 [debug    ] Reusing existing entity        entity_id=7ea4cdca-1a4a-4287-a019-c952917b2d2b entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=8473a17a-37fe-4705-85ea-36f6939d8c86
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=98fe9572-a05c-4b5a-a590-3826ad8affa6
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=24aee1b1-26d1-46b8-a05f-5336581fd506 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:30 [debug    ] Reusing existing entity        entity_id=7ea4cdca-1a4a-4287-a019-c952917b2d2b entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c98bfdb4-7bbb-430c-9c36-f79f768b6c51
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=4aab74de-217b-4f18-937b-31e26730852b
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=2b73b1d3-c25a-42a6-9f23-ac5a2f304523 entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=e5719952-de5d-452a-a932-e888befdfdc2 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=e25ddb00-8275-485e-b57f-818d142b0b48
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=ced36377-a6cc-4494-bf38-55cdde36c663
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=72ca44b2-05fb-4276-a365-9a6e0ebf2662 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:30 [debug    ] Reusing existing entity        entity_id=7ea4cdca-1a4a-4287-a019-c952917b2d2b entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=94cf717e-7cb7-42b2-8b90-d5ce7294025e
+2026-11-11 16:14:30 [info     ] ingestion.phase2_complete      event_id=476462b6-510a-4fb4-ad93-1b5294b34441
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=dad00aec-d5a2-4c28-bf1c-3d200d02f0c7 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:30 [info     ] Created new entity             entity_id=28bf000d-d08f-4cfc-bd14-a2f32e24a833 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:30 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=33ca936b-4c3d-4cee-b98c-edf80115a66b
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=ff18de70-248a-4a76-8a0d-00c5ca5d869b
+2026-11-11 16:14:31 [info     ] Created new entity             entity_id=508da23e-e137-454c-afd1-6ebeb918a538 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=3be3ed0a-d6f9-45ba-9706-0bba856950a2 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:31 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=09c9964d-012f-46e6-aadd-4ac4b7a5d999
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=aa8e3a54-c6a5-4680-ab1d-076cef60132a
+2026-11-11 16:14:31 [info     ] Created new entity             entity_id=f70fb2cb-29c8-4062-b093-ab7693a3e7d1 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=2ac53a56-8340-44ba-b90c-bd72a3772ec1 entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:31 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5706dce2-ec42-4b6d-a1d7-97b016cff18a
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=0ce37ada-ca24-42cc-acd9-dd1289287a25
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=c4cfc11a-847d-4ed6-b70c-1b77a6b18a6e entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=7794511e-408b-45e0-af45-ec60054723f0 entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:31 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a220fcb0-2eb5-4687-98cc-190b3fc96b2a
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=62ef7024-c843-4186-b1a8-7cdd979b6576
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=86ae0bc4-227f-49b3-802c-9b41ecd68a44 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=e5719952-de5d-452a-a932-e888befdfdc2 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:31 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=7c7ac3e1-b813-424d-be2c-c75b6feb1859
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=8b5fce8a-2a14-4a05-83db-f26b574b0552
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=71b16e39-9daa-448b-b285-b0ed1ec4f01a entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:31 [info     ] Created new entity             entity_id=8f7ee9cd-c163-4e85-9249-ee731fdc899a entity_type=location name='front porch' user_id=robot-1
+2026-11-11 16:14:31 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=39deef51-39f7-4a96-9fd5-a77e9ab09994
+2026-11-11 16:14:31 [info     ] ingestion.phase2_complete      event_id=e0590993-cdd3-4471-9ba3-967e641d03e7
+2026-11-11 16:14:31 [debug    ] Reusing existing entity        entity_id=d1813b55-6501-47b9-9dbc-34619d550dcb entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=077db483-f526-48e7-90d2-78eee7004a12 entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=41bce824-0ad8-414d-a2db-6a75e165ab74
+2026-11-11 16:14:32 [info     ] ingestion.phase2_complete      event_id=28d28547-1c06-4821-83a9-f5a4bd240c9f
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=9e6fe95f-8522-4e1e-8c77-065e012d3947 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:32 [info     ] Created new entity             entity_id=37b60a11-89ec-43fd-9fee-55b1aa58a8ab entity_type=location name='kids room floor' user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0e4aea44-04aa-452e-913a-c63cb1a082c5
+2026-11-11 16:14:32 [info     ] ingestion.phase2_complete      event_id=fcd79e76-356a-47c4-9e03-580177565a13
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=95bd95b5-fc53-42f5-93f7-74c8731ec0e5 entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=7794511e-408b-45e0-af45-ec60054723f0 entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=b59c7749-c9cb-4728-a607-41466bfa1893
+2026-11-11 16:14:32 [info     ] ingestion.phase2_complete      event_id=42f080ec-f490-4351-9703-0ebfe4ab8be3
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=5baecd6f-1bd8-4648-8342-4521cb07f1df entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=2ac53a56-8340-44ba-b90c-bd72a3772ec1 entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bc3fe8ec-2ca5-455d-b6b8-5b938c64a92a
+2026-11-11 16:14:32 [info     ] ingestion.phase2_complete      event_id=e082dd61-5a32-4494-aabe-56201ba66de6
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=e7954864-0c6b-4e83-829e-ccc646b35eeb entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:32 [info     ] Created new entity             entity_id=aa2ffdc6-7c0f-4926-819c-500935112794 entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=29a7a0fb-d927-45ce-94ff-a47f13a5a612
+2026-11-11 16:14:32 [info     ] ingestion.phase2_complete      event_id=22dcb126-93d0-4e72-aea3-9ce2dd288e85
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=04676705-5288-4dc3-b149-e0b678b00a45 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:32 [debug    ] Reusing existing entity        entity_id=28bf000d-d08f-4cfc-bd14-a2f32e24a833 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:32 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=d0a8081b-e1d5-4209-b6e0-0eb7194e0e6f
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=07144d90-d913-48fa-bbeb-b963fc215041
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=a97f254d-ea66-4f8f-a14b-940375f4b906 entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=077db483-f526-48e7-90d2-78eee7004a12 entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9d9c4e61-99ad-4da3-98ad-608eb222da21
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=2455dca8-7d59-4149-8dd9-751a4efecd5b
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=e431b032-aabc-4bb6-8af5-5fab96d707a0 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=aa2ffdc6-7c0f-4926-819c-500935112794 entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=26b3943a-5a04-45e0-ac89-64e42c28eb2d
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=4f1eefdb-0f4b-4187-b10b-a53041943874
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=2820a12f-8cea-49da-9363-cdf5d8b32a26 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=f1e194e4-511c-4bef-99f8-17fa5aac3183 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bfdc6a33-5578-4845-86e0-461ee28ff98a
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=79cfe8d1-3c77-418b-a939-bda4f5531854
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=61ea9b8a-bc67-4be8-9841-ca1a762d2667 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:33 [info     ] Created new entity             entity_id=0832b799-b9eb-4061-9371-b3f23af689fd entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=25a52403-ec33-4762-8901-a246de0e229a
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=1425bed0-d633-4075-9def-0c60dff22690
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=231c04cc-37f9-4471-8143-cde324d35489 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=0832b799-b9eb-4061-9371-b3f23af689fd entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=f1485d92-e4c2-445e-b288-ad5952b370e4
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=4da98738-a863-4e4e-a232-99d0ccfc1893
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=24aee1b1-26d1-46b8-a05f-5336581fd506 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:33 [debug    ] Reusing existing entity        entity_id=f1e194e4-511c-4bef-99f8-17fa5aac3183 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:33 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=01d1073a-bcf2-4012-b867-c1e35509435f
+2026-11-11 16:14:33 [info     ] ingestion.phase2_complete      event_id=e53040a0-d017-44a2-b961-23685cb72541
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=2b73b1d3-c25a-42a6-9f23-ac5a2f304523 entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:34 [info     ] Created new entity             entity_id=ed6f9e77-3562-433e-8101-42ac37cb50ce entity_type=location name='coat closet' user_id=robot-1
+2026-11-11 16:14:34 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=eddff929-2927-4741-a2a0-12e9fa476817
+2026-11-11 16:14:34 [info     ] ingestion.phase2_complete      event_id=d9c47ea7-4f8d-4a0b-b0fc-a8239a57d71c
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=72ca44b2-05fb-4276-a365-9a6e0ebf2662 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:34 [info     ] Created new entity             entity_id=b85ebc6c-79e3-405d-823e-86f42e2b61ae entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:34 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5038935a-6779-4184-a64a-954b41160c49
+2026-11-11 16:14:34 [info     ] ingestion.phase2_complete      event_id=ab522789-5cf5-4d3a-8c2b-647e629c2f8e
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=dad00aec-d5a2-4c28-bf1c-3d200d02f0c7 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=0832b799-b9eb-4061-9371-b3f23af689fd entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:34 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=943e4a20-b8be-4477-9979-c66ae2cd8951
+2026-11-11 16:14:34 [info     ] ingestion.phase2_complete      event_id=7020eed0-9cf7-46dd-9958-02215caebcbb
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=508da23e-e137-454c-afd1-6ebeb918a538 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=077db483-f526-48e7-90d2-78eee7004a12 entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:34 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0b1cfa5b-bb96-49ca-97ca-c10c97c288f1
+2026-11-11 16:14:34 [info     ] ingestion.phase2_complete      event_id=e703ce67-5312-46ef-9835-3ab1bbf374de
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=f70fb2cb-29c8-4062-b093-ab7693a3e7d1 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:34 [debug    ] Reusing existing entity        entity_id=e5719952-de5d-452a-a932-e888befdfdc2 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:34 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=ff0087a0-86b7-4421-80c4-db6c7e7b200b
+2026-11-11 16:14:34 [info     ] ingestion.phase2_complete      event_id=4d59776a-829d-441f-894e-4f564cc86476
+______ test_newest_stated_place_ranks_first[stated-3days-5moves-car-keys] ______
+
+stated_case = Case(id='stated-3days-5moves-car-keys', data=('3days', 5, 'car keys'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The car keys is on the hallway shelf.'; top 5: ['The car keys is on the entry bench.', 'The car keys is on the hallway shelf.', 'The car keys is on the dishwasher.', 'The car keys is on the study windowsill.', 'The car keys is on the bedroom nightstand.']
+E       assert (['The car keys is on the entry bench.', 'The car keys is on the hallway shelf.', 'The car keys is on the dishwasher.', 'The car keys is on the study windowsill.', 'The car keys is on the bedroom nightstand.'] and 'The car keys... entry bench.' == 'The car keys...allway shelf.'
+E         
+E         - The car keys is on the hallway shelf.
+E         + The car keys is on the entry bench.)
+
+tests/contract/test_state_churn.py:30: AssertionError
+----------------------------- Captured stdout call -----------------------------
+2026-11-11 16:14:35 [info     ] write_queue.started
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=8db516d9-1184-4489-b10c-6290915ba55a role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f9d9f07c-eb8b-4c28-ab2d-c7c7ff6b7b29 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=d3b821c1-ec95-4f63-913a-873ce2ad89fa role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=d0eab40c-1034-4dc3-b621-68d259a23475 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=27cf81ab-6c52-4761-9ed9-72ba9e4c3de2 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=6f541216-d549-4dac-a8b9-5d4831c8c380 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=e1c66ba0-9a60-4686-bc77-c6d6afb6eb68 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=8d3ada6b-bdff-465b-b0e9-68ab71deec32 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2421a1c2-602b-429a-b4b7-87d16d0bce79 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=278f5c21-f293-4b12-b3e7-0a784608f928 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=e6ad0c86-2f38-47e9-bf6c-7a47835d4a7a role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=77e896d5-801e-4cde-9a35-9135bb6d9e3b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=c77a3a9e-f657-4206-a191-acc9a3f80758 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=523e2417-c9ce-46dd-9fb6-0cd75e3f2dab role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=89b7986b-6473-4c67-b64c-ee040e58ecca role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=ec99060c-a6d8-486d-832f-fee4b8dc6a6a role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=55701194-7d93-4740-bd52-0281dc9ae761 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=5da88dfc-f75c-41ed-b378-727b169bf765 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2d5aac74-7a7e-43f0-93fb-298caa2f1b0b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f1689d05-320b-441a-aabd-160da24c475b role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f53ec610-af86-4a86-9d16-1bc03c065637 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=85ecc35d-b06d-418a-9581-44a8af49bb06 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=633640ea-9113-440c-ac73-ebe6941379f4 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=776dd5de-90dc-4a38-a603-83c9978a2c8e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=5b589c72-b9b1-4da9-b9c8-673e74577e12 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=fc6e548d-9d91-47fd-9366-9c5c329db092 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=891c88a8-88fd-4f41-881c-32204917c336 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=9fa0c7f7-e40b-4a83-a43f-947158bea088 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=b2f60ee8-1b0f-42e1-8834-a9d698eeb9bd role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=e8ff6a3d-451a-4e4a-a51e-d76d1cb78e09 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=5fb5d7de-10ea-4590-bcf2-4087133a2e12 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=44145122-ae5f-419e-ac2a-9d06c0adc8b8 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=7381bfb4-757a-4b69-a848-efdf9246351c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=928379ce-bde8-4f6a-99d9-f64865fb92bf role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f4c39aab-5ee7-4862-b134-acffcf356d95 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=9b1c0482-bca7-4129-a27b-ce348fb7c15f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=3317a3d6-73a3-448e-829b-0927e7a14ebf role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=0ce8c1dd-98e4-4193-8608-3c745bf53198 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=33900656-5a98-4529-980f-117253595bdb role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=be70ef14-d0c1-4ace-b45d-ff846ff1b13f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=3491120b-7b13-45da-a5a7-f35a6697cd67 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=79589bc5-9cea-4ada-be5c-8ca438f828f2 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=da9741f0-4e11-4564-8cc0-ef0cf2d04862 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=cfae5ad1-2dc3-41df-bf7c-892d3c8c5c62 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=54763e7f-c6d1-4f5a-9579-8b418739aedd role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=5042429d-10a8-4688-ade1-26abc58c8b65 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=bbd25187-48bb-4b50-a5c7-2dabd51d7aaf role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=ea19a76a-b084-4606-8226-031f9098851e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=c3a156d3-0661-4497-ab54-38f3fc08ff53 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f351fce1-8370-4a74-97e0-d560f8e07841 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=0b76bbbb-3bcc-417f-b278-03c2b369fa80 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=a1a43160-6592-45d9-8d48-56060aaa0768 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=7c312bc8-9e41-4ff1-aa86-481f285ee316 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=fd31c33a-7b4f-48ea-b283-a7fd9bc67559 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=aa9277ac-0d83-4eed-900b-b86d364ced4f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=7e3cfa77-970e-4a47-8ce2-3b7b91f1f087 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=73ec7d8f-3091-4a3f-aaef-3a60428465f5 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=a9d11c52-3ec9-4257-a9aa-3b45cd392d16 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2eb52e73-8821-4ed8-9565-ebccecee26ac role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=c45dafdb-4fea-44d0-8389-616a5aa0bf17 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=fa5a7b80-c079-4666-9b31-657004e27ce8 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=40a1f5d6-f060-45d5-8186-f01f0e0565b9 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=acf0504b-520f-4a8a-8fdb-36c092587ff1 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=71167a65-cab8-4b45-bf66-a5d4e776e40f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=18697d11-c4fc-49cc-93e1-63209ab2db6e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=20f5e822-5570-4158-9b45-cb54bb854d3e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=65c6006a-a4ac-44b5-a72e-10f1e36c018d role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=92c9dd17-545f-4419-9d76-efbb71994179 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2747fed3-cd8e-4438-bb6e-283a62f503ab role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f2fab831-e5af-4ecf-895f-468fe8d34bf1 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2ab8410b-0194-4959-855f-1ccc03e67c1f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=6d3aa026-bb0e-4fb8-b953-066bffbeccf6 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=14c5a038-f700-4a4d-97d3-cbe78bb00eba role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=07b12be7-1a52-4554-a0f9-90dab5441a21 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=f0f4b919-d812-45a9-b21a-fe1c7230d0f3 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=6e57a61d-6e0c-4e6d-acce-f97050849f53 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=7c69afbc-6a9f-471c-933b-8c5ea17ac9c6 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=b2da7eb5-cf52-4970-93e5-0fcf7da59c4c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=19e6ab87-9014-4cf5-ae5d-cdae7ac3f297 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=31209445-c787-457d-ba14-fbeeebecd699 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=80798387-b16b-4609-9ea9-e0e774ba802a role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=9631df66-97dd-48cc-8a7b-02df88629665 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=4c38385d-922d-4d54-a3d5-f95b339df20c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=0003a521-e86c-4957-bed2-c42d7d31fb07 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=2e2d28a5-5662-427a-8bcb-693f30f86660 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=d406e2a9-76f4-4c6f-b407-c26b1fe03046 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=aef262d3-42d5-4f48-a1b5-0fbaa8a6d6bc role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=cbd410d0-6cec-4811-8c2d-f07e93b52f3c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=854fd87a-4461-4fae-aba5-322a518d9e39 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=8f50fae6-e354-4ae8-8a43-2804ca55cdb7 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=83e5f217-81ac-4e47-99a7-34a048ab9004 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=bcc932d6-a40a-4cfd-898b-90423687bd2f role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=554f1c50-d6c3-4ee2-8cab-15a8061a58ff role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=6add6d0a-d6a7-4a9e-bd0d-959d64625949 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=bc351f03-c04c-4d26-8e62-48fdde9baa7c role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=395bdbb3-d7d4-4217-a743-4035d97d9740 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=5ac25830-afb9-4960-ba3c-b4049eec8e7e role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=69e26a67-5236-4bcd-b9f5-f13c398ece89 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=6cb33fa6-abf1-4872-8050-445e67c142ff role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] ingestion.phase1_complete      event_id=7ffc28cc-cc02-4b8b-b481-7713be50dce3 role=system session_id=None user_id=robot-1
+2026-11-11 16:14:35 [info     ] Created new entity             entity_id=d2c4c60c-82bb-41a0-a95d-c81189ebffbd entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:35 [info     ] Created new entity             entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:35 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=ad1867e3-6506-4faf-9111-dee9996a6e76
+2026-11-11 16:14:35 [info     ] ingestion.phase2_complete      event_id=8db516d9-1184-4489-b10c-6290915ba55a
+2026-11-11 16:14:35 [info     ] Created new entity             entity_id=b3d0bfb2-c582-4892-929a-0cef02b19f70 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:35 [info     ] Created new entity             entity_id=899f5e96-40e6-457b-962c-9568087c97a3 entity_type=location name='guest room dresser' user_id=robot-1
+2026-11-11 16:14:35 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5e4efadb-171a-41bb-87a8-49dcf0bd730e
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=f9d9f07c-eb8b-4c28-ab2d-c7c7ff6b7b29
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=500237bb-09cf-4536-897e-66fe0ae6ddf3 entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=44dbedae-2a8f-4126-9c47-175392cd8a6c
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=d3b821c1-ec95-4f63-913a-873ce2ad89fa
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=1a6a9c47-b545-4d9d-a016-dac75d27c34a entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=08ec578d-b1e0-4a00-9a10-4a422c93a18c entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=da2c3bf1-1075-4be1-8e92-f0cc7f4125d9
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=d0eab40c-1034-4dc3-b621-68d259a23475
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=6551f67f-59cd-46e6-ab05-6e7696e88571 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=96fc4dce-45ad-483d-9da4-bc572e282b77
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=27cf81ab-6c52-4761-9ed9-72ba9e4c3de2
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=d9222669-199d-499c-adb6-33a7d71682bb entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=99ecc27a-b69d-45fc-873d-45486612a48e entity_type=location name='piano top' user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=f52d51a3-df17-4c18-88a5-fc8e6546412d
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=6f541216-d549-4dac-a8b9-5d4831c8c380
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=c78441f9-9bef-4c29-8159-c092c1471eec entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=7e8f0da2-4a6b-4a29-b4c7-a572ef88d378 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=aa342014-ef1b-4185-9272-32e146df7005
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=e1c66ba0-9a60-4686-bc77-c6d6afb6eb68
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=f70d51d3-dec9-46f4-85ae-be03aba43fbc entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=ebb4115b-20bc-47d0-90f9-39acaf799359 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:36 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=15c466ef-d2e1-4271-8d74-4419572f6ee3
+2026-11-11 16:14:36 [info     ] ingestion.phase2_complete      event_id=8d3ada6b-bdff-465b-b0e9-68ab71deec32
+2026-11-11 16:14:36 [info     ] Created new entity             entity_id=04c7ead5-253c-409f-8a82-66db92a88bc8 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:37 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=65b37f4d-3c23-4c40-a39c-2e7127eda5ca
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=2421a1c2-602b-429a-b4b7-87d16d0bce79
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=ec7781fa-8d3b-46cf-8eb7-5e0ffb58714c entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=2451d239-bf4e-4f1d-8eaa-842685f67667 entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=3ea9beb6-7a75-4549-a559-6e1dd2318aa2
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=278f5c21-f293-4b12-b3e7-0a784608f928
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=0c192302-066a-4c31-b720-e8b2b270cae4 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:37 [debug    ] Reusing existing entity        entity_id=ebb4115b-20bc-47d0-90f9-39acaf799359 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=f421b5b7-566c-42b8-be05-3824c7740912
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=e6ad0c86-2f38-47e9-bf6c-7a47835d4a7a
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=835b0130-fb8f-4272-9128-dbf5699180e5 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=e7801820-a844-411f-a461-d5d11fa9bffa entity_type=location name='bathroom cabinet' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9322895f-c10d-47bc-8c83-6b13fc96a3f8
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=77e896d5-801e-4cde-9a35-9135bb6d9e3b
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=1f84072f-ea4d-47d0-866b-3ad7ef2faeb8 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:37 [debug    ] Reusing existing entity        entity_id=ebb4115b-20bc-47d0-90f9-39acaf799359 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=12db5d0c-eb8d-4dc9-915c-0e741135e770
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=c77a3a9e-f657-4206-a191-acc9a3f80758
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=6c176e93-bc26-42b7-9004-7d83fd8987b1 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:37 [debug    ] Reusing existing entity        entity_id=2451d239-bf4e-4f1d-8eaa-842685f67667 entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9e3292da-ee26-453e-aa91-5bc3affc043e
+2026-11-11 16:14:37 [info     ] ingestion.phase2_complete      event_id=523e2417-c9ce-46dd-9fb6-0cd75e3f2dab
+2026-11-11 16:14:37 [info     ] Created new entity             entity_id=dce50194-12c3-44c1-831f-a1c9e97cc8b3 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:37 [debug    ] Reusing existing entity        entity_id=2451d239-bf4e-4f1d-8eaa-842685f67667 entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:37 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5ced6969-c2c2-40b5-ac1f-4ea3db7efcae
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=89b7986b-6473-4c67-b64c-ee040e58ecca
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=32def8de-cd66-43d2-bd16-d4a7a0397b6b entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=e3aa7245-24d7-4251-a9bd-53d2a4540038 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=28be704e-a1ba-476f-ac39-7cf91839c086
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=ec99060c-a6d8-486d-832f-fee4b8dc6a6a
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=7c2d669a-c810-4dbd-8670-faa84d73f958 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:38 [debug    ] Reusing existing entity        entity_id=2451d239-bf4e-4f1d-8eaa-842685f67667 entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c4c1c4b2-3c55-49a6-a922-4f2db009ff8e
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=55701194-7d93-4740-bd52-0281dc9ae761
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=710c2abe-828a-49c9-b4ab-63ba57dc2ee3 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=bb072314-c9d9-48a2-8d4a-fca40997e2a1 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9024469f-afe4-47ce-a7e4-949849cc22ae
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=5da88dfc-f75c-41ed-b378-727b169bf765
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=aa2b9d67-646c-44fc-840c-3cd758dc7595 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:38 [debug    ] Reusing existing entity        entity_id=7e8f0da2-4a6b-4a29-b4c7-a572ef88d378 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=76fe64e9-1cd6-4018-8f1a-118a6e527fdc
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=2d5aac74-7a7e-43f0-93fb-298caa2f1b0b
+2026-11-11 16:14:38 [info     ] Created new entity             entity_id=1cfb8fc7-c1a1-42de-b1c0-6a4a05843ec6 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:38 [debug    ] Reusing existing entity        entity_id=08ec578d-b1e0-4a00-9a10-4a422c93a18c entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bdb71855-be29-4258-9b5d-702e8f12c45c
+2026-11-11 16:14:38 [info     ] ingestion.phase2_complete      event_id=f1689d05-320b-441a-aabd-160da24c475b
+2026-11-11 16:14:38 [debug    ] Reusing existing entity        entity_id=d2c4c60c-82bb-41a0-a95d-c81189ebffbd entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:38 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:38 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=31863fe8-1d1d-4792-aae0-a68ea807b485
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=f53ec610-af86-4a86-9d16-1bc03c065637
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=b3d0bfb2-c582-4892-929a-0cef02b19f70 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=e3aa7245-24d7-4251-a9bd-53d2a4540038 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:39 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=ed3832a2-db6e-4b56-8c7c-d081f902cf51
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=85ecc35d-b06d-418a-9581-44a8af49bb06
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=500237bb-09cf-4536-897e-66fe0ae6ddf3 entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:39 [info     ] Created new entity             entity_id=d5adb482-e25b-4100-b37e-5fce44e1af4f entity_type=location name='front porch' user_id=robot-1
+2026-11-11 16:14:39 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=cab3cca7-c060-40e6-af08-61bb89ec2344
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=633640ea-9113-440c-ac73-ebe6941379f4
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=1a6a9c47-b545-4d9d-a016-dac75d27c34a entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:39 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=64fddc79-2204-407d-a197-d6dcd6ae8b4b
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=776dd5de-90dc-4a38-a603-83c9978a2c8e
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=6551f67f-59cd-46e6-ab05-6e7696e88571 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:39 [info     ] Created new entity             entity_id=597e3f8f-2916-4d9b-b5d0-3575d8e54dc9 entity_type=location name='kids room floor' user_id=robot-1
+2026-11-11 16:14:39 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c4a831a8-b50e-4d7d-b7e2-17269e266ee2
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=5b589c72-b9b1-4da9-b9c8-673e74577e12
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=d9222669-199d-499c-adb6-33a7d71682bb entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:39 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c1986f0f-72cf-41a2-b6ca-85e38107ea05
+2026-11-11 16:14:39 [info     ] ingestion.phase2_complete      event_id=fc6e548d-9d91-47fd-9366-9c5c329db092
+2026-11-11 16:14:39 [debug    ] Reusing existing entity        entity_id=c78441f9-9bef-4c29-8159-c092c1471eec entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=08ec578d-b1e0-4a00-9a10-4a422c93a18c entity_type=location name='basement shelf' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=6bd526a9-1b9a-49f7-9676-39de59cbcd48
+2026-11-11 16:14:40 [info     ] ingestion.phase2_complete      event_id=891c88a8-88fd-4f41-881c-32204917c336
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=f70d51d3-dec9-46f4-85ae-be03aba43fbc entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:40 [info     ] Created new entity             entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9423a6ef-cb86-4d66-89de-35620fa08794
+2026-11-11 16:14:40 [info     ] ingestion.phase2_complete      event_id=9fa0c7f7-e40b-4a83-a43f-947158bea088
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=04c7ead5-253c-409f-8a82-66db92a88bc8 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=bb072314-c9d9-48a2-8d4a-fca40997e2a1 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5145725b-d17d-4452-a43c-d0d03c0d3dd3
+2026-11-11 16:14:40 [info     ] ingestion.phase2_complete      event_id=b2f60ee8-1b0f-42e1-8834-a9d698eeb9bd
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=ec7781fa-8d3b-46cf-8eb7-5e0ffb58714c entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=b893f652-25ec-4709-ab09-4f076c1ae6fb
+2026-11-11 16:14:40 [info     ] ingestion.phase2_complete      event_id=e8ff6a3d-451a-4e4a-a51e-d76d1cb78e09
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=0c192302-066a-4c31-b720-e8b2b270cae4 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=322dd26c-c44a-4931-b1b0-85c6331cf461
+2026-11-11 16:14:40 [info     ] ingestion.phase2_complete      event_id=5fb5d7de-10ea-4590-bcf2-4087133a2e12
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=835b0130-fb8f-4272-9128-dbf5699180e5 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:40 [debug    ] Reusing existing entity        entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:40 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=67db3685-cf8e-432d-852c-4f793b4baf23
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=44145122-ae5f-419e-ac2a-9d06c0adc8b8
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=1f84072f-ea4d-47d0-866b-3ad7ef2faeb8 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:41 [info     ] Created new entity             entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=33da7f9f-4aad-476d-8523-559792153704
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=7381bfb4-757a-4b69-a848-efdf9246351c
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=6c176e93-bc26-42b7-9004-7d83fd8987b1 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=38bc0057-0ac3-45f9-a832-8966b2ee42c5
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=928379ce-bde8-4f6a-99d9-f64865fb92bf
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=dce50194-12c3-44c1-831f-a1c9e97cc8b3 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=4b05ead5-3e8e-49c8-a4cd-7f114764b183
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=f4c39aab-5ee7-4862-b134-acffcf356d95
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=32def8de-cd66-43d2-bd16-d4a7a0397b6b entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:41 [info     ] Created new entity             entity_id=201115ee-e07a-4716-b9db-8af2f4411094 entity_type=location name='coat closet' user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=625601d1-7889-4548-abe0-ada96b0572e0
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=9b1c0482-bca7-4129-a27b-ce348fb7c15f
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=7c2d669a-c810-4dbd-8670-faa84d73f958 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:41 [info     ] Created new entity             entity_id=c2e14431-1ef7-4131-8133-639541f73b0c entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a00170ab-49b1-44a7-ba3d-c86b5cd3f5af
+2026-11-11 16:14:41 [info     ] ingestion.phase2_complete      event_id=3317a3d6-73a3-448e-829b-0927e7a14ebf
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=710c2abe-828a-49c9-b4ab-63ba57dc2ee3 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:41 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:41 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=27ff1998-6270-4dd1-a365-3691b8731581
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=0ce8c1dd-98e4-4193-8608-3c745bf53198
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=aa2b9d67-646c-44fc-840c-3cd758dc7595 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=69ac9ba5-4bfe-4484-a5f3-0e8c578a706d
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=33900656-5a98-4529-980f-117253595bdb
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=1cfb8fc7-c1a1-42de-b1c0-6a4a05843ec6 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=e3aa7245-24d7-4251-a9bd-53d2a4540038 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0dcb4120-e314-45db-9e9a-c8287ed8a8dd
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=be70ef14-d0c1-4ace-b45d-ff846ff1b13f
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=d2c4c60c-82bb-41a0-a95d-c81189ebffbd entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=99ecc27a-b69d-45fc-873d-45486612a48e entity_type=location name='piano top' user_id=robot-1
+2026-11-11 16:14:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=65f7ff7d-db78-4e7f-80be-270094a1c8c7
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=3491120b-7b13-45da-a5a7-f35a6697cd67
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=b3d0bfb2-c582-4892-929a-0cef02b19f70 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=e7801820-a844-411f-a461-d5d11fa9bffa entity_type=location name='bathroom cabinet' user_id=robot-1
+2026-11-11 16:14:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=aad8f562-6a97-4b79-be7b-4fb4da3ef62b
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=79589bc5-9cea-4ada-be5c-8ca438f828f2
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=500237bb-09cf-4536-897e-66fe0ae6ddf3 entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:42 [debug    ] Reusing existing entity        entity_id=201115ee-e07a-4716-b9db-8af2f4411094 entity_type=location name='coat closet' user_id=robot-1
+2026-11-11 16:14:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5a77b8ee-56a6-4e23-93eb-f334fa9592d0
+2026-11-11 16:14:42 [info     ] ingestion.phase2_complete      event_id=da9741f0-4e11-4564-8cc0-ef0cf2d04862
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=1a6a9c47-b545-4d9d-a016-dac75d27c34a entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=1d18aeae-5cb0-4128-ba94-256b8918aafc
+2026-11-11 16:14:43 [info     ] ingestion.phase2_complete      event_id=cfae5ad1-2dc3-41df-bf7c-892d3c8c5c62
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=6551f67f-59cd-46e6-ab05-6e7696e88571 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=d05478fe-0609-45a9-96ae-959e641cafbd
+2026-11-11 16:14:43 [info     ] ingestion.phase2_complete      event_id=54763e7f-c6d1-4f5a-9579-8b418739aedd
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=d9222669-199d-499c-adb6-33a7d71682bb entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=1df6cde9-294e-402f-9f68-d176a741c661
+2026-11-11 16:14:43 [info     ] ingestion.phase2_complete      event_id=5042429d-10a8-4688-ade1-26abc58c8b65
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=c78441f9-9bef-4c29-8159-c092c1471eec entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=2451d239-bf4e-4f1d-8eaa-842685f67667 entity_type=location name='study windowsill' user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=905b64a3-8fa0-4bab-b0a4-2a993334b74b
+2026-11-11 16:14:43 [info     ] ingestion.phase2_complete      event_id=bbd25187-48bb-4b50-a5c7-2dabd51d7aaf
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=f70d51d3-dec9-46f4-85ae-be03aba43fbc entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=47df9e68-8783-4e89-93e3-5cf98de4c24e
+2026-11-11 16:14:43 [info     ] ingestion.phase2_complete      event_id=ea19a76a-b084-4606-8226-031f9098851e
+2026-11-11 16:14:43 [debug    ] Reusing existing entity        entity_id=04c7ead5-253c-409f-8a82-66db92a88bc8 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:43 [info     ] Created new entity             entity_id=8616f1d7-0bec-4e28-b875-5b2986a72628 entity_type=location name=pantry user_id=robot-1
+2026-11-11 16:14:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a9717374-8a12-4e84-a67b-c6c0052c76ce
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=c3a156d3-0661-4497-ab54-38f3fc08ff53
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=ec7781fa-8d3b-46cf-8eb7-5e0ffb58714c entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=25fffcb3-b8ea-4067-8f18-cc73c6e1e56f
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=f351fce1-8370-4a74-97e0-d560f8e07841
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=0c192302-066a-4c31-b720-e8b2b270cae4 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=899f5e96-40e6-457b-962c-9568087c97a3 entity_type=location name='guest room dresser' user_id=robot-1
+2026-11-11 16:14:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=1c697dc1-9250-482f-a654-64f7e27fed0d
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=0b76bbbb-3bcc-417f-b278-03c2b369fa80
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=835b0130-fb8f-4272-9128-dbf5699180e5 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=bb072314-c9d9-48a2-8d4a-fca40997e2a1 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0a89c282-b558-4777-a3a8-e4698bbf5145
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=a1a43160-6592-45d9-8d48-56060aaa0768
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=1f84072f-ea4d-47d0-866b-3ad7ef2faeb8 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:44 [info     ] Created new entity             entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=8bbfa10e-f451-4dfe-ade0-b76263961c48
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=7c312bc8-9e41-4ff1-aa86-481f285ee316
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=6c176e93-bc26-42b7-9004-7d83fd8987b1 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:44 [info     ] Created new entity             entity_id=d62ae703-f645-4a1c-bf19-18967188fbe2 entity_type=location name='office desk' user_id=robot-1
+2026-11-11 16:14:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=28d81fab-b5aa-4cfd-88d2-4e23d3ed421f
+2026-11-11 16:14:44 [info     ] ingestion.phase2_complete      event_id=fd31c33a-7b4f-48ea-b283-a7fd9bc67559
+2026-11-11 16:14:44 [debug    ] Reusing existing entity        entity_id=dce50194-12c3-44c1-831f-a1c9e97cc8b3 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=d5adb482-e25b-4100-b37e-5fce44e1af4f entity_type=location name='front porch' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=4e2fa28a-7a8a-476b-8ead-5bec9db6499b
+2026-11-11 16:14:45 [info     ] ingestion.phase2_complete      event_id=aa9277ac-0d83-4eed-900b-b86d364ced4f
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=32def8de-cd66-43d2-bd16-d4a7a0397b6b entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=7e8f0da2-4a6b-4a29-b4c7-a572ef88d378 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=81e5d49b-11a8-4a4f-ab59-e670fa19c677
+2026-11-11 16:14:45 [info     ] ingestion.phase2_complete      event_id=7e3cfa77-970e-4a47-8ce2-3b7b91f1f087
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=7c2d669a-c810-4dbd-8670-faa84d73f958 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=94bd8db7-66f9-46b0-9c2f-ada21fa2c199
+2026-11-11 16:14:45 [info     ] ingestion.phase2_complete      event_id=73ec7d8f-3091-4a3f-aaef-3a60428465f5
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=710c2abe-828a-49c9-b4ab-63ba57dc2ee3 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=e7801820-a844-411f-a461-d5d11fa9bffa entity_type=location name='bathroom cabinet' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=556205cc-00ad-4202-8e63-fa2e2f4fcbfe
+2026-11-11 16:14:45 [info     ] ingestion.phase2_complete      event_id=a9d11c52-3ec9-4257-a9aa-3b45cd392d16
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=aa2b9d67-646c-44fc-840c-3cd758dc7595 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=201115ee-e07a-4716-b9db-8af2f4411094 entity_type=location name='coat closet' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=d1f90fe5-bf7e-4367-9537-0e94c88aa2c6
+2026-11-11 16:14:45 [info     ] ingestion.phase2_complete      event_id=2eb52e73-8821-4ed8-9565-ebccecee26ac
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=1cfb8fc7-c1a1-42de-b1c0-6a4a05843ec6 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:45 [debug    ] Reusing existing entity        entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=98efa65e-d631-4816-901e-4bfc69f51ff6
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=c45dafdb-4fea-44d0-8389-616a5aa0bf17
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=d2c4c60c-82bb-41a0-a95d-c81189ebffbd entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=bb072314-c9d9-48a2-8d4a-fca40997e2a1 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:46 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=e822841b-423f-4ea6-97bb-3aa9cdf2abff
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=fa5a7b80-c079-4666-9b31-657004e27ce8
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=b3d0bfb2-c582-4892-929a-0cef02b19f70 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:46 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a4ba612d-e569-4af1-8e15-9a49ae28eac9
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=40a1f5d6-f060-45d5-8186-f01f0e0565b9
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=500237bb-09cf-4536-897e-66fe0ae6ddf3 entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:46 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=e130d3f4-7851-4f8c-88e1-ac634cd602e3
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=acf0504b-520f-4a8a-8fdb-36c092587ff1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=1a6a9c47-b545-4d9d-a016-dac75d27c34a entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=c2e14431-1ef7-4131-8133-639541f73b0c entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:46 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bf753202-d6ab-445f-a419-0855224f96b9
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=71167a65-cab8-4b45-bf66-a5d4e776e40f
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=6551f67f-59cd-46e6-ab05-6e7696e88571 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:46 [debug    ] Reusing existing entity        entity_id=597e3f8f-2916-4d9b-b5d0-3575d8e54dc9 entity_type=location name='kids room floor' user_id=robot-1
+2026-11-11 16:14:46 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=cbd342d8-d473-46c7-af28-f6352a5d64c9
+2026-11-11 16:14:46 [info     ] ingestion.phase2_complete      event_id=18697d11-c4fc-49cc-93e1-63209ab2db6e
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=d9222669-199d-499c-adb6-33a7d71682bb entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=ebb4115b-20bc-47d0-90f9-39acaf799359 entity_type=location name='dining table' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=ceab1cbd-6267-4012-bf68-6a95a34dea46
+2026-11-11 16:14:47 [info     ] ingestion.phase2_complete      event_id=20f5e822-5570-4158-9b45-cb54bb854d3e
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=c78441f9-9bef-4c29-8159-c092c1471eec entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=597e3f8f-2916-4d9b-b5d0-3575d8e54dc9 entity_type=location name='kids room floor' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=841bf2fb-ca37-4b02-89b7-ab4ca67fe887
+2026-11-11 16:14:47 [info     ] ingestion.phase2_complete      event_id=65c6006a-a4ac-44b5-a72e-10f1e36c018d
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=f70d51d3-dec9-46f4-85ae-be03aba43fbc entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5e6c7391-7824-4a1f-8217-016cef1713b0
+2026-11-11 16:14:47 [info     ] ingestion.phase2_complete      event_id=92c9dd17-545f-4419-9d76-efbb71994179
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=04c7ead5-253c-409f-8a82-66db92a88bc8 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=899f5e96-40e6-457b-962c-9568087c97a3 entity_type=location name='guest room dresser' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=47539900-9b3b-40f2-a89a-0473b43f880b
+2026-11-11 16:14:47 [info     ] ingestion.phase2_complete      event_id=2747fed3-cd8e-4438-bb6e-283a62f503ab
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=ec7781fa-8d3b-46cf-8eb7-5e0ffb58714c entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=7e8f0da2-4a6b-4a29-b4c7-a572ef88d378 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=cbc81031-5c47-418c-872d-87cd32bc522b
+2026-11-11 16:14:47 [info     ] ingestion.phase2_complete      event_id=f2fab831-e5af-4ecf-895f-468fe8d34bf1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=0c192302-066a-4c31-b720-e8b2b270cae4 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:47 [debug    ] Reusing existing entity        entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:47 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=2bc5b909-7571-4bb7-8e73-4bdfe8e3eff9
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=2ab8410b-0194-4959-855f-1ccc03e67c1f
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=835b0130-fb8f-4272-9128-dbf5699180e5 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:48 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c82f42ca-86e3-4b7a-92a4-91701287dc69
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=6d3aa026-bb0e-4fb8-b953-066bffbeccf6
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=1f84072f-ea4d-47d0-866b-3ad7ef2faeb8 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=e7801820-a844-411f-a461-d5d11fa9bffa entity_type=location name='bathroom cabinet' user_id=robot-1
+2026-11-11 16:14:48 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=f422ca3f-7247-415e-aa55-e5484e2ea9ac
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=14c5a038-f700-4a4d-97d3-cbe78bb00eba
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=6c176e93-bc26-42b7-9004-7d83fd8987b1 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=d5adb482-e25b-4100-b37e-5fce44e1af4f entity_type=location name='front porch' user_id=robot-1
+2026-11-11 16:14:48 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=30bccc96-709b-44dc-8340-01fc7979c592
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=07b12be7-1a52-4554-a0f9-90dab5441a21
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=dce50194-12c3-44c1-831f-a1c9e97cc8b3 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=99ecc27a-b69d-45fc-873d-45486612a48e entity_type=location name='piano top' user_id=robot-1
+2026-11-11 16:14:48 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=6aa7dfe1-ce63-43b2-96a7-8fb99f72b15a
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=f0f4b919-d812-45a9-b21a-fe1c7230d0f3
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=32def8de-cd66-43d2-bd16-d4a7a0397b6b entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:48 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=8508516d-f54f-438c-9f6d-4d92e250cece
+2026-11-11 16:14:48 [info     ] ingestion.phase2_complete      event_id=6e57a61d-6e0c-4e6d-acce-f97050849f53
+2026-11-11 16:14:48 [debug    ] Reusing existing entity        entity_id=7c2d669a-c810-4dbd-8670-faa84d73f958 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:49 [info     ] Created new entity             entity_id=535607ec-9481-4c91-92dc-78e2f024baa2 entity_type=location name='entry bench' user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=466b4e1a-c524-4a7b-b0ad-70b8f7ad7eaf
+2026-11-11 16:14:49 [info     ] ingestion.phase2_complete      event_id=7c69afbc-6a9f-471c-933b-8c5ea17ac9c6
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=710c2abe-828a-49c9-b4ab-63ba57dc2ee3 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=bb9c262f-f0fc-477d-b173-9558036ada2c entity_type=location name='bedroom nightstand' user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=c2b9f796-e3be-4a2d-a16d-a3b0b9ac419e
+2026-11-11 16:14:49 [info     ] ingestion.phase2_complete      event_id=b2da7eb5-cf52-4970-93e5-0fcf7da59c4c
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=aa2b9d67-646c-44fc-840c-3cd758dc7595 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=8616f1d7-0bec-4e28-b875-5b2986a72628 entity_type=location name=pantry user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=dac876c9-7f87-4eb7-b432-2815b3515ebb
+2026-11-11 16:14:49 [info     ] ingestion.phase2_complete      event_id=19e6ab87-9014-4cf5-ae5d-cdae7ac3f297
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=1cfb8fc7-c1a1-42de-b1c0-6a4a05843ec6 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=86f10cbb-3669-4972-a5c5-b3da3c84eb1c
+2026-11-11 16:14:49 [info     ] ingestion.phase2_complete      event_id=31209445-c787-457d-ba14-fbeeebecd699
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=d2c4c60c-82bb-41a0-a95d-c81189ebffbd entity_type=product name='red mug' user_id=robot-1
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=99dc8768-e436-4677-919f-c22143449e4c entity_type=location name=balcony user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=93ed62b1-2168-4e81-9bbb-925a53abb65a
+2026-11-11 16:14:49 [info     ] ingestion.phase2_complete      event_id=80798387-b16b-4609-9ea9-e0e774ba802a
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=b3d0bfb2-c582-4892-929a-0cef02b19f70 entity_type=product name='house keys' user_id=robot-1
+2026-11-11 16:14:49 [debug    ] Reusing existing entity        entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:49 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=3ecf189a-b268-49bb-ae0c-23334ef04617
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=9631df66-97dd-48cc-8a7b-02df88629665
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=500237bb-09cf-4536-897e-66fe0ae6ddf3 entity_type=product name='blue notebook' user_id=robot-1
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:50 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=36246f2a-548a-4a07-8bf0-823dfb4d9d68
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=4c38385d-922d-4d54-a3d5-f95b339df20c
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=1a6a9c47-b545-4d9d-a016-dac75d27c34a entity_type=product name='phone charger' user_id=robot-1
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:50 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0ee29a0e-c5b4-48c9-b8e2-9e8f55f8b285
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=0003a521-e86c-4957-bed2-c42d7d31fb07
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=6551f67f-59cd-46e6-ab05-6e7696e88571 entity_type=product name='reading glasses' user_id=robot-1
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=e99e8901-0a94-424d-ad35-304c2dce7730 entity_type=location name='laundry room' user_id=robot-1
+2026-11-11 16:14:50 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=6f962c5f-125f-4b22-8bf1-8dd31d204716
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=2e2d28a5-5662-427a-8bcb-693f30f86660
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=d9222669-199d-499c-adb6-33a7d71682bb entity_type=product name='tv remote' user_id=robot-1
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=7e8f0da2-4a6b-4a29-b4c7-a572ef88d378 entity_type=location name='sofa armrest' user_id=robot-1
+2026-11-11 16:14:50 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=18e675c2-a4f4-4b29-b48f-eb923883426c
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=d406e2a9-76f4-4c6f-b407-c26b1fe03046
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=c78441f9-9bef-4c29-8159-c092c1471eec entity_type=product name='black umbrella' user_id=robot-1
+2026-11-11 16:14:50 [debug    ] Reusing existing entity        entity_id=535607ec-9481-4c91-92dc-78e2f024baa2 entity_type=location name='entry bench' user_id=robot-1
+2026-11-11 16:14:50 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=4714f07d-259c-41d4-a90b-941822663425
+2026-11-11 16:14:50 [info     ] ingestion.phase2_complete      event_id=aef262d3-42d5-4f48-a1b5-0fbaa8a6d6bc
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=f70d51d3-dec9-46f4-85ae-be03aba43fbc entity_type=product name='dog leash' user_id=robot-1
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=857178e5-49fd-4d01-8a76-b9343262edcb entity_type=location name='garage workbench' user_id=robot-1
+2026-11-11 16:14:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=5302f107-e936-46a7-b2d3-b85945067606
+2026-11-11 16:14:51 [info     ] ingestion.phase2_complete      event_id=cbd410d0-6cec-4811-8c2d-f07e93b52f3c
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=04c7ead5-253c-409f-8a82-66db92a88bc8 entity_type=product name='screwdriver set' user_id=robot-1
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=201115ee-e07a-4716-b9db-8af2f4411094 entity_type=location name='coat closet' user_id=robot-1
+2026-11-11 16:14:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=eb515050-668e-4d75-896d-25ff60711af3
+2026-11-11 16:14:51 [info     ] ingestion.phase2_complete      event_id=854fd87a-4461-4fae-aba5-322a518d9e39
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=ec7781fa-8d3b-46cf-8eb7-5e0ffb58714c entity_type=product name='first aid kit' user_id=robot-1
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=99ecc27a-b69d-45fc-873d-45486612a48e entity_type=location name='piano top' user_id=robot-1
+2026-11-11 16:14:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=888beb75-773a-4d15-9df4-1aa2a3fc854a
+2026-11-11 16:14:51 [info     ] ingestion.phase2_complete      event_id=8f50fae6-e354-4ae8-8a43-2804ca55cdb7
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=0c192302-066a-4c31-b720-e8b2b270cae4 entity_type=product name='yoga mat' user_id=robot-1
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=e3aa7245-24d7-4251-a9bd-53d2a4540038 entity_type=location name=bookshelf user_id=robot-1
+2026-11-11 16:14:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=b6b4444d-b6bf-4df1-8e89-5263a9eb7538
+2026-11-11 16:14:51 [info     ] ingestion.phase2_complete      event_id=83e5f217-81ac-4e47-99a7-34a048ab9004
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=835b0130-fb8f-4272-9128-dbf5699180e5 entity_type=product name='water bottle' user_id=robot-1
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=c2e14431-1ef7-4131-8133-639541f73b0c entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=d9e8a228-a100-40bc-b750-42f44fc67d58
+2026-11-11 16:14:51 [info     ] ingestion.phase2_complete      event_id=bcc932d6-a40a-4cfd-898b-90423687bd2f
+2026-11-11 16:14:51 [debug    ] Reusing existing entity        entity_id=1f84072f-ea4d-47d0-866b-3ad7ef2faeb8 entity_type=product name='laptop bag' user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=c2e14431-1ef7-4131-8133-639541f73b0c entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=dcba74a2-44e6-45f5-b41d-820e86ac120e
+2026-11-11 16:14:52 [info     ] ingestion.phase2_complete      event_id=554f1c50-d6c3-4ee2-8cab-15a8061a58ff
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=6c176e93-bc26-42b7-9004-7d83fd8987b1 entity_type=product name='sewing kit' user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=54366883-1716-421a-a1e0-777e7bc42a4a entity_type=location name='kitchen counter' user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=862bfae8-df8a-4fd7-9c33-b957eee5eab3
+2026-11-11 16:14:52 [info     ] ingestion.phase2_complete      event_id=6add6d0a-d6a7-4a9e-bd0d-959d64625949
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=dce50194-12c3-44c1-831f-a1c9e97cc8b3 entity_type=product name=flashlight user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=8616f1d7-0bec-4e28-b875-5b2986a72628 entity_type=location name=pantry user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=cf4f55ea-16b8-479f-b37c-2bf2cd04d38d
+2026-11-11 16:14:52 [info     ] ingestion.phase2_complete      event_id=bc351f03-c04c-4d26-8e62-48fdde9baa7c
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=32def8de-cd66-43d2-bd16-d4a7a0397b6b entity_type=product name='tape measure' user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=c2e14431-1ef7-4131-8133-639541f73b0c entity_type=location name=dishwasher user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=a1136358-a641-41d2-88a7-6fcc381d3c71
+2026-11-11 16:14:52 [info     ] ingestion.phase2_complete      event_id=395bdbb3-d7d4-4217-a743-4035d97d9740
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=7c2d669a-c810-4dbd-8670-faa84d73f958 entity_type=product name='car keys' user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=bb072314-c9d9-48a2-8d4a-fca40997e2a1 entity_type=location name='hallway shelf' user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=abeab748-5586-43a8-bb68-704db4a4722c
+2026-11-11 16:14:52 [info     ] ingestion.phase2_complete      event_id=5ac25830-afb9-4960-ba3c-b4049eec8e7e
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=710c2abe-828a-49c9-b4ab-63ba57dc2ee3 entity_type=product name='passport folder' user_id=robot-1
+2026-11-11 16:14:52 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=2b4a4d69-d3d2-49ff-b2c2-3fe97621e49e
+2026-11-11 16:14:53 [info     ] ingestion.phase2_complete      event_id=69e26a67-5236-4bcd-b9f5-f13c398ece89
+2026-11-11 16:14:53 [debug    ] Reusing existing entity        entity_id=aa2b9d67-646c-44fc-840c-3cd758dc7595 entity_type=product name='wool scarf' user_id=robot-1
+2026-11-11 16:14:53 [debug    ] Reusing existing entity        entity_id=535607ec-9481-4c91-92dc-78e2f024baa2 entity_type=location name='entry bench' user_id=robot-1
+2026-11-11 16:14:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=55f3dfa7-13d9-4e2b-9cc8-e22ea4d7bbc5
+2026-11-11 16:14:53 [info     ] ingestion.phase2_complete      event_id=6cb33fa6-abf1-4872-8050-445e67c142ff
+2026-11-11 16:14:53 [debug    ] Reusing existing entity        entity_id=1cfb8fc7-c1a1-42de-b1c0-6a4a05843ec6 entity_type=product name='guitar tuner' user_id=robot-1
+2026-11-11 16:14:53 [debug    ] Reusing existing entity        entity_id=e3adef48-984e-4877-b3f2-8adad3d1de26 entity_type=location name='living room table' user_id=robot-1
+2026-11-11 16:14:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=bff61087-17e7-426c-a23a-81ae0f75b066
+2026-11-11 16:14:53 [info     ] ingestion.phase2_complete      event_id=7ffc28cc-cc02-4b8b-b481-7713be50dce3
+____ test_newest_stated_place_ranks_first[stated-3days-5moves-guitar-tuner] ____
+
+stated_case = Case(id='stated-3days-5moves-guitar-tuner', data=('3days', 5, 'guitar tuner'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The guitar tuner is on the living room table.'; top 5: ['The guitar tuner is on the garage workbench.', 'The guitar tuner is on the bookshelf.', 'The guitar tuner is on the living room table.', 'The guitar tuner is on the laundry room.', 'The guitar tuner is on the basement shelf.']
+E       assert (['The guitar tuner is on the garage workbench.', 'The guitar tuner is on the bookshelf.', 'The guitar tuner is on the living room table.', 'The guitar tuner is on the laundry room.', 'The guitar tuner is on the basement shelf.'] and 'The guitar t...ge workbench.' == 'The guitar t...g room table.'
+E         
+E         - The guitar tuner is on the living room table.
+E         + The guitar tuner is on the garage workbench.)
+
+tests/contract/test_state_churn.py:30: AssertionError
+_____ test_newest_stated_place_ranks_first[stated-3days-12moves-tv-remote] _____
+
+stated_case = Case(id='stated-3days-12moves-tv-remote', data=('3days', 12, 'tv remote'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The tv remote is on the guest room dresser.'; top 5: ['The tv remote is on the kitchen counter.', 'The tv remote is on the sofa armrest.', 'The tv remote is on the dining table.', 'The tv remote is on the balcony.', 'The tv remote is on the guest room dresser.']
+E       assert (['The tv remote is on the kitchen counter.', 'The tv remote is on the sofa armrest.', 'The tv remote is on the dining table.', 'The tv remote is on the balcony.', 'The tv remote is on the guest room dresser.'] and 'The tv remot...chen counter.' == 'The tv remot...room dresser.'
+E         
+E         - The tv remote is on the guest room dresser.
+E         + The tv remote is on the kitchen counter.)
+
+tests/contract/test_state_churn.py:30: AssertionError
+____ test_newest_stated_place_ranks_first[stated-3days-12moves-wool-scarf] _____
+
+stated_case = Case(id='stated-3days-12moves-wool-scarf', data=('3days', 12, 'wool scarf'))
+robot = <tests.contract.harness.RobotScenes object at 0x1149b7250>
+
+    def test_newest_stated_place_ranks_first(stated_case, robot):
+        label, moves, obj = stated_case.data
+        scene, truth = robot.churn_stated(label, moves)
+        # The newest move's two records, its message and its claim, both have the placement sentence as their text
+        # (prme.ingestion.assertions.stated_text). Either one first is the newest placement.
+        sentence = robot.world.placed.format(obj=obj, place=truth[obj])
+        ranked = texts(scene.ask(robot.world.where_now.format(obj=obj)), 5)
+>       assert ranked and ranked[0] == sentence, f"newest: {sentence!r}; top 5: {ranked}"
+E       AssertionError: newest: 'The wool scarf is on the dishwasher.'; top 5: ['The wool scarf is on the pantry.', 'The wool scarf is on the dishwasher.', 'The wool scarf is on the entry bench.', 'The wool scarf is on the sofa armrest.', 'The wool scarf is on the coat closet.']
+E       assert (['The wool scarf is on the pantry.', 'The wool scarf is on the dishwasher.', 'The wool scarf is on the entry bench.', 'The wool scarf is on the sofa armrest.', 'The wool scarf is on the coat closet.'] and 'The wool sca...n the pantry.' == 'The wool sca...e dishwasher.'
+E         
+E         - The wool scarf is on the dishwasher.
+E         ?                          ^^^^^ ^^^
+E         + The wool scarf is on the pantry.
+E         ?                          ^ ^^ +)
+
+tests/contract/test_state_churn.py:30: AssertionError
+--------------------------- Captured stdout teardown ---------------------------
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+2026-11-11 16:15:44 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:15:44 [info     ] write_queue.stopped
+================ tests/contract/ scorecard, memory mode classic ================
+group                           passed  xpassed  xfailed   failed
+S1 churn stated, 10 min apart        2        0       12        4
+S1 churn stated, 3 days apart        9        0        4        5
+total                               11        0       16        9
+=========================== short test summary info ============================
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-2moves-yoga-mat]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-2moves-dog-leash]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-red-mug]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-wool-scarf]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-2moves-tape-measure]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-5moves-car-keys]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-5moves-guitar-tuner]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-12moves-tv-remote]
+FAILED tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-12moves-wool-scarf]
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-2moves-wool-scarf] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-2moves-sewing-kit] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-2moves-water-bottle] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-sewing-kit] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-guitar-tuner] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-screwdriver-set] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-5moves-blue-notebook] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-12moves-tape-measure] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-12moves-tv-remote] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-12moves-black-umbrella] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-12moves-blue-notebook] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-10min-12moves-water-bottle] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-2moves-first-aid-kit] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-12moves-tape-measure] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-12moves-car-keys] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+XFAIL tests/contract/test_state_churn.py::test_newest_stated_place_ranks_first[stated-3days-12moves-screwdriver-set] - thesis 2.2 B: without the ledger, an older stated placement outranks the newest
+9 failed, 11 passed, 36 deselected, 16 xfailed in 158.98s (0:02:38)

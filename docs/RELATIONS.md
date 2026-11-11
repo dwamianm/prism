@@ -224,9 +224,17 @@ await engine.ingest(
 Each assertion becomes the claim typed extraction would make from a sentence saying it: the subject and object
 entities, a fact node with its relation, role and status (written whatever `enable_typed_extraction` says), the
 `HAS_FACT` and `MENTIONS` links and the derivation plan, so the walk and the belief ledger read it with no special
-case. The claim's text is a sentence rendered from its fields, so word search, meaning search and the reader see
-its title, value and date ("Dana works at Brightpath as analytics manager (since 2026-05-04)."); the source's own
-text stays the stored message and the claim's `evidence_quote`. No model is called. The source never joins a model batch, and pronoun repair,
+case. The claim's text is the source's sentence that names its object (the shortest run of the content's
+sentences that does, or the whole content when none does), followed, in one parenthesis, by only the fields that
+sentence does not show: the role and the time ("Two weeks in at Brightpath and I already like my team. (as
+analytics manager; since 2026-05-04)"). So word search, meaning search and the reader see the turn's own words and
+the title and date the caller stated. Claims of one sentence share its text: claim merge reads the claim's fields
+(predicate, object, polarity, stated date, object entity), never its text, so they stay separate claims, and the
+reader's `fold_repeated_text` folds a claim into its turn only when the turn's text holds the claim's whole text,
+so a claim whose parenthesis adds a role or a date stays in the context beside its turn. When the caller gives no
+content, the content and each claim's text are a sentence rendered from the fields ("Dana works at Brightpath as
+analytics manager (since 2026-05-04)."). The source's own text stays the stored message and the claim's
+`evidence_quote`. No model is called. The source never joins a model batch, and pronoun repair,
 corrections and resolved claim text do not apply to it. `ingest_batch()` takes an `"assertions"` key per message,
 and `MemoryClient.ingest()` takes the same argument.
 

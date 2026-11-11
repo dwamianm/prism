@@ -1,3 +1,45 @@
+# Task 11 (round 3): state of the work (2026-11-11)
+
+Branch `fact-fields` in `/Users/dwamianm/Sites/prism-fields`, from 4a5f71ff. Nothing was pushed by this session.
+The round 3 result is in `round3/REPORT.md`: tx-B1 top 3 is 6/7, 16/18 and 12/12, so only member-v1 meets its bar.
+The owner approved this round as the last one of this line of work.
+
+## Round 3
+
+**The change.** A stated claim's text is its turn's sentence that names its object (`stated_sentence`, the picker
+of round 2's B1s, now only in `src/prme/ingestion/assertions.py`), then one parenthesis with the role and the ISO
+date the sentence does not show (`stated_text`). Content rendered from the assertions (`render_content`) keeps the
+rendered sentence (`claim_text`; `is_rendered` tells the two apart). `grounding_method` is `stated_sentence_v1` or
+`stated_fields_v1`. `oracle.py` lost `sentence_text`; `run_oracle.py` lost `--sentence-text`.
+
+**Checks.** `tests/test_structured_assertions.py` 73 passed, 16 skipped; targeted suites with the two fold suites
+715 passed, 259 skipped; derivation 2 passed. Contract visible set: classic 73 passed, 87 xfailed (the stated churn
+list is the 24 ids of 2026-11-10 again, three runs agreed; `tests/contract/expected.py`); address_first 73 passed,
+44 xpassed, 43 xfailed, 0 failed. Hidden set totals: classic 82 passed, 80 xfailed; address_first 82 passed,
+42 xfailed, 38 xpassed. Full unit suite: 1 failed (`tests/test_checkout.py`, the worktree test), 7471 passed,
+1646 skipped, 2 xfailed.
+
+**Rerun** (providers blocked, from the worktree):
+
+```sh
+for n in defects-v1 chat-v1 member-v1; do
+  extra=(); [ $n = member-v1 ] && extra=(--speaker --set enable_speaker_grounding=true)
+  uv run python research/oracle-extraction-2026-11/run_oracle.py $n tx-B1 --levels O1,O2 \
+    --set 'memory_mode="address_first"' --replace "${extra[@]}"
+  uv run python research/oracle-extraction-2026-11/serve_paths.py $n tx-B1 \
+    --json research/oracle-extraction-2026-11/results/round3/serve-$n-tx-B1.json
+  uv run python research/oracle-extraction-2026-11/union_ranks.py $n fx-M1 ox-B1 fx-B1 fx-B1s tx-B1 \
+    --json research/oracle-extraction-2026-11/results/round3/union-$n.json
+done
+uv run python research/oracle-extraction-2026-11/report_tables.py round3 \
+  > research/oracle-extraction-2026-11/results/round3/tables.md
+```
+
+**Next (not this task).** The router's cue bug: "What is it called?" cues `involved_in` because `derive_cues`
+takes "call" from the definition text "on call".
+
+---
+
 # Task 10 (round 2): state of the work (2026-11-11)
 
 Branch `fact-fields` in `/Users/dwamianm/Sites/prism-fields`. Nothing was pushed by this session. The round 2

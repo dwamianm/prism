@@ -1,0 +1,20 @@
+2026-11-11 16:00:43 [info     ] write_queue.started
+2026-11-11 16:00:45 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:45 [info     ] write_queue.stopped
+2026-11-11 16:00:45 [info     ] write_queue.started
+2026-11-11 16:00:46 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:46 [info     ] write_queue.stopped
+2026-11-11 16:00:46 [info     ] write_queue.started
+2026-11-11 16:00:48 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:48 [info     ] write_queue.stopped
+2026-11-11 16:00:48 [info     ] write_queue.started
+2026-11-11 16:00:49 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:49 [info     ] write_queue.stopped
+2026-11-11 16:00:49 [info     ] write_queue.started
+2026-11-11 16:00:50 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:50 [info     ] write_queue.stopped
+chat-v1 fx-M1: probe top 3 15/18, top 5 16/18; union top 3 15/18, top 5 16/18
+chat-v1 ox-B1: probe top 3 13/18, top 5 13/18; union top 3 13/18, top 5 13/18
+chat-v1 fx-B1: probe top 3 12/18, top 5 13/18; union top 3 12/18, top 5 13/18
+chat-v1 fx-B1s: probe top 3 14/18, top 5 15/18; union top 3 14/18, top 5 15/18
+chat-v1 tx-B1: probe top 3 16/18, top 5 16/18; union top 3 16/18, top 5 16/18

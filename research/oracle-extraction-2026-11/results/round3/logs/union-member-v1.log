@@ -1,0 +1,20 @@
+2026-11-11 16:00:53 [info     ] write_queue.started
+2026-11-11 16:00:54 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:54 [info     ] write_queue.stopped
+2026-11-11 16:00:54 [info     ] write_queue.started
+2026-11-11 16:00:55 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:55 [info     ] write_queue.stopped
+2026-11-11 16:00:55 [info     ] write_queue.started
+2026-11-11 16:00:55 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:55 [info     ] write_queue.stopped
+2026-11-11 16:00:55 [info     ] write_queue.started
+2026-11-11 16:00:56 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:56 [info     ] write_queue.stopped
+2026-11-11 16:00:56 [info     ] write_queue.started
+2026-11-11 16:00:56 [info     ] ingestion.pipeline_shutdown
+2026-11-11 16:00:56 [info     ] write_queue.stopped
+member-v1 fx-M1: probe top 3 11/12, top 5 12/12; union top 3 11/12, top 5 12/12
+member-v1 ox-B1: probe top 3 10/12, top 5 11/12; union top 3 10/12, top 5 11/12
+member-v1 fx-B1: probe top 3 9/12, top 5 9/12; union top 3 11/12, top 5 11/12
+member-v1 fx-B1s: probe top 3 12/12, top 5 12/12; union top 3 12/12, top 5 12/12
+member-v1 tx-B1: probe top 3 12/12, top 5 12/12; union top 3 12/12, top 5 12/12

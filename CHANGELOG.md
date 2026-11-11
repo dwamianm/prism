@@ -74,9 +74,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   holds (same name and type, same scope); a literal value must be in the content unless it repeats a live claim's
   value at the same subject and attribute. How each end was found is kept with the assertion, so a rebuild from
   the log accepts exactly what admission accepted. `time` (an ISO date, or a datetime with its offset) becomes the
-  claim's stated time. A stated claim's text is a sentence rendered from its fields ("Dana works at Brightpath as
-  analytics manager (since 2026-05-04)."), and the source's text stays its evidence; the content is rendered from
-  the assertions when omitted. `ASSERTION_VERSION` is 2. `reingest()` re-derives such a source from its own
+  claim's stated time. A stated claim's text is the source's sentence that names its object, with only the role
+  and the time that sentence does not show in one parenthesis ("Two weeks in at Brightpath and I already like my
+  team. (as analytics manager; since 2026-05-04)"), and the source's text stays its evidence. When the content is
+  omitted it is rendered from the assertions ("Dana works at Brightpath as analytics manager (since
+  2026-05-04).") and each claim keeps its rendered sentence. `ASSERTION_VERSION` is 2. `reingest()` re-derives such a source from its own
   metadata under settings of its own.
   The write rate is 4.6 facts a second at 400 observations, the cost of the materialization path every extracted
   claim takes; it is not yet fit for a sensor stream. Model-derived records are unchanged and `DERIVATION_VERSION`

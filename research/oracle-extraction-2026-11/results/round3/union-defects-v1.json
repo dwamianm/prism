@@ -1,0 +1,187 @@
+{
+ "fx-M1": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
+ ],
+ "ox-B1": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 5,
+   "union_rank": 5
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
+ ],
+ "fx-B1": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 25,
+   "union_rank": 12
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 18,
+   "union_rank": 2
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
+ ],
+ "fx-B1s": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 5,
+   "union_rank": 5
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
+ ],
+ "tx-B1": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 6,
+   "union_rank": 6
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
+ ]
+}

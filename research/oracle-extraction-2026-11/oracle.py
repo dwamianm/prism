@@ -194,27 +194,14 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def sentence_text(fact) -> str:
-    """Diagnostic only (``--sentence-text``): a stated claim's text as its turn's sentences, not its fields.
-
-    The shortest run of the turn's sentences that names the claim's object, or the whole turn when none does: about
-    what round 1 stored, so one build separates the rendered text (round 2, change 3) from the new facts.
-    """
-    from prme.ingestion.grounding import claim_sentences
-
-    turn = fact.evidence_quote
-    return claim_sentences(turn, fact.object, fact.object) or turn
-
-
 def build(label: str, *, name: str, facts_path: Path, levels: tuple[str, ...], overrides: dict | None = None,
-          speaker: bool = False, replace: bool = False, sentence_claims: bool = False) -> dict:
+          speaker: bool = False, replace: bool = False) -> dict:
     """Build the probe pack ``label`` of conversation ``name`` from a facts file, and measure it with the probe.
 
-    ``sentence_claims`` replaces, for this build only, the engine's rendered claim text with :func:`sentence_text`.
+    A stated claim's text is the engine's own (``prme.ingestion.assertions.stated_text``). Round 2's diagnostic arm
+    B1s swapped in the turn's sentence here; round 3 moved that picker into the engine, so the swap is gone.
     """
     import asyncio
-    import contextlib
-    from unittest import mock
 
     from benchmarks.diagnostics import chat_probe
     from prme.types import Scope
@@ -261,11 +248,9 @@ def build(label: str, *, name: str, facts_path: Path, levels: tuple[str, ...], o
 
     # The model build's configuration (extraction through deepseek-v4.1-flash:cloud), so only the facts differ;
     # the stubs answer every extraction call, and the build fails on any model call.
-    with (mock.patch("prme.ingestion.pipeline.stated_fact_text", sentence_text) if sentence_claims
-          else contextlib.nullcontext()):
-        report = asyncio.run(chat_probe.build(label, conversation_path=conversation_path, overrides=overrides,
-                                              model=MODEL, cloud=True, speaker=speaker, cache=False,
-                                              replace=replace, prepare=prepare))
+    report = asyncio.run(chat_probe.build(label, conversation_path=conversation_path, overrides=overrides,
+                                          model=MODEL, cloud=True, speaker=speaker, cache=False,
+                                          replace=replace, prepare=prepare))
     folder = chat_probe.default_root() / name / label
     totals = json.loads((folder / "build.json").read_text())["totals"]
     if totals.get("calls"):
@@ -275,8 +260,8 @@ def build(label: str, *, name: str, facts_path: Path, levels: tuple[str, ...], o
                      if (row["found"], row["reason"]) != next(
                          ((other["found"], other["reason"]) for other in predicted["turns"].get(key, [])
                           if other["position"] == row["position"]), None)]
-    record = {"kind": "oracle-extraction-build", "round": 2, "label": label, "conversation": name,
-              "claim_text": "turn sentences (diagnostic)" if sentence_claims else "rendered from the fields",
+    record = {"kind": "oracle-extraction-build", "round": 3, "label": label, "conversation": name,
+              "claim_text": "the turn's sentence and the fields it does not show (engine)",
               "levels": list(levels), "facts": str(facts_path.relative_to(ROOT)) if facts_path.is_relative_to(ROOT)
               else str(facts_path), "facts_sha256": digest(facts_path), "overrides": overrides or {},
               "speaker": speaker, "model_calls": totals.get("calls", 0), "turns": dict(ingested),
