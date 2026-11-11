@@ -122,18 +122,6 @@ _SEED_WORD_RE = re.compile(r"\w+")
 _MAX_SEED_TERMS = 32
 
 
-def content_words(query: str) -> str:
-    """The question without its function words (``PackingConfig.lexical_content_words``), in order.
-
-    A word of one or two letters or in ``_SEED_STOPWORDS`` is dropped, whatever its case; digits stay, since a
-    number in a question is content ("room 12").
-    """
-    return " ".join(
-        word for word in _SEED_WORD_RE.findall(query)
-        if word.isdigit() or (len(word) > 2 and word.lower() not in _SEED_STOPWORDS)
-    )
-
-
 def _seed_terms(query: str) -> list[str]:
     """Distinct lower-case question words that can name an entity, in order."""
     terms = dict.fromkeys(
@@ -450,13 +438,8 @@ async def _generate_lexical_candidates(
     """
     # Convert Scope enums to string values for the lexical index.
     scope_values = [s.value for s in scope] if scope else None
-    query = analysis.query
-    if config.lexical_content_words:
-        query = content_words(query)
-        if not query:
-            return []
     results = await lexical_index.search(
-        query, user_id, limit=config.lexical_k,
+        analysis.query, user_id, limit=config.lexical_k,
         scope=scope_values,
     )
     return normalize_bm25_scores(results)

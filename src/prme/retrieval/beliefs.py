@@ -99,6 +99,12 @@ def _claim_time(node: MemoryNode) -> datetime:
     return as_utc(node.event_time or node.valid_from or node.created_at)
 
 
+def _text_key(node: MemoryNode) -> str:
+    """A claim's text, to order claims stated at one time. A node id is new on every build of the same log, so
+    it only orders claims whose time and text are both equal, which say the same thing."""
+    return " ".join((node.content or "").casefold().split())
+
+
 def _own_state(node: MemoryNode, now: datetime) -> str:
     """The state a claim records for itself, before later claims are read."""
     metadata = node.metadata or {}
@@ -135,12 +141,14 @@ def read_ledger(
       earlier claim that names the same value, and at a single-valued
       relation every earlier claim, since "I quit" need not name the place;
     - at a single-valued relation the newest claim that holds is ``current``
-      and the older ones are ``earlier``.
+      and the older ones are ``earlier``; claims stated at the newest time
+      hold together.
 
     The result lists every address's claims: for a question about now,
     ``current`` first (newest first), then ``planned`` (soonest first),
     ``earlier``, ``ended`` and ``negated`` (newest first); with ``history``,
-    in time order. Ties break on node id.
+    in time order. Claims stated at one time are ordered by their text, so
+    the order is the same on every build of the same log.
     """
     now = as_utc(now)
     groups: dict[tuple[str, str, str | None], list[tuple[datetime, str, str]]] = defaultdict(list)
@@ -172,20 +180,25 @@ def read_ledger(
                 ):
                     states[earlier] = "ended"
         if single:
-            holding = [node_id for _when, node_id, _state in members if states[node_id] == "current"]
-            for node_id in holding[:-1]:
-                states[node_id] = "earlier"
+            # The newest stated time holds. Claims stated at that same time hold together: one turn can state
+            # the place and its schedule, and nothing in the log says which of the two is the older.
+            holding = [(when, node_id) for when, node_id, _state in members if states[node_id] == "current"]
+            newest = holding[-1][0] if holding else None
+            for when, node_id in holding:
+                if when < newest:
+                    states[node_id] = "earlier"
         beliefs.extend(
             Belief(node_id=node_id, state=states[node_id], relation=relation, role=role, pivot=pivot, when=when)
             for when, node_id, _state in members
         )
 
     if history:
-        beliefs.sort(key=lambda belief: (belief.when, belief.node_id))
+        beliefs.sort(key=lambda belief: (belief.when, _text_key(nodes[belief.node_id]), belief.node_id))
     else:
         beliefs.sort(key=lambda belief: (
             _NOW_ORDER[belief.state],
             belief.when.timestamp() if belief.state == "planned" else -belief.when.timestamp(),
+            _text_key(nodes[belief.node_id]),
             belief.node_id,
         ))
     return beliefs

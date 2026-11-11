@@ -126,11 +126,6 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "packing.second_round is true",
         bool,
     ),
-    "packing.lexical_content_words": (
-        "packing.lexical_content_words",
-        "packing.lexical_content_words is true",
-        bool,
-    ),
     "packing.session_context_direct_first": (
         "packing.session_context_direct_first",
         "packing.session_context_direct_first is set",

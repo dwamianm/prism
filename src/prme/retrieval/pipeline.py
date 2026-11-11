@@ -26,7 +26,7 @@ import logging
 import re
 import time
 import uuid
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Protocol
@@ -146,6 +146,7 @@ from prme.types import (
 if TYPE_CHECKING:
     from pydantic import SecretStr
 
+    from prme.models.nodes import MemoryNode
     from prme.models.relevance import RankingPolicy
     from prme.storage.graph_store import GraphStore
     from prme.storage.lexical_index import LexicalIndex
@@ -187,9 +188,26 @@ _HISTORY_QUESTION_RE = re.compile(
 )
 
 
-def _asks_for_history(query: str) -> bool:
-    """Whether a routed question asks for the record over time, so its ledger is read in time order."""
-    return bool(_HISTORY_QUESTION_RE.search(query))
+def _asks_for_history(query: str, names: Iterable[object] = ()) -> bool:
+    """Whether a routed question asks for the record over time, so its ledger is read in time order.
+
+    A question about now is read for now (``is_current_state_question``), and only a question that is not and
+    has a history cue is read in time order. The names the ledger's claims use are taken out of the question
+    first, so a word inside a name is not a cue: "Where is the first aid kit now?" asks about now, and "first"
+    there names the kit.
+    """
+    text = query
+    for name in sorted({name.strip() for name in names if isinstance(name, str) and name.strip()},
+                       key=len, reverse=True):
+        text = re.sub(rf"(?<!\w){re.escape(name)}(?!\w)", " ", text, flags=re.IGNORECASE)
+    return not is_current_state_question(text) and bool(_HISTORY_QUESTION_RE.search(text))
+
+
+def _claim_names(nodes: Iterable[MemoryNode]) -> list[str]:
+    """The subject and object names of the ledger's claims."""
+    return [value for node in nodes for value in ((node.metadata or {}).get("subject"),
+                                                   (node.metadata or {}).get("object"))
+            if isinstance(value, str)]
 
 
 def _apply_bitemporal_filters(
@@ -1270,7 +1288,7 @@ class RetrievalPipeline:
             ledger = read_ledger(
                 route_walk.nodes, route_walk.claims, route_walk.pivots,
                 last_step=len(route) - 1 if belief_source == "route" else 0,
-                now=scoring_now, history=_asks_for_history(query),
+                now=scoring_now, history=_asks_for_history(query, _claim_names(route_walk.nodes.values())),
             )
             scored, beliefs_placed = place_beliefs(
                 scored, ledger, route_walk.nodes, lead=belief_source == "route",

@@ -762,29 +762,6 @@ class PackingConfig(BaseModel):
             "points of packed evidence, so neither is used."
         ),
     )
-    lexical_content_words: bool = Field(
-        default=False,
-        exclude_if=lambda value: not value,
-        description=(
-            "[HYPOTHESIS] Search the lexical index with the question's "
-            "content words only; off by default. The whole question goes to "
-            "the word search otherwise, so a record that shares only a "
-            "function word with it ('what', 'does', 'have') is a lexical "
-            "match, and under rank fusion that match counts as much as the "
-            "best semantic match (memory_bank/"
-            "THESIS-2026-11-10-EMBODIED-MEMORY.md, 2.2 A). When True, the "
-            "question's function words (the list graph_seed_words uses, and "
-            "words of one or two letters) are left out of the word search; a "
-            "question with no other word gets no lexical candidates. Not part "
-            "of memory_mode: on the offline evidence gate of 2026-11-10 it "
-            "lost LongMemEval-S evidence (all evidence packed -3.6 points, "
-            "-5.7 to -1.3) and two LoCoMo questions lost all their "
-            "candidates, because a word match also gives a record its "
-            "second path, which packing's tiers and balanced order read. It "
-            "helps stores of short records and needs a packing change before "
-            "it can be a default."
-        ),
-    )
     session_context_direct_first: int | None = Field(
         default=None,
         ge=1,

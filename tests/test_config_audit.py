@@ -35,7 +35,6 @@ EXPECTED_HYPOTHESES = {
     "packing.graph_seed_words",
     "packing.clock_window_filter",
     "packing.collapse_identical_text",
-    "packing.lexical_content_words",
     "packing.second_round",
     "packing.session_context_direct_first",
     "scoring.rrf_recency_order",

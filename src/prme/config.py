@@ -1804,6 +1804,9 @@ class PRMEConfig(_ProjectSettings):
             self.packing = self.packing.model_copy(update=packing)
         if self.scoring.fusion == "rrf" and "rrf_recency_order" not in self.scoring.model_fields_set:
             self.scoring = self.scoring.model_copy(update={"rrf_recency_order": True})
+        # Corrections need batched extraction; with batching off they stay off, and nothing is raised.
+        if "enable_extraction_corrections" not in self.model_fields_set and self.extraction_batch_target_tokens > 0:
+            self.enable_extraction_corrections = True
         return self
 
     @model_validator(mode="after")
