@@ -80,6 +80,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retire), with no model call and no network. `uv run pytest tests/contract -q`; `--memory-mode address_first` runs
   it under the switch, and `--stated` adds the moves written as stated facts.
 
+## [0.17.0a7] - 2026-11-10
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. It has not been through the full benchmark or the mid
+tier. The stable release stays at 0.16.1 until the full benchmark audit, so `pip install prme` still
+installs 0.16.1. Install the alpha with `pip install --pre prme` or `pip install prme==0.17.0a7`.
+
+What is new since 0.17.0a6: an extraction whose source an organizer run had already summarized or
+consolidated no longer fails with `MaterializationError`, because the legacy check ignores SUMMARY
+nodes, and an event that already failed recovers with `prme retry-extraction` followed by
+`process_extractions()`, with no re-store (dwamianm/prism#556); a failed merge or alias resolution in
+incremental `deduplicate` and `alias_resolve` is now recorded against the pair's own node instead of
+the page head, so a pair that fails on every run no longer names innocent memories in `skipped_nodes`
+or costs three runs for each node before it (dwamianm/prism#546); and a direct-store node whose
+materialization is deferred and lands after a completed organizer run is now examined by the next
+incremental run, because a drained copy takes the time it is made as `updated_at` while `created_at`
+keeps the accepted snapshot (dwamianm/prism#548).
+
+Upgrade notes:
+
+- `DERIVATION_VERSION` is unchanged from 0.17.0a6 (it stays 2), so this upgrade makes no stored
+  memory stale.
+- The runtime schema fingerprint is unchanged and no migration runs. The three fixes change which
+  records future organizer runs examine and whether a pending extraction can publish; they do not
+  rewrite a stored memory, and there is nothing to run on upgrade.
+
+### Fixed
+
+- An extraction whose source an organizer run had already summarized or consolidated no longer fails with `MaterializationError` (dwamianm/prism#556). `summarize` and `consolidate` publish a SUMMARY node whose `evidence_refs` copy their sources' evidence, including the event id of a source whose extraction is still queued. The extraction's legacy check read every node naming the event and mistook that aggregate for an unjournaled derivation, so every later extraction for that owner failed and was retried for nothing until the aggregate left the graph. `prme organize` running while extractions were pending was enough to reach it, and `consolidate` is in the default `organize()` job list. The check now ignores SUMMARY nodes, which are provenance over a source, not a derivation of it. An event that already failed keeps its queued work, so `prme retry-extraction` followed by `process_extractions()` publishes it without storing the memory again. A test for each job fails without the change and passes with it on DuckDB and on PostgreSQL. Stored memories are not rewritten, and `DERIVATION_VERSION` and the runtime schema fingerprint are unchanged.
+- Incremental `deduplicate` and `alias_resolve` now bound a failing pair on the pair's own node instead of the page head (dwamianm/prism#546). `merge_duplicates` and `resolve_aliases` receive a `failures` list that records the two node ids of every pair whose merge or resolution raised, and the incremental handlers stall, count attempts and skip on the page node of the earliest failing pair. A pair that fails on every run near the end of a page no longer names innocent memories in `skipped_nodes` or costs three runs for each node before it: the nodes before the pair were examined and the cursor moves past them, so a skip covers only the failing pair's node. A test for each job fails without the change and passes with it on DuckDB and on PostgreSQL. Stored memories are not rewritten, and `DERIVATION_VERSION` and the runtime schema fingerprint are unchanged.
+- A direct-store node whose materialization is deferred and lands after a completed organizer run is now examined by the next incremental `deduplicate` and `alias_resolve` run (dwamianm/prism#548). A copy the drain makes later keeps the accepted snapshot's `created_at` and takes the time it is made as `updated_at`, as a raw queued note and a privacy-admitted direct store already do, so it ranks after a watermark that moved past its save time. The node inserted by the `store()` call that accepts the source keeps its snapshot unchanged, and so does the direct record, so only a drained node may differ from the record in that one timestamp. A test for each job fails without the change and passes with it on DuckDB and on PostgreSQL. Stored memories are not rewritten, and `DERIVATION_VERSION` and the runtime schema fingerprint are unchanged.
+
 ## [0.17.0a6] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
@@ -3638,7 +3670,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a6...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a7...HEAD
+[0.17.0a7]: https://github.com/dwamianm/prism/compare/v0.17.0a6...v0.17.0a7
 [0.17.0a6]: https://github.com/dwamianm/prism/compare/v0.17.0a5...v0.17.0a6
 [0.17.0a5]: https://github.com/dwamianm/prism/compare/v0.17.0a4...v0.17.0a5
 [0.17.0a4]: https://github.com/dwamianm/prism/compare/v0.17.0a3...v0.17.0a4

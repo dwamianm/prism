@@ -2122,7 +2122,13 @@ class IngestionPipeline:
                 # or the node a store() saved with the event (#260).
                 direct = await self._event_store.get_direct_store(event_id, user_id=event.user_id)
                 source_id = direct.node.id if direct is not None else event.id
-                if any(node.id != source_id for node in existing):
+                # An organizer aggregate (summarize, consolidate) copies its
+                # sources' evidence_refs, so it mentions a source whose
+                # extraction is still queued. It is not a derivation of that
+                # source, and reading it as unjournaled derived nodes refused
+                # every later extraction for the owner (dwamianm/prism#556).
+                derived = [node for node in existing if node.node_type != NodeType.SUMMARY]
+                if any(node.id != source_id for node in derived):
                     # Another attempt may have published between the first
                     # plan read and this graph read. Its journal distinguishes
                     # a valid concurrent completion from unjournaled legacy data.

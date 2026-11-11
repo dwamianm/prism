@@ -86,7 +86,7 @@ class DurableMaterializationQueue:
                 if (time.monotonic() - start) * 1000 >= budget_ms:
                     break
                 try:
-                    await engine._materialize_event(event)
+                    await engine._materialize_event(event, deferred_direct=True)
                 except Exception as exc:
                     # Retain only exception type, not provider responses which
                     # could contain secrets or source content.

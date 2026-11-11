@@ -8,6 +8,7 @@ import pytest
 
 from prme import MemoryEngine, NodeType
 from prme.models import Event, MemoryNode
+from prme.organizer.watermarks import scope_key
 from tests import test_durable_ingestion
 
 config = test_durable_ingestion.config
@@ -349,3 +350,67 @@ async def test_corrupt_direct_store_record_stays_pending_without_creating_raw_no
         assert (result.processed, result.pending, result.failed) == (0, 1, 1)
         assert await engine.get_event_nodes(str(event.id), user_id=user) == []
         assert (await engine.processing_status(str(event.id), user_id=user)).last_error == "ValueError"
+
+
+# ---------------------------------------------------------------------------
+# A deferred direct store enters the next incremental window (#548)
+# ---------------------------------------------------------------------------
+
+
+def _incremental(config):
+    """The shared fixture with incremental organizer runs turned on."""
+    return config.model_copy(update={
+        "organizer": config.organizer.model_copy(update={"incremental_enabled": True}),
+    })
+
+
+async def _persist_while_graph_is_down(engine, user, monkeypatch, content, **store_args):
+    """Keep the accepted direct record and leave its materialization pending."""
+    from prme import MaterializationError
+    with pytest.raises(MaterializationError) as failure:
+        with monkeypatch.context() as fault:
+            fault.setattr(
+                engine._graph_store, "create_node",
+                AsyncMock(side_effect=OSError("graph offline")),
+            )
+            await engine.store(content, user_id=user, **store_args)
+    assert await engine.get_event_nodes(failure.value.event_id, user_id=user) == []
+    return failure.value.event_id
+
+
+async def _assert_the_copy_is_examined(config, user, monkeypatch, job, content, **store_args):
+    """A copy inserted after a completed run still enters that job's window."""
+    async with MemoryEngine.open(_incremental(config)) as engine:
+        event_id = await _persist_while_graph_is_down(
+            engine, user, monkeypatch, content, **store_args,
+        )
+        recorded = await engine._event_store.get_direct_store(event_id, user_id=user)
+        # A completed run whose window starts after the source was saved. The
+        # accepted snapshot keeps the save time, so it ranks behind the
+        # watermark; the materialized copy must not.
+        watermark = datetime.now(timezone.utc)
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(user), job=job, completed_through=watermark,
+        )
+        assert recorded.node.updated_at < watermark
+        assert (await engine.process_pending(user_id=user, budget_ms=5000)).processed == 1
+        [node] = await engine.get_event_nodes(event_id, user_id=user)
+        assert node.created_at == recorded.node.created_at
+        assert node.updated_at > watermark
+
+        result = await engine.organize(user_id=user, jobs=[job])
+        assert result.per_job[job].status == "completed"
+        assert result.per_job[job].nodes_processed == 1
+
+
+async def test_a_deferred_direct_store_is_examined_by_deduplicate(config, user, monkeypatch):
+    await _assert_the_copy_is_examined(
+        config, user, monkeypatch, "deduplicate", "Deferred direct memory",
+    )
+
+
+async def test_a_deferred_direct_store_is_examined_by_alias_resolve(config, user, monkeypatch):
+    await _assert_the_copy_is_examined(
+        config, user, monkeypatch, "alias_resolve", "Deferred Entity",
+        node_type=NodeType.ENTITY,
+    )

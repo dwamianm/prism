@@ -1551,6 +1551,155 @@ class TestFailedMergeKeepsThePageResumable:
         assert retried.per_job["deduplicate"].nodes_modified == 1
 
 
+class TestAFailedPairIsBoundedOnItsOwnNode:
+    """A pair that always fails near the page end skips only its node (#546).
+
+    Before #546 the job could only name the page head, so one deterministically
+    failing pair near the end of a page named innocent memories in the skip
+    list and moved the cursor one node at a time, costing three runs each.
+    """
+
+    # Contents far enough apart that no two of them proposes a pair.
+    DISTINCT = [
+        "a red bicycle",
+        "quarterly tax filing",
+        "migrating swallows",
+        "sourdough starter",
+        "the lighthouse keeper",
+        "violin practice",
+    ]
+
+    @pytest.mark.asyncio
+    async def test_a_failing_merge_near_the_end_of_a_page_skips_only_its_node(
+        self, engine, monkeypatch,
+    ):
+        await _store_many(engine, ["poison memory"], valid_from=FIXED_VALID_FROM)
+        old_twin_id = next(
+            str(node.id) for node in await engine.query_nodes(
+                user_id=USER, lifecycle_states=list(LifecycleState),
+            )
+            if node.content == "poison memory"
+        )
+        window_start = datetime.now(timezone.utc)
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+            completed_through=window_start,
+        )
+        await _store_many(
+            engine, [*self.DISTINCT, "poison memory"], valid_from=FIXED_VALID_FROM,
+        )
+        page = await engine.scan_changed_nodes(
+            user_id=USER,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            updated_after=window_start,
+            updated_at_or_before=datetime.now(timezone.utc),
+            limit=100,
+        )
+        assert len(page) == len(self.DISTINCT) + 1
+        # The failing twin is the last node of the page.
+        failing_id = str(page[-1].id)
+        assert page[-1].content == "poison memory"
+
+        original_merge = engine._graph_store.merge_nodes
+
+        async def failing_merge(node_a_id, node_b_id, **kwargs):
+            if old_twin_id in (str(node_a_id), str(node_b_id)):
+                raise RuntimeError("merge rejected")
+            return await original_merge(node_a_id, node_b_id, **kwargs)
+
+        monkeypatch.setattr(engine._graph_store, "merge_nodes", failing_merge)
+
+        max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+        for attempt in range(1, max_attempts):
+            result = await engine.organize(user_id=USER, jobs=["deduplicate"])
+            job = result.per_job["deduplicate"]
+            assert job.status == "error"
+            assert job.nodes_processed == 0
+            watermark = await engine.get_organizer_watermark(
+                scope_key=scope_key(USER), job="deduplicate",
+            )
+            # The pair's own page node is named, not the page head.
+            assert watermark.stalled_id == failing_id
+            assert watermark.stalled_attempts == attempt
+
+        bounded = await engine.organize(user_id=USER, jobs=["deduplicate"])
+        job = bounded.per_job["deduplicate"]
+        assert job.status == "completed"
+        assert job.details["skipped_nodes"] == [
+            {"node_id": failing_id, "attempts": max_attempts},
+        ]
+        # Every node before the failing pair was examined and the cursor moved
+        # past them, so only the failing pair's node was skipped.
+        assert job.nodes_processed == len(self.DISTINCT)
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="deduplicate",
+        )
+        assert watermark.stalled_id is None
+
+    @pytest.mark.asyncio
+    async def test_a_failing_resolution_near_the_end_of_a_page_skips_only_its_entity(
+        self, engine, monkeypatch,
+    ):
+        await _store_entities(engine, ["PostgreSQL"])
+        old_twin_id = next(
+            str(node.id) for node in await engine.query_nodes(
+                user_id=USER, node_type=NodeType.ENTITY,
+                lifecycle_states=list(LifecycleState),
+            )
+            if node.content == "PostgreSQL"
+        )
+        window_start = datetime.now(timezone.utc)
+        await engine.set_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+            completed_through=window_start,
+        )
+        await _store_entities(engine, [*self.DISTINCT, "postgresql"])
+        page = await engine.scan_changed_nodes(
+            user_id=USER,
+            node_type=NodeType.ENTITY,
+            lifecycle_states=[LifecycleState.TENTATIVE, LifecycleState.STABLE],
+            updated_after=window_start,
+            updated_at_or_before=datetime.now(timezone.utc),
+            limit=100,
+        )
+        assert len(page) == len(self.DISTINCT) + 1
+        failing_id = str(page[-1].id)
+        assert page[-1].content == "postgresql"
+
+        original_merge = engine._graph_store.merge_nodes
+
+        async def failing_merge(node_a_id, node_b_id, **kwargs):
+            if old_twin_id in (str(node_a_id), str(node_b_id)):
+                raise RuntimeError("merge rejected")
+            return await original_merge(node_a_id, node_b_id, **kwargs)
+
+        monkeypatch.setattr(engine._graph_store, "merge_nodes", failing_merge)
+
+        max_attempts = jobs_module._MAX_STALLED_ATTEMPTS
+        for attempt in range(1, max_attempts):
+            result = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+            job = result.per_job["alias_resolve"]
+            assert job.status == "error"
+            assert job.nodes_processed == 0
+            watermark = await engine.get_organizer_watermark(
+                scope_key=scope_key(USER), job="alias_resolve",
+            )
+            assert watermark.stalled_id == failing_id
+            assert watermark.stalled_attempts == attempt
+
+        bounded = await engine.organize(user_id=USER, jobs=["alias_resolve"])
+        job = bounded.per_job["alias_resolve"]
+        assert job.status == "completed"
+        assert job.details["skipped_nodes"] == [
+            {"node_id": failing_id, "attempts": max_attempts},
+        ]
+        assert job.nodes_processed == len(self.DISTINCT)
+        watermark = await engine.get_organizer_watermark(
+            scope_key=scope_key(USER), job="alias_resolve",
+        )
+        assert watermark.stalled_id is None
+
+
 class TestOwnerKeyMatchesOwnership:
     """Two spellings of one UUID owner id are two owners and two watermarks."""
 

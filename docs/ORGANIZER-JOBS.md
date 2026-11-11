@@ -137,7 +137,10 @@ they stopped and continue on the next run when
 `OrganizerConfig.incremental_enabled` is on. A page whose search or merge
 failed does not advance that watermark, and a node that fails three runs in a
 row is recorded as skipped and passed, so one bad record cannot pin the scope
-(dwamianm/prism#545). This audit records the behavior and does not change the
+(dwamianm/prism#545). When the failure is a merge or resolution that raised,
+the node recorded and skipped is the page node of the earliest failing pair,
+not the page head, so a pair that fails on every run costs only its own node
+(dwamianm/prism#546). This audit records the behavior and does not change the
 merge policy.
 
 The local timing table above adds a 240-node row so one provider measures all
