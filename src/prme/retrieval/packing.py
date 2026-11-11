@@ -631,7 +631,6 @@ def pack_context(
             or "CURRENT_STATE" in candidate.paths
             or "OWNER_PROFILE" in candidate.paths
             or "BELIEF" in candidate.paths
-            or "SECOND_ROUND" in candidate.paths
         ):
             # Episode routing and evidence projection are already bounded, and
             # so are the newest observations of a current-state question and

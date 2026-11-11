@@ -182,7 +182,7 @@ CATALOG_SEMANTIC_RANK = 10
 
 _HISTORY_QUESTION_RE = re.compile(
     r"\b(?:when|before|after|ago|since|until|first|earlier|earliest|previous|previously|formerly|originally"
-    r"|used\s+to|history|over\s+time|in\s+what\s+order|how\s+long|every|all\s+the)\b",
+    r"|used?\s+to|history|over\s+time|in\s+what\s+order|how\s+long|every|all\s+the)\b",
     re.IGNORECASE,
 )
 

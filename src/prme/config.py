@@ -1399,8 +1399,7 @@ class PRMEConfig(_ProjectSettings):
             "(ingest() records each claim's relation and status), "
             "enable_relation_routing and enable_belief_state (a question "
             "about a relation is answered from the claims at its address, "
-            "the one that holds now first), packing.lexical_content_words "
-            "(function words of the question do not count as word matches), "
+            "the one that holds now first), "
             "packing.session_context_direct_first=10 (session neighbors stay "
             "below the ten best direct matches), packing.clock_window_filter "
             "(a clock window in the question filters by event time), "
@@ -1796,7 +1795,7 @@ class PRMEConfig(_ProjectSettings):
                 setattr(self, name, True)
         packing = {
             name: value
-            for name, value in (("lexical_content_words", True), ("session_context_direct_first", 10),
+            for name, value in (("session_context_direct_first", 10),
                                 ("clock_window_filter", True), ("collapse_identical_text", True),
                                 ("second_round", True))
             if name not in self.packing.model_fields_set

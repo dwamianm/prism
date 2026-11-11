@@ -751,11 +751,15 @@ class PackingConfig(BaseModel):
             "with the question. When True, the content words of the top "
             "result that are neither in the question nor in half or more of "
             "the next nine results (at most 6 words) go to the word index, "
-            "and its best matches (at most 3) are placed just below the "
+            "and its best matches (at most 2) are placed just below the "
             "third result, with a second_round score adjustment that "
-            "replays and the SECOND_ROUND path, which packing reserves. A "
-            "match that already ranks higher keeps its place. One extra "
-            "word search, no model call (prme.retrieval.second_round)."
+            "replays and the SECOND_ROUND path. A match that already ranks "
+            "higher keeps its place. One extra word search, no model call "
+            "(prme.retrieval.second_round). On the offline evidence gate of "
+            "2026-11-10 it lost no evidence beyond noise (LoCoMo projected "
+            "accuracy -0.2 points, -0.4 to +0.1; LongMemEval-S unchanged); "
+            "with 3 matches in packing's reserved tier LoCoMo lost 0.6 "
+            "points of packed evidence, so neither is used."
         ),
     )
     lexical_content_words: bool = Field(
@@ -771,7 +775,14 @@ class PackingConfig(BaseModel):
             "THESIS-2026-11-10-EMBODIED-MEMORY.md, 2.2 A). When True, the "
             "question's function words (the list graph_seed_words uses, and "
             "words of one or two letters) are left out of the word search; a "
-            "question with no other word gets no lexical candidates."
+            "question with no other word gets no lexical candidates. Not part "
+            "of memory_mode: on the offline evidence gate of 2026-11-10 it "
+            "lost LongMemEval-S evidence (all evidence packed -3.6 points, "
+            "-5.7 to -1.3) and two LoCoMo questions lost all their "
+            "candidates, because a word match also gives a record its "
+            "second path, which packing's tiers and balanced order read. It "
+            "helps stores of short records and needs a packing change before "
+            "it can be a default."
         ),
     )
     session_context_direct_first: int | None = Field(

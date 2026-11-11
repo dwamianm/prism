@@ -12,8 +12,10 @@ the question nor in half or more of the next results ("red", "mug"; not
 "asked", "robot", "bring", which every request shares). The best matches of
 those words, at most ``SECOND_ROUND_HITS``, are placed just below the third
 result, with the top result's score provenance and a ``second_round``
-adjustment that replays, and the ``SECOND_ROUND`` path, which packing
-reserves. One extra word search; no model call; deterministic.
+adjustment that replays, and the ``SECOND_ROUND`` path. They take no
+reserved place in packing: on the offline evidence gate, three matches in the
+reserved tier pushed annotated evidence out of LoCoMo contexts. One extra
+word search; no model call; deterministic.
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ SECOND_ROUND_VERSION = 1
 SECOND_ROUND_PATH = "SECOND_ROUND"
 # Words asked for at most, and matches placed at most.
 SECOND_ROUND_TERMS = 6
-SECOND_ROUND_HITS = 3
+SECOND_ROUND_HITS = 2
 # The top result is compared with this many results after it, and its matches go just below this rank.
 SECOND_ROUND_COMPARE = 9
 SECOND_ROUND_AFTER_RANK = 3

@@ -300,7 +300,7 @@ def _role_names_subject(role: str, metadata: dict) -> bool:
         if not isinstance(name, str) or not name.strip():
             return False
         word, person = re.escape(role), re.escape(name.strip())
-        return bool(re.search(rf"(?<!\w){word}[,]?\s+{person}(?!\w)|(?<!\w){person}\s+(?:is|was)\s+(?:\w+\s+)?{word}(?!\w)",
+        return bool(re.search(rf"(?<!\w){word}[,]?\s+{person}(?!\w)|(?<!\w){person}\s+(?:is|was)\s+(?:\w+\s+){{0,2}}{word}(?!\w)",
                               quote, re.IGNORECASE))
 
     return beside(subject) and not beside(target)
