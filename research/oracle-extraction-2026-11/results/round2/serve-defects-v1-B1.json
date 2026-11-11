@@ -1,0 +1,326 @@
+[
+ {
+  "id": "cities",
+  "question": "Which cities will Alex and Jordan visit in Japan?",
+  "answer_rank": 25,
+  "report_rank": 25,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "visits"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Trip to Japan's trip season is cherry blossom season."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Trip to Japan's trip timing is late March next year."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Jordan is going to be involved in trip to Japan (planner)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Trip to Japan is going to be located in Japan."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Alex Rivera is the partner of Jordan."
+   }
+  ]
+ },
+ {
+  "id": "learning",
+  "question": "What coding language is Alex learning?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "uses"
+  ],
+  "route_candidates": 4,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Alex Rivera uses Go (writing)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Alex Rivera uses TypeScript (writing)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Alex Rivera uses Rust (learning)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Alex Rivera uses Rust for Rustaceans (reading)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Alex Rivera is the partner of Jordan."
+   }
+  ]
+ },
+ {
+  "id": "work-languages",
+  "question": "Which languages does Alex write at work?",
+  "answer_rank": 18,
+  "report_rank": 18,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Alex Rivera uses Go (writing)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Alex Rivera uses TypeScript (writing)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Alex Rivera uses Rust (learning)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Alex Rivera uses Rust for Rustaceans (reading)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Alex Rivera is the partner of Jordan."
+   }
+  ]
+ },
+ {
+  "id": "travel",
+  "question": "How does Alex prefer to travel in Japan?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "prefers",
+   "visits"
+  ],
+  "route_candidates": 5,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Alex Rivera is going to prefer allergy card for restaurants."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Alex Rivera is going to prefer JR Pass."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Alex Rivera prefers trains."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Trip to Japan's trip season is cherry blossom season."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Trip to Japan's trip timing is late March next year."
+   }
+  ]
+ },
+ {
+  "id": "allergy",
+  "question": "Who is allergic to shellfish?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "allergic_to"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Jordan is allergic to shellfish."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Alex Rivera is going to prefer allergy card for restaurants."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Trip to Japan is going to be located in Japan."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Jordan is going to decide on Tokyo."
+   }
+  ]
+ },
+ {
+  "id": "shipments",
+  "question": "What did the team choose for the shipment table?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "member_of",
+   "part_of"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Postgres partitioning is part of shipment table."
+   },
+   {
+    "rank": 2,
+    "type": "note",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana is the manager of Alex Rivera (manager)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Alex Rivera is going to prefer allergy card for restaurants."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Alex Rivera is the partner of Jordan."
+   }
+  ]
+ },
+ {
+  "id": "reviewer",
+  "question": "Who should review the runbook?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Sam is going to be involved in runbook (reviewer)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is going to prefer runbook reviewed by Sam before Friday."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "My manager Dana wants the runbook reviewed by Sam before Friday."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana is the manager of Alex Rivera (manager)."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+   }
+  ]
+ }
+]

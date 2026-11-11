@@ -98,3 +98,26 @@ For each probe: top 3 and top 5, for these arms.
 
 Plus: how many assertions per turn, how many the loader refused and why, the attribute lists, the notes files,
 and for every probe question that fails under B1, what ranked above the answer.
+
+## Round 2 (2026-11-11): the form and the read side
+
+Round 1 result: with hand-written facts the probes scored below model extraction (defects 6 of 7, chat 13 of 18,
+member 10 of 12 in the top 3; `results/REPORT.md`). The read path reached the facts on 36 of 37 questions, so the
+facts were not missing: 69% of them could not be loaded through the form, the form had no place for a time, and
+a claim's text did not say what its fields say (the job title was only in metadata).
+
+Round 2 changes the engine on branch `fact-fields` and repeats the same six arms with the same bars:
+
+1. **A fact may be about someone the turn does not name.** A subject or object is accepted when the turn
+   mentions it, when it is the speaker and the turn says I, me, my, we, us or our, or when it names an entity the
+   owner's memory already holds. A literal value must be in the turn, except when it repeats the value of a live
+   claim at the same address (a closure).
+2. **A fact has a time.** New optional field `time` on an assertion: an ISO date or datetime for when the fact
+   starts to hold or happened ("starts on May 4" is `time: 2026-05-04`). The value string no longer carries the
+   date. Without `time`, the fact takes the turn's time, as before.
+3. **A claim's text says the claim.** The text of a stated claim is a sentence rendered from its fields (subject,
+   relation, object, role, time, status), so word search, meaning search and the reader all see the title, the
+   value and the date. The turn's own sentence stays as the stored message and as the claim's evidence.
+
+For the annotator, round 2: add `time` where a turn states one; put back the facts round 1 left out only because
+of the mention rule; change nothing else, and do not look at round 1's results.

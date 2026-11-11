@@ -1,0 +1,542 @@
+{
+  "kind": "prme-chat-probe-report",
+  "schema_version": 1,
+  "label": "fx-M0",
+  "conversation": "member-v1",
+  "owner": "member-v1-maya",
+  "build": {
+    "turns": 30,
+    "seconds": 5.8772754989840905,
+    "calls": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "cache_hits": 30,
+    "cache_unreproduced": 0
+  },
+  "settings": {
+    "overrides": {
+      "enable_speaker_grounding": true
+    },
+    "speaker": true,
+    "organize": false
+  },
+  "graph": {
+    "records": {
+      "entity/tentative": 36,
+      "fact/tentative": 32,
+      "note/tentative": 30
+    },
+    "claims": {
+      "active": 32,
+      "distinct_texts": 31,
+      "texts_shared_by_several_claims": 1,
+      "extra_copies_of_a_text": 1,
+      "same_claim_groups": 2,
+      "extra_copies_of_a_claim": 3,
+      "text_is_a_whole_message": 6,
+      "from_user_turns": 13,
+      "from_assistant_turns_only": 19,
+      "user_claim_subjects": {
+        "first_person_pronoun": 1,
+        "other_entity": 5,
+        "owner_named": 7
+      }
+    },
+    "entities": {
+      "active": 36,
+      "with_no_link": [],
+      "pronouns": [
+        "I",
+        "You",
+        "we"
+      ],
+      "key": {
+        "maya": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "theo": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "nico": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "jamaica": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "breast-cancer": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "dana": {
+          "nodes": 1,
+          "status": "found"
+        }
+      }
+    },
+    "links": [
+      {
+        "id": "husband",
+        "label": "Maya's husband is Theo",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Theo \u2192 is_husband_of \u2192 Maya Okafor",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "child",
+        "label": "Maya's child is Nico",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Nico \u2192 is_child_of \u2192 Maya Okafor",
+            "state": "tentative"
+          },
+          {
+            "claim": "Theo \u2192 is_husband_of \u2192 Maya Okafor",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip",
+        "label": "Maya is planning a trip to Jamaica",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "I \u2192 planning_trip_to \u2192 Jamaica",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "diagnosis",
+        "label": "Maya was diagnosed with breast cancer",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "I \u2192 diagnosed_with \u2192 breast cancer",
+            "state": "tentative"
+          }
+        ]
+      }
+    ],
+    "repeats": [
+      {
+        "id": "dependents",
+        "label": "Maya's dependents are Theo and Nico",
+        "user_mentions": 1,
+        "claims_stating_it": 0,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 1,
+        "claims": []
+      },
+      {
+        "id": "deductible",
+        "label": "The individual deductible is $1,500",
+        "user_mentions": 0,
+        "claims_stating_it": 2,
+        "from_assistant_only": 2,
+        "records_showing_its_text": 2,
+        "claims": [
+          "individual deductible \u2192 amount \u2192 $1,500",
+          "individual deductible \u2192 amount \u2192 $1,500"
+        ]
+      }
+    ]
+  },
+  "probes": [
+    {
+      "id": "husband",
+      "question": "Who is Maya's husband?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: Nico is child of Maya Okafor.",
+        "fact: My coworker Dana asked whether dental is included for her son.",
+        "note: OK. My husband is Theo and my child is Nico.",
+        "note: My coworker Dana asked whether dental is included for her son. Is it?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "child",
+      "question": "What is the name of Maya's child?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Nico"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Nico is child of Maya Okafor.",
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: My coworker Dana asked whether dental is included for her son.",
+        "fact: A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "dependents",
+      "question": "What are the names of Maya's dependents?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo",
+        "Nico"
+      ],
+      "answer_rank": 14,
+      "top_results": [
+        "note: Do you remember the names of my dependents?",
+        "note: Do you remember the names of my dependents?",
+        "fact: Do you remember the names of my dependents?",
+        "note: Do you have information on my dependents?",
+        "fact: Do you remember the names of my dependents?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "dependents-first-person",
+      "question": "Do you remember the names of my dependents?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Theo",
+        "Nico"
+      ],
+      "answer_rank": 3,
+      "top_results": [
+        "note: Do you remember the names of my dependents?",
+        "note: Do you remember the names of my dependents?",
+        "fact: My husband is Theo and my child is Nico.",
+        "note: Do you have information on my dependents?",
+        "fact: Do you remember the names of my dependents?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "diagnosis",
+      "question": "What was Maya diagnosed with?",
+      "answer_in_context": true,
+      "terms_found": [
+        "breast cancer"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: I was just diagnosed with breast cancer?",
+        "fact: Nico is child of Maya Okafor.",
+        "note: I was just diagnosed with breast cancer? How does this plan cover it?",
+        "fact: Oncology visits, chemotherapy and radiation are covered in network after the deductible, with the out-of-pocket maximum "
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "diagnosis-first-person",
+      "question": "What did I tell you about my health?",
+      "answer_in_context": true,
+      "terms_found": [
+        "breast cancer",
+        "pregnant"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I was just diagnosed with breast cancer?",
+        "fact: I am pregnant, how does my plan cover this?",
+        "note: What is the first question I asked you today?",
+        "fact: My coworker Dana asked whether dental is included for her son.",
+        "note: Do you have information on my dependents?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "trip",
+      "question": "Where is Maya planning a trip?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Jamaica"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I am planning a trip for us in December to Jamaica.",
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: Nico is child of Maya Okafor.",
+        "fact: I am pregnant, how does my plan cover this?",
+        "fact: A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "trip-when",
+      "question": "When is Maya's trip to Jamaica?",
+      "answer_in_context": true,
+      "terms_found": [
+        "December"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I am planning a trip for us in December to Jamaica.",
+        "fact: For Jamaica, routine vaccines are enough for most travelers, and hepatitis A is recommended.",
+        "note: I am planning a trip for us in December to Jamaica. Do we need vaccines?",
+        "fact: Nico is child of Maya Okafor.",
+        "fact: A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide."
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1838,
+      "token_budget": 4096
+    },
+    {
+      "id": "pregnant",
+      "question": "Is Maya expecting a baby?",
+      "answer_in_context": true,
+      "terms_found": [
+        "pregnant",
+        "newborn"
+      ],
+      "answer_rank": 3,
+      "top_results": [
+        "fact: Nico is child of Maya Okafor.",
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: My husband is Theo and my child is Nico.",
+        "fact: My coworker Dana asked whether dental is included for her son."
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "marriage",
+      "question": "What life event did Maya mention?",
+      "answer_in_context": true,
+      "terms_found": [
+        "married",
+        "marriage"
+      ],
+      "answer_rank": 4,
+      "top_results": [
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: Nico is child of Maya Okafor.",
+        "fact: You can add a newborn within 30 days of the birth as a qualifying life event.",
+        "fact: Marriage is also a qualifying life event, so you can change plans within 30 days.",
+        "note: What is the first question I asked you today?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "deductible",
+      "question": "What is my deductible?",
+      "answer_in_context": true,
+      "terms_found": [
+        "1,500"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000.",
+        "fact: Your individual deductible is $1,500 and the family deductible is $3,000 for in-network care.",
+        "fact: How much is my deductible?",
+        "note: How much is my deductible?",
+        "note: How much is my deductible?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    },
+    {
+      "id": "coworker",
+      "question": "What did Maya's coworker Dana ask about?",
+      "answer_in_context": true,
+      "terms_found": [
+        "dental"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: Dana coworker of Maya Okafor.",
+        "fact: My coworker Dana asked whether dental is included for her son.",
+        "note: My coworker Dana asked whether dental is included for her son. Is it?",
+        "fact: A child can be added to the dental plan at enrollment; Dana should check her own enrollment guide.",
+        "note: What is the first question I asked you today?"
+      ],
+      "stale_in_context": [],
+      "records": 54,
+      "record_types": {
+        "entity": 6,
+        "fact": 18,
+        "note": 30
+      },
+      "distinct_texts": 47,
+      "repeated_records": 7,
+      "repeated_share": 0.12962962962962962,
+      "record_lines": 54,
+      "repeated_lines": 0,
+      "tokens_used": 1779,
+      "token_budget": 4096
+    }
+  ],
+  "summary": {
+    "extraction calls": 0,
+    "active claims": 32,
+    "distinct claim texts": 31,
+    "claims whose text repeats another's": 1,
+    "claims repeating a subject, predicate and object": 3,
+    "claims whose text is the whole message": 6,
+    "claims from assistant turns only": 19,
+    "user claims attached to the named owner": 7,
+    "user claims attached to a first-person pronoun": 1,
+    "entities": 36,
+    "entities with no link": 0,
+    "pronoun entities": 3,
+    "key entities found / split / missing": "6/0/0",
+    "key links linked / via pronoun / not linked / missing": "4/0/0/0",
+    "probes with the answer in context": "12/12",
+    "probes with the answer ranked in the top 3": "10/12",
+    "probes with the answer ranked in the top 5": "11/12",
+    "probes with a stale value in context": 0,
+    "repeated records in contexts": "84/648"
+  }
+}

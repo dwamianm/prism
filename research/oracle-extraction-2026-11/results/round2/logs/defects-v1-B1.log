@@ -1,0 +1,159 @@
+2026-11-11 13:57:41 [info     ] write_queue.started
+2026-11-11 13:57:41 [info     ] ingestion.phase1_complete      event_id=4469eade-f9d8-47d9-854d-a070b2c93f01 role=user session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=c4bde76d-9db4-4d89-aa23-1a8d31d0deea entity_type=event name='trip to Japan' user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=2e383f83-a1e7-4218-8ca1-655635dac582 entity_type=location name=Japan user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=b60635f4-36c2-49e9-a5c9-98edc6d53069
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=46660aa4-2885-41d8-a4cc-fd9eb5ae867e
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=74da581c-5596-4dce-b163-cb2d8652c14f
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9ff05947-7ea8-42ac-8406-6fe8e6f96077
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=c7af20c3-f42c-4493-8a29-461af881bc5f
+2026-11-11 13:57:42 [info     ] ingestion.phase2_complete      event_id=4469eade-f9d8-47d9-854d-a070b2c93f01
+fx-B1: s1-trip#0 user 0.5s
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=c4bde76d-9db4-4d89-aa23-1a8d31d0deea entity_type=event name='trip to Japan' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=c4bde76d-9db4-4d89-aa23-1a8d31d0deea entity_type=event name='trip to Japan' user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] ingestion.phase1_complete      event_id=fab08aba-4f6f-4120-8cb3-a0d92251ec92 role=assistant session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=c4bde76d-9db4-4d89-aa23-1a8d31d0deea entity_type=event name='trip to Japan' user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=0c6448b8-cd28-400a-810f-94d4659a3efc
+2026-11-11 13:57:42 [info     ] ingestion.phase2_complete      event_id=fab08aba-4f6f-4120-8cb3-a0d92251ec92
+fx-B1: s1-trip#1 assistant 0.2s
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] ingestion.phase1_complete      event_id=50b8848e-227c-4f84-9be8-ddb704333630 role=user session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=27266dca-f3df-4625-87e5-e780512bd9b7 entity_type=location name=Tokyo user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=9e25f090-c488-444a-8b92-d640b3cf12c8 entity_type=location name=Kyoto user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=8d693870-418c-448c-b21a-69de9b9d3cd1 entity_type=location name=Kanazawa user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=48959652-4a45-4a93-a71d-482ef68f74ef entity_type=location name=Osaka user_id=defects-v1-alex
+2026-11-11 13:57:42 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] Created new entity             entity_id=b94dde1a-953d-4095-9553-7ea3d5e239d7 entity_type=location name=Hiroshima user_id=defects-v1-alex
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=24f47f33-d1ac-44e8-a3f8-52dac483335a
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=0ed75810-c7d0-4382-bfcb-24d2f2fff6e5
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=da789bc0-1402-4686-8ddb-cd4484c0448e
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=29c23b0a-3d3f-44e8-87c3-38e71dbcbe31
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=24b38194-e9d5-4a33-8220-0db752a6d473
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=44de30de-07c5-4a11-8ece-66e1c0ea966d
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=80270918-4e7b-4755-8a49-cca87d36275c
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=611a8251-07f9-4b7d-8752-a9a8fa4d9fdd
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=8dad0751-1aca-4681-abf9-43c40eeff3fa
+2026-11-11 13:57:42 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=31a257ba-7769-4c51-a6f3-f0bcf910eb9e
+2026-11-11 13:57:43 [info     ] ingestion.phase2_complete      event_id=50b8848e-227c-4f84-9be8-ddb704333630
+fx-B1: s1-trip#2 user 0.7s
+2026-11-11 13:57:43 [info     ] ingestion.phase1_complete      event_id=75472b41-732f-4abb-9ae3-095b0c5a1298 role=assistant session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] ingestion.extraction_batch_saved batch_id=cb0b1a6c-79a8-5e7d-bba6-5f9348f4b0cb event_id=75472b41-732f-4abb-9ae3-095b0c5a1298 turns=1
+2026-11-11 13:57:43 [info     ] ingestion.phase2_complete      event_id=75472b41-732f-4abb-9ae3-095b0c5a1298
+fx-B1: s1-trip#3 assistant 0.1s
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] ingestion.phase1_complete      event_id=fcf593aa-d2e3-450f-b36e-64720bd0b86e role=user session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] Created new entity             entity_id=ec14d89f-7b0a-4f75-b92b-2df5e34f6473 entity_type=product name=trains user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] Created new entity             entity_id=a4dbbe3a-f897-4858-9475-cfbc4402637d entity_type=product name='JR Pass' user_id=defects-v1-alex
+2026-11-11 13:57:43 [debug    ] Reusing existing entity        entity_id=b90ad6eb-9b80-46c8-866f-3944c63f8f94 entity_type=person name=Jordan user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] Created new entity             entity_id=931395d1-60dd-4ed6-93a9-70f535acbce8 entity_type=product name=shellfish user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] Created new entity             entity_id=81ad5a61-108f-4a6c-95a2-ab4829a61765 entity_type=product name='allergy card for restaurants' user_id=defects-v1-alex
+2026-11-11 13:57:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=2ef0a85f-e25b-4a9f-b740-7a0ef849553b
+2026-11-11 13:57:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=1138186a-9783-4881-a7e6-ad3b201e4741
+2026-11-11 13:57:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=08155151-473f-46db-a4e7-cb5dc5b85511
+2026-11-11 13:57:43 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=94befa7c-8c71-4a89-bde6-a2ee3f449f74
+2026-11-11 13:57:43 [info     ] ingestion.phase2_complete      event_id=fcf593aa-d2e3-450f-b36e-64720bd0b86e
+fx-B1: s1-trip#4 user 0.5s
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=ce2ee74f-92f9-4d07-b85f-ad3bdbfe3c12 role=assistant session_id=s1-trip user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.extraction_batch_saved batch_id=9cc73f3c-e784-5911-82fc-3b3bd81a7d00 event_id=ce2ee74f-92f9-4d07-b85f-ad3bdbfe3c12 turns=1
+2026-11-11 13:57:44 [info     ] ingestion.phase2_complete      event_id=ce2ee74f-92f9-4d07-b85f-ad3bdbfe3c12
+fx-B1: s1-trip#5 assistant 0.1s
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=aacf0708-a248-4484-b3f2-a3c06266be21 role=user session_id=s2-learning user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=94be9517-d68c-4dce-873d-9e9f21da85b3 entity_type=product name=Rust user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=544f8b86-3ebd-4f53-98e3-67919018f2c8 entity_type=product name='Rust for Rustaceans' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=dc541dc4-b810-46d4-a448-6228a53a7fe5
+2026-11-11 13:57:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=349d16df-aaec-4819-bf27-dcd9978ff3bb
+2026-11-11 13:57:44 [info     ] ingestion.phase2_complete      event_id=aacf0708-a248-4484-b3f2-a3c06266be21
+fx-B1: s2-learning#0 user 0.3s
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=b5bfb9f4-8c5c-467f-9ead-e72d72aea79c role=assistant session_id=s2-learning user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.extraction_batch_saved batch_id=3d66bcab-0e74-580e-9e3b-15ae0f500e03 event_id=b5bfb9f4-8c5c-467f-9ead-e72d72aea79c turns=1
+2026-11-11 13:57:44 [info     ] ingestion.phase2_complete      event_id=b5bfb9f4-8c5c-467f-9ead-e72d72aea79c
+fx-B1: s2-learning#1 assistant 0.0s
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=1a9167c7-8842-4d98-aa19-f4510908db40 role=user session_id=s2-learning user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=9e095d47-a8fb-4082-b717-1afba8132585 entity_type=product name=Go user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=74c95b65-57ad-412d-a0c9-8823d388f4e2 entity_type=product name=TypeScript user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=5dc92a34-7750-4dbb-86ec-832689d7e730
+2026-11-11 13:57:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=dcd6abeb-9cb7-4c4c-a562-1bb69eda8639
+2026-11-11 13:57:44 [info     ] ingestion.phase2_complete      event_id=1a9167c7-8842-4d98-aa19-f4510908db40
+fx-B1: s2-learning#2 user 0.3s
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=8f603eb7-3707-444a-8df1-44318d47299e role=assistant session_id=s2-learning user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.extraction_batch_saved batch_id=2a95e130-331d-50a5-9424-75d536021137 event_id=8f603eb7-3707-444a-8df1-44318d47299e turns=1
+2026-11-11 13:57:44 [info     ] ingestion.phase2_complete      event_id=8f603eb7-3707-444a-8df1-44318d47299e
+fx-B1: s2-learning#3 assistant 0.0s
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] ingestion.phase1_complete      event_id=50ac2ee3-3866-4fc9-a2fe-2fd017bbf2a6 role=user session_id=s3-work user_id=defects-v1-alex
+2026-11-11 13:57:44 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=e36636ee-c0ec-44b2-b25c-efa6a617bcd1 entity_type=concept name='Postgres partitioning' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=daae29d9-a33d-4f78-a1be-0e434160d837 entity_type=product name=TimescaleDB user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=e88d9764-c995-47fb-a8c7-5698cd9dd5c2 entity_type=concept name='shipment table' user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] Created new entity             entity_id=923dd21c-da0f-4bb4-a8c5-e0dc36eda77c entity_type=concept name=self-hosting user_id=defects-v1-alex
+2026-11-11 13:57:44 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=6b5f1f5d-a030-4faf-b3af-8bcc2a0f1ff3
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=744f4176-de20-4818-b0c9-aa377a375e59
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=c99fd942-b30f-4584-99a9-dc276f255033
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=9ad3ca5a-2a0d-49a8-905e-d294cdae5300
+2026-11-11 13:57:45 [info     ] ingestion.phase2_complete      event_id=50ac2ee3-3866-4fc9-a2fe-2fd017bbf2a6
+fx-B1: s3-work#0 user 0.6s
+2026-11-11 13:57:45 [info     ] ingestion.phase1_complete      event_id=5d1870ef-4803-42a0-bf6e-74f420f91953 role=assistant session_id=s3-work user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] ingestion.extraction_batch_saved batch_id=b5b916c0-2808-5be6-8980-dc074a252c96 event_id=5d1870ef-4803-42a0-bf6e-74f420f91953 turns=1
+2026-11-11 13:57:45 [info     ] ingestion.phase2_complete      event_id=5d1870ef-4803-42a0-bf6e-74f420f91953
+fx-B1: s3-work#1 assistant 0.0s
+2026-11-11 13:57:45 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:45 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] ingestion.phase1_complete      event_id=d21e1d77-a52d-46b1-9977-bfc618ea8b81 role=user session_id=s3-work user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] Created new entity             entity_id=c803155a-6055-44d4-aa38-6b564e015a4c entity_type=person name=Dana user_id=defects-v1-alex
+2026-11-11 13:57:45 [debug    ] Reusing existing entity        entity_id=fcbc247e-9b53-491a-b7db-dcc15f26f9b3 entity_type=person name='Alex Rivera' user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] Created new entity             entity_id=30e4946e-3f95-428b-82d6-191fdc830542 entity_type=concept name='runbook reviewed by Sam before Friday' user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] Created new entity             entity_id=52aceb75-d82c-49c1-bf24-5e2594d36f0b entity_type=person name=Sam user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] Created new entity             entity_id=62ba55c9-db79-4774-a904-3f52ad144b24 entity_type=concept name=runbook user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=6a4279e3-fc3e-40ca-a31c-d7dfb9aef20b
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=fc16e8f7-f542-41f1-8e0c-354ca2cc27de
+2026-11-11 13:57:45 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=64e2e351-3743-4dea-93a1-2dd103894536
+2026-11-11 13:57:45 [info     ] ingestion.phase2_complete      event_id=d21e1d77-a52d-46b1-9977-bfc618ea8b81
+fx-B1: s3-work#2 user 0.5s
+2026-11-11 13:57:45 [info     ] ingestion.phase1_complete      event_id=28867e2c-4f19-4271-8e65-ea2d6443d286 role=assistant session_id=s3-work user_id=defects-v1-alex
+2026-11-11 13:57:45 [info     ] ingestion.extraction_batch_saved batch_id=5814a0c5-9ea9-5801-85ca-f773a1a1aa04 event_id=28867e2c-4f19-4271-8e65-ea2d6443d286 turns=1
+2026-11-11 13:57:45 [info     ] ingestion.phase2_complete      event_id=28867e2c-4f19-4271-8e65-ea2d6443d286
+fx-B1: s3-work#3 assistant 0.0s
+2026-11-11 13:57:46 [info     ] ingestion.pipeline_shutdown
+2026-11-11 13:57:46 [info     ] write_queue.stopped
+2026-11-11 13:57:46 [info     ] write_queue.started
+2026-11-11 13:57:46 [info     ] ingestion.pipeline_shutdown
+2026-11-11 13:57:46 [info     ] write_queue.stopped
+Traceback (most recent call last):
+  File "/Users/dwamianm/Sites/prism-fields/research/oracle-extraction-2026-11/run_oracle.py", line 50, in <module>
+    main()
+  File "/Users/dwamianm/Sites/prism-fields/research/oracle-extraction-2026-11/run_oracle.py", line 44, in main
+    "oracle": {key: built["oracle"][key] for key in (
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/dwamianm/Sites/prism-fields/research/oracle-extraction-2026-11/run_oracle.py", line 44, in <dictcomp>
+    "oracle": {key: built["oracle"][key] for key in (
+                    ~~~~~~~~~~~~~~~^^^^^
+KeyError: 'mention_patch_uses'

@@ -1,6 +1,7 @@
 """The tables of results/REPORT.md, from the built arms' reports (task 9c and 9d). No model call, no retrieval.
 
     uv run python research/oracle-extraction-2026-11/report_tables.py > research/oracle-extraction-2026-11/results/tables.md
+    uv run python research/oracle-extraction-2026-11/report_tables.py fx results/round2 > .../results/round2/tables.md
 
 Reads ``report.json``, ``build.json`` and ``oracle.json`` of each arm under the probe's build root, the B1 serve
 paths written by ``serve_paths.py --json`` into ``results/``, and checks that each B1 rebuild (``ox-B1r``) repeats
@@ -30,10 +31,14 @@ def root() -> Path:
     return chat_probe.default_root()
 
 
+PREFIX = sys.argv[1] if len(sys.argv) > 1 else "ox"
+RESULTS = HERE / (sys.argv[2] if len(sys.argv) > 2 else "results")
+
+
 def arm_folder(name: str, arm: str) -> Path:
     built = BUILT.get(name, ("M0", "M1", "B0", "B1"))
     label = arm if arm in built else {"A0": "B0", "A1": "B1"}[arm]
-    return root() / name / f"ox-{label}"
+    return root() / name / f"{PREFIX}-{label}"
 
 
 def load(name: str, arm: str) -> dict:
@@ -51,7 +56,7 @@ def ratio(summary: dict, key: str) -> str:
 
 def same_build(name: str) -> list[str]:
     """Differences between ox-B1 and ox-B1r: probe rows, graph measures and packed contexts."""
-    first, second = root() / name / "ox-B1", root() / name / "ox-B1r"
+    first, second = root() / name / f"{PREFIX}-B1", root() / name / f"{PREFIX}-B1r"
     differences = []
     a, b = (json.loads((folder / "report.json").read_text()) for folder in (first, second))
     if a["probes"] != b["probes"]:
@@ -91,17 +96,18 @@ def main() -> None:
             lines.append(f"| {name} | {arm} | {summary['active claims']} | "
                          f"{summary['user claims attached to the named owner']} | {summary['entities']} | {facts} | "
                          f"{totals.get('calls', 0)} | {oracle['empty_extractions'] if oracle else '-'} |")
+    kinds = list(load(NAMES[0], "B0")["oracle"]["tally"]["accepted_needing"])
     lines += ["", "## Loader: accepted and refused, by the part of the mention rule each needed", "",
-              "| Probe | Levels | Written | Accepted | By the turn's text alone | Needing owner | Carried | Closure | "
-              "Refused (by reason) |", "|---|---|---:|---:|---:|---:|---:|---:|---|"]
+              "| Probe | Levels | Written | Accepted | " + " | ".join(kinds) + " | Refused (by reason) |",
+              "|---|---|---:|---:|" + "---:|" * len(kinds) + "---|"]
     for name in NAMES:
         for arm in ("A0", "B0") if name == "chat-v1" else ("B0",):
             tally = load(name, arm)["oracle"]["tally"]
             needing = tally["accepted_needing"]
             refused = "; ".join(f"{reason}: {count}" for reason, count in tally["refused_by_reason"].items()) or "none"
             levels = "O1" if arm == "A0" else "O1+O2"
-            lines.append(f"| {name} | {levels} | {tally['assertions']} | {tally['accepted']} | {needing['turn only']} | "
-                         f"{needing['owner']} | {needing['carried']} | {needing['closure']} | {refused} |")
+            lines.append(f"| {name} | {levels} | {tally['assertions']} | {tally['accepted']} | "
+                         + " | ".join(str(needing[kind]) for kind in kinds) + f" | {refused} |")
     lines += ["", "## B1 rebuilt from scratch", ""]
     for name in NAMES:
         differences = same_build(name)
@@ -110,14 +116,14 @@ def main() -> None:
     lines += ["", "## How B1 serves each question (receipts)", "",
               "| Probe | Question | Answer rank | Path | Relations | Ledger |", "|---|---|---:|---|---|---|"]
     for name in NAMES:
-        rows = json.loads((HERE / "results" / f"serve-{name}-B1.json").read_text())
+        rows = json.loads((RESULTS / f"serve-{name}-B1.json").read_text())
         for row in rows:
             ledger = f"{row['ledger']['source']}: {', '.join(row['ledger']['states'])}" if row["ledger"] else ""
             lines.append(f"| {name} | {row['question']} | {row['answer_rank'] or 'none'} | {row['path']} | "
                          f"{', '.join(row['relations'])} | {ledger} |")
     lines += ["", "## Questions B1 misses in the top 3: its top 5", ""]
     for name in NAMES:
-        rows = json.loads((HERE / "results" / f"serve-{name}-B1.json").read_text())
+        rows = json.loads((RESULTS / f"serve-{name}-B1.json").read_text())
         for row in rows:
             if row["answer_rank"] is not None and row["answer_rank"] <= 3:
                 continue

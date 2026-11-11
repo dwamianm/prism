@@ -1,0 +1,529 @@
+[
+ {
+  "id": "husband",
+  "question": "Who is Maya's husband?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "partner_of"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is radiation."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's diagnosis is breast cancer."
+   }
+  ]
+ },
+ {
+  "id": "child",
+  "question": "What is the name of Maya's child?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is radiation."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's diagnosis is breast cancer."
+   }
+  ]
+ },
+ {
+  "id": "dependents",
+  "question": "What are the names of Maya's dependents?",
+  "answer_rank": 7,
+  "report_rank": 7,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is Prenatal visits are covered in full in network."
+   }
+  ]
+ },
+ {
+  "id": "dependents-first-person",
+  "question": "Do you remember the names of my dependents?",
+  "answer_rank": 8,
+  "report_rank": 8,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson)",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Hi Kai. Do you remember me?"
+   }
+  ]
+ },
+ {
+  "id": "diagnosis",
+  "question": "What was Maya diagnosed with?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor's diagnosis is breast cancer."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is chemotherapy."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is oncology visits."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is radiation."
+   }
+  ]
+ },
+ {
+  "id": "diagnosis-first-person",
+  "question": "What did I tell you about my health?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "text ranking only",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": null,
+  "top5": [
+   {
+    "rank": 1,
+    "type": "note",
+    "content": "What is the first question I asked you today?"
+   },
+   {
+    "rank": 2,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Do you remember the names of my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "I am pregnant, how does my plan cover this? How do I enroll my newborn?"
+   }
+  ]
+ },
+ {
+  "id": "trip",
+  "question": "Where is Maya planning a trip?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor is going to visit Jamaica."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor's trip month is going to be December."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is travel vaccines."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is oncology visits."
+   }
+  ]
+ },
+ {
+  "id": "trip-when",
+  "question": "When is Maya's trip to Jamaica?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Nico is going to visit Jamaica."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is going to visit Jamaica."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's trip month is going to be December."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Theo is going to visit Jamaica."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "I am planning a trip for us in December to Jamaica. Do we need vaccines?"
+   }
+  ]
+ },
+ {
+  "id": "pregnant",
+  "question": "Is Maya expecting a baby?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is radiation."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor's diagnosis is breast cancer."
+   }
+  ]
+ },
+ {
+  "id": "marriage",
+  "question": "What life event did Maya mention?",
+  "answer_rank": 8,
+  "report_rank": 8,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor's health state is pregnant."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Maya Okafor's coverage is radiation."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor is related to Nico (child)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Maya Okafor is the partner of Theo."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Maya Okafor is going to visit Jamaica."
+   }
+  ]
+ },
+ {
+  "id": "deductible",
+  "question": "What is my deductible?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Maya Okafor's deductible is $1,500."
+   },
+   {
+    "rank": 2,
+    "type": "note",
+    "content": "How much is my deductible?"
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Maya Okafor's family deductible is $3,000."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Do you have information on my dependents?"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Open enrollment is coming up. What plan will be best for us?"
+   }
+  ]
+ },
+ {
+  "id": "coworker",
+  "question": "What did Maya's coworker Dana ask about?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "note",
+    "content": "My coworker Dana asked whether dental is included for her son. Is it?"
+   },
+   {
+    "rank": 2,
+    "type": "note",
+    "content": "What is the first question I asked you today?"
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Open enrollment is coming up. What plan will be best for us?"
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "I am getting married. What plan will be best for our new family?"
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "You first asked whether I remember you, and then whether I have information on your dependents."
+   }
+  ]
+ }
+]

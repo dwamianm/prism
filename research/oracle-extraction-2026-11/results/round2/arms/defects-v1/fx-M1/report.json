@@ -1,0 +1,502 @@
+{
+  "kind": "prme-chat-probe-report",
+  "schema_version": 1,
+  "label": "fx-M1",
+  "conversation": "defects-v1",
+  "owner": "defects-v1-alex",
+  "build": {
+    "turns": 14,
+    "seconds": 4.766453875992738,
+    "calls": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "cache_hits": 14,
+    "cache_unreproduced": 0
+  },
+  "settings": {
+    "overrides": {
+      "memory_mode": "address_first"
+    },
+    "speaker": false,
+    "organize": false
+  },
+  "graph": {
+    "records": {
+      "decision/tentative": 5,
+      "entity/tentative": 25,
+      "fact/tentative": 16,
+      "note/tentative": 14,
+      "preference/tentative": 3
+    },
+    "claims": {
+      "active": 24,
+      "distinct_texts": 24,
+      "texts_shared_by_several_claims": 0,
+      "extra_copies_of_a_text": 0,
+      "same_claim_groups": 0,
+      "extra_copies_of_a_claim": 0,
+      "text_is_a_whole_message": 2,
+      "from_user_turns": 24,
+      "from_assistant_turns_only": 0,
+      "user_claim_subjects": {
+        "first_person_pronoun": 5,
+        "other_entity": 7,
+        "owner_named": 12
+      }
+    },
+    "entities": {
+      "active": 25,
+      "with_no_link": [],
+      "pronouns": [
+        "We",
+        "We"
+      ],
+      "key": {
+        "alex": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "jordan": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "japan": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "tokyo": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "kyoto": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "kanazawa": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "osaka": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "dana": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "sam": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "hiroshima": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "timescaledb": {
+          "nodes": 1,
+          "status": "found"
+        }
+      }
+    },
+    "links": [
+      {
+        "id": "partner",
+        "label": "Jordan is Alex's partner",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 dropped_to_save_time \u2192 Hiroshima",
+            "state": "tentative"
+          },
+          {
+            "claim": "We \u2192 dropped \u2192 Hiroshima",
+            "state": "tentative"
+          },
+          {
+            "claim": "We \u2192 chose \u2192 Tokyo, Kyoto, Kanazawa, and Osaka",
+            "state": "tentative"
+          },
+          {
+            "claim": "Jordan \u2192 partner_of \u2192 I",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip",
+        "label": "Alex is planning a trip to Japan",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "I \u2192 planning_trip_to \u2192 Japan",
+            "state": "tentative"
+          },
+          {
+            "claim": "Jordan \u2192 partner_of \u2192 I",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip-partner",
+        "label": "Jordan is going on the trip to Japan",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Jordan \u2192 planning_trip_to \u2192 Japan",
+            "state": "tentative"
+          },
+          {
+            "claim": "Jordan \u2192 partner_of \u2192 I",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "city-tokyo",
+        "label": "Tokyo is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-kyoto",
+        "label": "Kyoto is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-kanazawa",
+        "label": "Kanazawa is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-osaka",
+        "label": "Osaka is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "manager",
+        "label": "Dana is Alex's manager",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "reviewer",
+        "label": "Dana wants Sam to review the runbook",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 role \u2192 manager",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-cities-alex",
+        "label": "Alex chose Tokyo for the trip (\"We chose Tokyo, ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 chose \u2192 Tokyo, Kyoto, Kanazawa, and Osaka",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-cities-jordan",
+        "label": "Jordan chose Tokyo for the trip (\"We chose Tokyo, ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 chose \u2192 Tokyo, Kyoto, Kanazawa, and Osaka",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-dropped-alex",
+        "label": "Alex dropped Hiroshima from the trip (\"We dropped Hiroshima\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 dropped_to_save_time \u2192 Hiroshima",
+            "state": "tentative"
+          },
+          {
+            "claim": "We \u2192 dropped \u2192 Hiroshima",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-dropped-jordan",
+        "label": "Jordan dropped Hiroshima from the trip (\"We dropped Hiroshima\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 dropped_to_save_time \u2192 Hiroshima",
+            "state": "tentative"
+          },
+          {
+            "claim": "We \u2192 dropped \u2192 Hiroshima",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-shipments-alex",
+        "label": "Alex's team chose Postgres partitioning over TimescaleDB (\"We chose ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "We \u2192 chose \u2192 Postgres partitioning over TimescaleDB for the shipment table",
+            "state": "tentative"
+          }
+        ]
+      }
+    ],
+    "repeats": []
+  },
+  "probes": [
+    {
+      "id": "cities",
+      "question": "Which cities will Alex and Jordan visit in Japan?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Tokyo",
+        "Kyoto",
+        "Kanazawa",
+        "Osaka"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "decision: We chose Tokyo, Kyoto, Kanazawa, and Osaka.",
+        "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "fact: Hi, I am Alex Rivera.",
+        "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants."
+      ],
+      "stale_in_context": [],
+      "records": 15,
+      "record_types": {
+        "entity": 1,
+        "fact": 2,
+        "note": 12
+      },
+      "distinct_texts": 15,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 15,
+      "repeated_lines": 0,
+      "tokens_used": 531,
+      "token_budget": 4096
+    },
+    {
+      "id": "learning",
+      "question": "What coding language is Alex learning?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Rust"
+      ],
+      "answer_rank": 3,
+      "top_results": [
+        "fact: The speaker uses Go.",
+        "fact: The speaker uses TypeScript.",
+        "fact: On weekends I am learning Rust.",
+        "fact: Yes, I write Go for services and TypeScript for tooling.",
+        "fact: My partner Jordan and I are planning a trip to Japan in late March next year."
+      ],
+      "stale_in_context": [],
+      "records": 17,
+      "record_types": {
+        "entity": 1,
+        "fact": 4,
+        "note": 12
+      },
+      "distinct_texts": 17,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 17,
+      "repeated_lines": 0,
+      "tokens_used": 575,
+      "token_budget": 4096
+    },
+    {
+      "id": "work-languages",
+      "question": "Which languages does Alex write at work?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Go",
+        "TypeScript"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: The speaker writes TypeScript for tooling.",
+        "fact: Yes, I write Go for services and TypeScript for tooling.",
+        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "fact: Hi, I am Alex Rivera.",
+        "note: Yes, I write Go for services and TypeScript for tooling."
+      ],
+      "stale_in_context": [],
+      "records": 16,
+      "record_types": {
+        "entity": 1,
+        "fact": 3,
+        "note": 12
+      },
+      "distinct_texts": 16,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 16,
+      "repeated_lines": 0,
+      "tokens_used": 559,
+      "token_budget": 4096
+    },
+    {
+      "id": "travel",
+      "question": "How does Alex prefer to travel in Japan?",
+      "answer_in_context": true,
+      "terms_found": [
+        "JR Pass",
+        "trains"
+      ],
+      "answer_rank": 3,
+      "top_results": [
+        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "preference: I prefer trains to flights, so I want a JR Pass.",
+        "fact: Hi, I am Alex Rivera.",
+        "decision: We dropped Hiroshima to save time."
+      ],
+      "stale_in_context": [],
+      "records": 15,
+      "record_types": {
+        "entity": 1,
+        "fact": 1,
+        "note": 13
+      },
+      "distinct_texts": 15,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 15,
+      "repeated_lines": 0,
+      "tokens_used": 531,
+      "token_budget": 4096
+    },
+    {
+      "id": "allergy",
+      "question": "Who is allergic to shellfish?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Jordan",
+        "shellfish"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Jordan is allergic to shellfish, so I need an allergy card for restaurants.",
+        "preference: I prefer trains to flights, so I want a JR Pass.",
+        "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "note: I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaura",
+        "decision: We dropped Hiroshima to save time."
+      ],
+      "stale_in_context": [],
+      "records": 15,
+      "record_types": {
+        "entity": 1,
+        "fact": 1,
+        "note": 13
+      },
+      "distinct_texts": 15,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 15,
+      "repeated_lines": 0,
+      "tokens_used": 531,
+      "token_budget": 4096
+    },
+    {
+      "id": "shipments",
+      "question": "What did the team choose for the shipment table?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Postgres",
+        "partitioning"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "decision: We chose Postgres partitioning over TimescaleDB for the shipment table.",
+        "preference: I prefer trains to flights, so I want a JR Pass.",
+        "fact: Yes, I write Go for services and TypeScript for tooling.",
+        "fact: My manager Dana wants the runbook reviewed by Sam before Friday.",
+        "decision: We dropped the idea of self-hosting."
+      ],
+      "stale_in_context": [],
+      "records": 15,
+      "record_types": {
+        "entity": 1,
+        "fact": 2,
+        "note": 12
+      },
+      "distinct_texts": 15,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 15,
+      "repeated_lines": 0,
+      "tokens_used": 531,
+      "token_budget": 4096
+    },
+    {
+      "id": "reviewer",
+      "question": "Who should review the runbook?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Sam"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My manager Dana wants the runbook reviewed by Sam before Friday.",
+        "fact: Yes, I write Go for services and TypeScript for tooling.",
+        "preference: I prefer trains to flights, so I want a JR Pass.",
+        "decision: We chose Postgres partitioning over TimescaleDB for the shipment table.",
+        "note: My manager Dana wants the runbook reviewed by Sam before Friday."
+      ],
+      "stale_in_context": [],
+      "records": 15,
+      "record_types": {
+        "entity": 1,
+        "fact": 2,
+        "note": 12
+      },
+      "distinct_texts": 15,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 15,
+      "repeated_lines": 0,
+      "tokens_used": 531,
+      "token_budget": 4096
+    }
+  ],
+  "summary": {
+    "extraction calls": 0,
+    "active claims": 24,
+    "distinct claim texts": 24,
+    "claims whose text repeats another's": 0,
+    "claims repeating a subject, predicate and object": 0,
+    "claims whose text is the whole message": 2,
+    "claims from assistant turns only": 0,
+    "user claims attached to the named owner": 12,
+    "user claims attached to a first-person pronoun": 5,
+    "entities": 25,
+    "entities with no link": 0,
+    "pronoun entities": 2,
+    "key entities found / split / missing": "11/0/0",
+    "key links linked / via pronoun / not linked / missing": "9/0/5/0",
+    "probes with the answer in context": "7/7",
+    "probes with the answer ranked in the top 3": "7/7",
+    "probes with the answer ranked in the top 5": "7/7",
+    "probes with a stale value in context": 0,
+    "repeated records in contexts": "0/108"
+  }
+}

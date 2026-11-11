@@ -223,8 +223,10 @@ await engine.ingest(
 
 Each assertion becomes the claim typed extraction would make from a sentence saying it: the subject and object
 entities, a fact node with its relation, role and status (written whatever `enable_typed_extraction` says), the
-`HAS_FACT` and `MENTIONS` links, the grounding record and the derivation plan, so the walk and the belief ledger
-read it with no special case. No model is called. The source never joins a model batch, and pronoun repair,
+`HAS_FACT` and `MENTIONS` links and the derivation plan, so the walk and the belief ledger read it with no special
+case. The claim's text is a sentence rendered from its fields, so word search, meaning search and the reader see
+its title, value and date ("Dana works at Brightpath as analytics manager (since 2026-05-04)."); the source's own
+text stays the stored message and the claim's `evidence_quote`. No model is called. The source never joins a model batch, and pronoun repair,
 corrections and resolved claim text do not apply to it. `ingest_batch()` takes an `"assertions"` key per message,
 and `MemoryClient.ingest()` takes the same argument.
 
@@ -238,14 +240,27 @@ admitted):
 - `subject_type` and `object_type` are one of person, organization, location, product, concept and event.
 - `status`, when given, is one of planned, current, done, past and superseded; `polarity` is positive (the
   default) or negative; `role` is a short lower-case word or phrase.
+- `time`, when given, is when the fact starts to hold or happened: an ISO date (`2026-05-04`) or an ISO datetime
+  with its offset (`2026-05-04T09:30:00-06:00`). It becomes the claim's stated time (`event_time` and
+  `valid_from`, and `resolved_date` in its metadata), as a resolved date of an extracted fact does. Without it the
+  claim takes the source's time.
 - A leading article (a, an, the) is dropped from the subject and object names, so "the red mug" and "red mug" are
   one entity.
-- The content must mention the subject and the object, with or without the article. When the content is omitted
-  (None or blank), a plain sentence per assertion is stored instead ("Red mug is located in kitchen counter.").
+- Each subject and object must be something the source can be about. It is accepted when the content mentions it,
+  with or without the article (`text`); when it is the source's `speaker` and the content says I, me, my, mine,
+  myself, we, us or our (`speaker`); or when it names an entity, with the same name and type, that the owner's
+  memory already holds in the source's scope, found as ingestion reuses an entity (`memory`: "your deductible" in
+  an assistant turn, Jordan in "We chose Tokyo", a pronoun for someone named before). A literal value (`has`) must
+  be in the content, unless it repeats the value of a live claim at the same subject and attribute (`closure`:
+  the old diet stated again with status past by the turn that ends it). How each end was found is kept with the
+  assertion (`found`). When the content is omitted (None or blank), the claim sentences are stored instead.
 - Assertions are refused under a privacy policy, and the metadata key `prme_assertions_v1`, where they are kept, is
   reserved.
 
-**Re-derivation.** The validated assertions are kept in the event's metadata, so the log alone rebuilds them.
+**Re-derivation.** The validated assertions are kept in the event's metadata, so the log alone rebuilds them. A
+rebuild checks `text` and `speaker` again from the content and the stored speaker, and takes `memory` and
+`closure` as recorded, since they were read from the graph at admission: it accepts exactly what admission
+accepted, whatever the graph holds by then. The assertion version (`ASSERTION_VERSION`) is 2.
 `reingest()` derives such a source again from them, never through a model, under settings of its own that leave out
 the extraction provider, model and request, so a change of extraction model leaves it current.
 

@@ -1,0 +1,827 @@
+[
+ {
+  "id": "job-now",
+  "question": "Where does Dana work now?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "works_at"
+  ],
+  "route_candidates": 4,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "earlier",
+    "ended",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana works at Brightpath as analytics manager."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is going to work at Brightpath as analytics manager (from 2026-05-04)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana used to work at Northwind as data analyst (from 2026-04-13)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana works at Northwind as data analyst."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana uses Tableau."
+   }
+  ]
+ },
+ {
+  "id": "title-now",
+  "question": "What is Dana's job title now?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "works_at"
+  ],
+  "route_candidates": 4,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "earlier",
+    "ended",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana works at Brightpath as analytics manager."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is going to work at Brightpath as analytics manager (from 2026-05-04)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana used to work at Northwind as data analyst (from 2026-04-13)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana works at Northwind as data analyst."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana's diet is pescatarian."
+   }
+  ]
+ },
+ {
+  "id": "start-date",
+  "question": "When did Dana start the new job?",
+  "answer_rank": 22,
+  "report_rank": 22,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Priya is the manager of Dana (manager)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is the partner of Sam."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana uses Tableau."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana lives in Denver."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana used to prefer coffee."
+   }
+  ]
+ },
+ {
+  "id": "old-manager",
+  "question": "Who was Dana's manager at Northwind?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "manager_of (manager)"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Priya is the manager of Dana (manager)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana works at Northwind as data analyst."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana used to work at Northwind as data analyst (from 2026-04-13)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana was involved in analytics manager role (candidate) (on 2026-03-16)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Northwind uses Tableau."
+   }
+  ]
+ },
+ {
+  "id": "partner-job",
+  "question": "What does Dana's partner do for work?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "partner_of",
+   "works_at"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is the partner of Sam."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Sam works at Denver Health as nurse."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana works at Northwind as data analyst."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana works at Brightpath as analytics manager."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana's diet is pescatarian."
+   }
+  ]
+ },
+ {
+  "id": "allergy",
+  "question": "What is Sam allergic to?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "allergic_to"
+  ],
+  "route_candidates": 1,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Sam is allergic to peanuts."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Sam owns Biscuit."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Sam lives in Denver."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Can you suggest a quick vegetarian dinner I can make after runs? Nothing with peanuts though, Sam is allergic to peanuts."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Biscuit was involved in Sam's running shoes (ate)."
+   }
+  ]
+ },
+ {
+  "id": "dog",
+  "question": "What kind of dog does Dana have, and what is it called?",
+  "answer_rank": 21,
+  "report_rank": 21,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "involved_in"
+  ],
+  "route_candidates": 5,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is going to be involved in Portland trip (planner)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana was involved in Cherry Creek Half Marathon (runner) (on 2026-05-17)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana was involved in 10 mile long run (runner) (on 2026-04-11)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana was involved in analytics manager role (candidate) (on 2026-03-16)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana was involved in first interview (candidate) (on 2026-03-16)."
+   }
+  ]
+ },
+ {
+  "id": "niece-name",
+  "question": "What is the name of Dana's niece?",
+  "answer_rank": 7,
+  "report_rank": 7,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is the partner of Sam."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is a friend of Melanie."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Priya is the manager of Dana (manager)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana's diet is pescatarian."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Melanie is the partner of Tom."
+   }
+  ]
+ },
+ {
+  "id": "niece-born",
+  "question": "When was Ivy born?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Rachel is related to Ivy (mother) (since 2026-03-12)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is related to Ivy (aunt)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana was involved in first interview (candidate) (on 2026-03-16)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Melanie was involved in 10 mile long run (running partner) (on 2026-04-11)."
+   },
+   {
+    "rank": 5,
+    "type": "note",
+    "content": "Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+   }
+  ]
+ },
+ {
+  "id": "sister-city",
+  "question": "Where does Dana's sister live?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "kin_of (sister)",
+   "lives_in"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is related to Rachel (sister)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Rachel lives in Portland."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana lives in Denver."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana's diet used to be vegetarian."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana's diet is pescatarian."
+   }
+  ]
+ },
+ {
+  "id": "running-partner",
+  "question": "Who is Dana's running partner?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "friend_of",
+   "partner_of"
+  ],
+  "route_candidates": 2,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is a friend of Melanie."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is the partner of Sam."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana's long run distance is 5 miles."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana's run frequency is three runs a week."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana's long run distance is 10 mile (since 2026-04-11)."
+   }
+  ]
+ },
+ {
+  "id": "race-time",
+  "question": "What was Dana's half marathon finishing time?",
+  "answer_rank": 10,
+  "report_rank": 10,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana is going to be involved in Portland trip (planner)."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana was involved in Cherry Creek Half Marathon (runner) (on 2026-05-17)."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana was involved in 10 mile long run (runner) (on 2026-04-11)."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana was involved in analytics manager role (candidate) (on 2026-03-16)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana was involved in first interview (candidate) (on 2026-03-16)."
+   }
+  ]
+ },
+ {
+  "id": "coffee",
+  "question": "Does Dana drink coffee?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana prefers green tea."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana prefers Python."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana used to prefer coffee."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana uses Tableau."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana owns Biscuit."
+   }
+  ]
+ },
+ {
+  "id": "diet",
+  "question": "What is Dana's diet now?",
+  "answer_rank": 1,
+  "report_rank": 1,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana's diet is pescatarian."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana's diet used to be vegetarian."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana's long run distance is 5 miles."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana is going to visit Portland."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana's run frequency is three runs a week."
+   }
+  ]
+ },
+ {
+  "id": "mel-news",
+  "question": "What news did Melanie share after the race?",
+  "answer_rank": 4,
+  "report_rank": 4,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Melanie's race result is 1:41."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Melanie's race count is ten half marathons."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Melanie is the partner of Tom."
+   },
+   {
+    "rank": 4,
+    "type": "note",
+    "content": "Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Melanie was involved in 10 mile long run (running partner) (on 2026-04-11)."
+   }
+  ]
+ },
+ {
+  "id": "trip",
+  "question": "What is Dana planning for July?",
+  "answer_rank": 22,
+  "report_rank": 22,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current",
+    "current",
+    "current",
+    "current",
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Portland trip's trip month is going to be July."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is going to visit Portland."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana is going to visit Boise."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana is going to be involved in Portland trip (planner)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana was involved in Cherry Creek Half Marathon (runner) (on 2026-05-17)."
+   }
+  ]
+ },
+ {
+  "id": "overnight",
+  "question": "Where will Dana stop overnight on the drive?",
+  "answer_rank": 3,
+  "report_rank": 3,
+  "path": "catalog",
+  "receipt_found": true,
+  "relations": [],
+  "route_candidates": 0,
+  "ledger": {
+   "source": "catalog",
+   "states": [
+    "current"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana's drive time is going to be 18 hours."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana is the partner of Sam."
+   },
+   {
+    "rank": 3,
+    "type": "note",
+    "content": "Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to tell Rachel about it."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Priya is the manager of Dana (manager)."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana was involved in Cherry Creek Half Marathon (runner) (on 2026-05-17)."
+   }
+  ]
+ },
+ {
+  "id": "language",
+  "question": "Which programming language does Dana prefer?",
+  "answer_rank": 2,
+  "report_rank": 2,
+  "path": "routed",
+  "receipt_found": true,
+  "relations": [
+   "prefers"
+  ],
+  "route_candidates": 3,
+  "ledger": {
+   "source": "route",
+   "states": [
+    "current",
+    "current",
+    "ended"
+   ]
+  },
+  "top5": [
+   {
+    "rank": 1,
+    "type": "fact",
+    "content": "Dana prefers green tea."
+   },
+   {
+    "rank": 2,
+    "type": "fact",
+    "content": "Dana prefers Python."
+   },
+   {
+    "rank": 3,
+    "type": "fact",
+    "content": "Dana used to prefer coffee."
+   },
+   {
+    "rank": 4,
+    "type": "fact",
+    "content": "Dana uses Tableau."
+   },
+   {
+    "rank": 5,
+    "type": "fact",
+    "content": "Dana lives in Denver."
+   }
+  ]
+ }
+]

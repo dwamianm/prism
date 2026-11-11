@@ -67,10 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and left LongMemEval-S unchanged; alone, it lost answers on the chat and member probes on 2026-11-11.
 - Stated facts: `MemoryEngine.ingest(content, assertions=[...])`, the same per message in `ingest_batch()`, and
   `MemoryClient.ingest()`. A caller that knows a fact states it (subject, relation of the vocabulary, object, types,
-  and optional status, polarity and role, or `has` with a predicate for a literal value), and ingestion writes the
-  claim typed extraction would make, with no model call. Assertions are checked before anything is admitted and a
-  bad one raises `ValueError` naming it; the content must mention every subject and object, and is rendered from the
-  assertions when omitted. `reingest()` re-derives such a source from its own metadata under settings of its own.
+  and optional status, polarity, role and `time`, or `has` with a predicate for a literal value), and ingestion
+  writes the claim typed extraction would make, with no model call. Assertions are checked before anything is
+  admitted and a bad one raises `ValueError` naming it. A subject or object must be mentioned by the content, be the
+  source's speaker when the content says I, me, my, we, us or our, or name an entity the owner's memory already
+  holds (same name and type, same scope); a literal value must be in the content unless it repeats a live claim's
+  value at the same subject and attribute. How each end was found is kept with the assertion, so a rebuild from
+  the log accepts exactly what admission accepted. `time` (an ISO date, or a datetime with its offset) becomes the
+  claim's stated time. A stated claim's text is a sentence rendered from its fields ("Dana works at Brightpath as
+  analytics manager (since 2026-05-04)."), and the source's text stays its evidence; the content is rendered from
+  the assertions when omitted. `ASSERTION_VERSION` is 2. `reingest()` re-derives such a source from its own
+  metadata under settings of its own.
   The write rate is 4.6 facts a second at 400 observations, the cost of the materialization path every extracted
   claim takes; it is not yet fit for a sensor stream. Model-derived records are unchanged and `DERIVATION_VERSION`
   stays 2. See [stated facts](docs/RELATIONS.md#stated-facts-assertions).

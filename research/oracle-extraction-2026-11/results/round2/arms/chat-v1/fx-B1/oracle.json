@@ -1,0 +1,36 @@
+{
+  "kind": "oracle-extraction-build",
+  "round": 2,
+  "label": "fx-B1",
+  "conversation": "chat-v1",
+  "levels": [
+    "O1",
+    "O2"
+  ],
+  "facts": "research/oracle-extraction-2026-11/facts/chat-v1.json",
+  "facts_sha256": "6a2e7e1ed97f7cccae89181d52dc5483f376cd080888dbb2b390ab03c78de64f",
+  "overrides": {
+    "memory_mode": "address_first"
+  },
+  "speaker": false,
+  "model_calls": 0,
+  "turns": {
+    "with assertions": 25,
+    "without assertions": 29
+  },
+  "empty_extractions": 29,
+  "tally": {
+    "assertions": 57,
+    "accepted": 57,
+    "refused": 0,
+    "refused_by_reason": {},
+    "accepted_needing": {
+      "text only": 25,
+      "speaker": 0,
+      "memory": 32,
+      "closure": 1
+    }
+  },
+  "check_disagrees_with_the_build": [],
+  "refusals": []
+}

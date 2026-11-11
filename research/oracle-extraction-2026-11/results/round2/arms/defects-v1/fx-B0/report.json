@@ -1,0 +1,464 @@
+{
+  "kind": "prme-chat-probe-report",
+  "schema_version": 1,
+  "label": "fx-B0",
+  "conversation": "defects-v1",
+  "owner": "defects-v1-alex",
+  "build": {
+    "turns": 14,
+    "seconds": 3.761547753987543,
+    "calls": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "cache_hits": 0,
+    "cache_unreproduced": 0
+  },
+  "settings": {
+    "overrides": {},
+    "speaker": false,
+    "organize": false
+  },
+  "graph": {
+    "records": {
+      "entity/tentative": 25,
+      "fact/tentative": 31,
+      "note/tentative": 14
+    },
+    "claims": {
+      "active": 31,
+      "distinct_texts": 31,
+      "texts_shared_by_several_claims": 0,
+      "extra_copies_of_a_text": 0,
+      "same_claim_groups": 0,
+      "extra_copies_of_a_claim": 0,
+      "text_is_a_whole_message": 0,
+      "from_user_turns": 30,
+      "from_assistant_turns_only": 1,
+      "user_claim_subjects": {
+        "other_entity": 13,
+        "owner_named": 17
+      }
+    },
+    "entities": {
+      "active": 25,
+      "with_no_link": [],
+      "pronouns": [],
+      "key": {
+        "alex": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "jordan": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "japan": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "tokyo": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "kyoto": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "kanazawa": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "osaka": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "dana": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "sam": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "hiroshima": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "timescaledb": {
+          "nodes": 1,
+          "status": "found"
+        }
+      }
+    },
+    "links": [
+      {
+        "id": "partner",
+        "label": "Jordan is Alex's partner",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Alex Rivera \u2192 partner_of \u2192 Jordan",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip",
+        "label": "Alex is planning a trip to Japan",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Alex Rivera \u2192 involved_in \u2192 trip to Japan",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "trip-partner",
+        "label": "Jordan is going on the trip to Japan",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Jordan \u2192 involved_in \u2192 trip to Japan",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "city-tokyo",
+        "label": "Tokyo is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-kyoto",
+        "label": "Kyoto is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-kanazawa",
+        "label": "Kanazawa is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "city-osaka",
+        "label": "Osaka is a city of the trip to Japan",
+        "status": "not_linked",
+        "claims": []
+      },
+      {
+        "id": "manager",
+        "label": "Dana is Alex's manager",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 manager_of \u2192 Alex Rivera",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "reviewer",
+        "label": "Dana wants Sam to review the runbook",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 prefers \u2192 runbook reviewed by Sam before Friday",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-cities-alex",
+        "label": "Alex chose Tokyo for the trip (\"We chose Tokyo, ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Alex Rivera \u2192 decided \u2192 Tokyo",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-cities-jordan",
+        "label": "Jordan chose Tokyo for the trip (\"We chose Tokyo, ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Jordan \u2192 decided \u2192 Tokyo",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-dropped-alex",
+        "label": "Alex dropped Hiroshima from the trip (\"We dropped Hiroshima\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Alex Rivera \u2192 NOT decided \u2192 Hiroshima",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-dropped-jordan",
+        "label": "Jordan dropped Hiroshima from the trip (\"We dropped Hiroshima\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Jordan \u2192 NOT decided \u2192 Hiroshima",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "we-shipments-alex",
+        "label": "Alex's team chose Postgres partitioning over TimescaleDB (\"We chose ...\")",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Alex Rivera \u2192 NOT decided \u2192 TimescaleDB",
+            "state": "tentative"
+          }
+        ]
+      }
+    ],
+    "repeats": []
+  },
+  "probes": [
+    {
+      "id": "cities",
+      "question": "Which cities will Alex and Jordan visit in Japan?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Tokyo",
+        "Kyoto",
+        "Kanazawa",
+        "Osaka"
+      ],
+      "answer_rank": 25,
+      "top_results": [
+        "fact: Jordan is going to be involved in trip to Japan (planner).",
+        "fact: Trip to Japan is going to be located in Japan.",
+        "fact: Alex Rivera is the partner of Jordan.",
+        "fact: Alex Rivera is going to be involved in trip to Japan (planner).",
+        "fact: Jordan is going to decide on Tokyo."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "learning",
+      "question": "What coding language is Alex learning?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Rust"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Alex Rivera uses Rust (learning).",
+        "fact: Alex Rivera uses TypeScript (writing).",
+        "fact: Alex Rivera is the partner of Jordan.",
+        "fact: Alex Rivera uses Go (writing).",
+        "fact: Alex Rivera prefers trains."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "work-languages",
+      "question": "Which languages does Alex write at work?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Go",
+        "TypeScript"
+      ],
+      "answer_rank": 18,
+      "top_results": [
+        "fact: Alex Rivera uses TypeScript (writing).",
+        "fact: Alex Rivera uses Go (writing).",
+        "fact: Alex Rivera uses Rust (learning).",
+        "fact: Alex Rivera uses Rust for Rustaceans (reading).",
+        "fact: Alex Rivera is the partner of Jordan."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "travel",
+      "question": "How does Alex prefer to travel in Japan?",
+      "answer_in_context": true,
+      "terms_found": [
+        "JR Pass",
+        "trains"
+      ],
+      "answer_rank": 5,
+      "top_results": [
+        "fact: Alex Rivera is going to be involved in trip to Japan (planner).",
+        "fact: Trip to Japan is going to be located in Japan.",
+        "fact: Jordan is going to be involved in trip to Japan (planner).",
+        "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year.",
+        "fact: Alex Rivera prefers trains."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "allergy",
+      "question": "Who is allergic to shellfish?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Jordan",
+        "shellfish"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Jordan is allergic to shellfish.",
+        "fact: Alex Rivera is going to prefer allergy card for restaurants.",
+        "note: I prefer trains to flights, so I want a JR Pass. Jordan is allergic to shellfish, so I need an allergy card for restaura",
+        "fact: Trip to Japan is going to be located in Japan.",
+        "fact: Jordan is going to decide on Tokyo."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "shipments",
+      "question": "What did the team choose for the shipment table?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Postgres",
+        "partitioning"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Postgres partitioning is part of shipment table.",
+        "note: We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting.",
+        "fact: Dana is the manager of Alex Rivera (manager).",
+        "fact: Alex Rivera is going to prefer allergy card for restaurants.",
+        "fact: Alex Rivera is the partner of Jordan."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    },
+    {
+      "id": "reviewer",
+      "question": "Who should review the runbook?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Sam"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Sam is going to be involved in runbook (reviewer).",
+        "fact: Dana is going to prefer runbook reviewed by Sam before Friday.",
+        "note: My manager Dana wants the runbook reviewed by Sam before Friday.",
+        "fact: Dana is the manager of Alex Rivera (manager).",
+        "note: We chose Postgres partitioning over TimescaleDB for the shipment table. We dropped the idea of self-hosting."
+      ],
+      "stale_in_context": [],
+      "records": 45,
+      "record_types": {
+        "fact": 31,
+        "note": 14
+      },
+      "distinct_texts": 45,
+      "repeated_records": 0,
+      "repeated_share": 0.0,
+      "record_lines": 45,
+      "repeated_lines": 0,
+      "tokens_used": 1269,
+      "token_budget": 4096
+    }
+  ],
+  "summary": {
+    "extraction calls": 0,
+    "active claims": 31,
+    "distinct claim texts": 31,
+    "claims whose text repeats another's": 0,
+    "claims repeating a subject, predicate and object": 0,
+    "claims whose text is the whole message": 0,
+    "claims from assistant turns only": 1,
+    "user claims attached to the named owner": 17,
+    "user claims attached to a first-person pronoun": 0,
+    "entities": 25,
+    "entities with no link": 0,
+    "pronoun entities": 0,
+    "key entities found / split / missing": "11/0/0",
+    "key links linked / via pronoun / not linked / missing": "10/0/4/0",
+    "probes with the answer in context": "7/7",
+    "probes with the answer ranked in the top 3": "4/7",
+    "probes with the answer ranked in the top 5": "5/7",
+    "probes with a stale value in context": 0,
+    "repeated records in contexts": "0/315"
+  }
+}
