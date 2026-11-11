@@ -1,0 +1,965 @@
+{
+  "kind": "prme-chat-probe-report",
+  "schema_version": 1,
+  "label": "fx-B1s",
+  "conversation": "chat-v1",
+  "owner": "chat-v1-dana",
+  "build": {
+    "turns": 54,
+    "seconds": 7.595117128985294,
+    "calls": 0,
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "cache_hits": 0,
+    "cache_unreproduced": 0
+  },
+  "settings": {
+    "overrides": {
+      "memory_mode": "address_first"
+    },
+    "speaker": false,
+    "organize": false
+  },
+  "graph": {
+    "records": {
+      "entity/tentative": 28,
+      "fact/superseded": 2,
+      "fact/tentative": 55,
+      "note/tentative": 54
+    },
+    "claims": {
+      "active": 55,
+      "distinct_texts": 35,
+      "texts_shared_by_several_claims": 13,
+      "extra_copies_of_a_text": 20,
+      "same_claim_groups": 3,
+      "extra_copies_of_a_claim": 3,
+      "text_is_a_whole_message": 5,
+      "from_user_turns": 54,
+      "from_assistant_turns_only": 1,
+      "user_claim_subjects": {
+        "other_entity": 26,
+        "owner_named": 28
+      }
+    },
+    "entities": {
+      "active": 28,
+      "with_no_link": [],
+      "pronouns": [],
+      "key": {
+        "dana": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "sam": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "biscuit": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "rachel": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "ivy": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "melanie": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "tom": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "priya": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "northwind": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "brightpath": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "denver-health": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "denver": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "portland": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "boise": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "half-marathon": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "tableau": {
+          "nodes": 1,
+          "status": "found"
+        },
+        "python": {
+          "nodes": 1,
+          "status": "found"
+        }
+      }
+    },
+    "links": [
+      {
+        "id": "partner",
+        "label": "Dana's partner is Sam",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 owns \u2192 Biscuit",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 lives_in \u2192 Denver",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 partner_of \u2192 Sam",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "dog",
+        "label": "Dana's dog is Biscuit",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 owns \u2192 Biscuit",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 lives_in \u2192 Denver",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 partner_of \u2192 Sam",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "home",
+        "label": "Dana lives in Denver",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 owns \u2192 Biscuit",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 lives_in \u2192 Denver",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 partner_of \u2192 Sam",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "sister",
+        "label": "Rachel is Dana's sister",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 visits \u2192 Portland",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 kin_of \u2192 Rachel",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "niece",
+        "label": "Ivy is Rachel's daughter",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Rachel \u2192 kin_of \u2192 Ivy",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "sister-city",
+        "label": "Rachel lives in Portland",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 visits \u2192 Portland",
+            "state": "tentative"
+          },
+          {
+            "claim": "Rachel \u2192 lives_in \u2192 Portland",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "running-partner",
+        "label": "Melanie is Dana's friend and running partner",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 friend_of \u2192 Melanie",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "fiance",
+        "label": "Melanie got engaged to Tom",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Melanie \u2192 partner_of \u2192 Tom",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "old-job",
+        "label": "Dana worked at Northwind (past)",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 works_at \u2192 Northwind",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 uses \u2192 Tableau",
+            "state": "tentative"
+          },
+          {
+            "claim": "Priya \u2192 manager_of \u2192 Dana",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 works_at \u2192 Northwind",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "new-job",
+        "label": "Dana works at Brightpath (current)",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 works_at \u2192 Brightpath",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 works_at \u2192 Brightpath",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "manager",
+        "label": "Priya was Dana's manager",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Priya \u2192 manager_of \u2192 Dana",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 works_at \u2192 Northwind",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "partner-job",
+        "label": "Sam is a nurse at Denver Health",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Sam \u2192 shift_pattern \u2192 night shifts",
+            "state": "tentative"
+          },
+          {
+            "claim": "Sam \u2192 works_at \u2192 Denver Health",
+            "state": "tentative"
+          }
+        ]
+      },
+      {
+        "id": "race",
+        "label": "Dana ran the Cherry Creek Half Marathon",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 involved_in \u2192 Cherry Creek Half Marathon",
+            "state": "tentative"
+          },
+          {
+            "claim": "Dana \u2192 involved_in \u2192 Cherry Creek Half Marathon",
+            "state": "superseded"
+          }
+        ]
+      },
+      {
+        "id": "prefers-python",
+        "label": "Dana prefers Python",
+        "status": "linked",
+        "claims": [
+          {
+            "claim": "Dana \u2192 prefers \u2192 Python",
+            "state": "tentative"
+          }
+        ]
+      }
+    ],
+    "repeats": [
+      {
+        "id": "biscuit-golden",
+        "label": "Biscuit is a golden retriever",
+        "user_mentions": 2,
+        "claims_stating_it": 2,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 8,
+        "claims": [
+          "Biscuit \u2192 breed \u2192 golden",
+          "Biscuit \u2192 breed \u2192 golden retriever"
+        ]
+      },
+      {
+        "id": "sam-nurse",
+        "label": "Sam is a nurse",
+        "user_mentions": 2,
+        "claims_stating_it": 0,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 2,
+        "claims": []
+      },
+      {
+        "id": "peanut-allergy",
+        "label": "Sam is allergic to peanuts",
+        "user_mentions": 2,
+        "claims_stating_it": 1,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 1,
+        "claims": [
+          "Sam \u2192 allergic_to \u2192 peanuts"
+        ]
+      },
+      {
+        "id": "prefers-python",
+        "label": "Dana prefers Python",
+        "user_mentions": 3,
+        "claims_stating_it": 2,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 2,
+        "claims": [
+          "Brightpath \u2192 uses \u2192 Python",
+          "Dana \u2192 prefers \u2192 Python"
+        ]
+      },
+      {
+        "id": "race-date",
+        "label": "The half marathon is on May 17",
+        "user_mentions": 1,
+        "claims_stating_it": 0,
+        "from_assistant_only": 0,
+        "records_showing_its_text": 1,
+        "claims": []
+      }
+    ]
+  },
+  "probes": [
+    {
+      "id": "job-now",
+      "question": "Where does Dana work now?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Brightpath"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Two weeks in at Brightpath and I already like my team more than the one at Northwind.",
+        "fact: I got the offer from Brightpath and I accepted it!",
+        "fact: I gave notice at Northwind yesterday.",
+        "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards.",
+        "fact: Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboa"
+      ],
+      "stale_in_context": [
+        "Northwind"
+      ],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2522,
+      "token_budget": 4096
+    },
+    {
+      "id": "title-now",
+      "question": "What is Dana's job title now?",
+      "answer_in_context": true,
+      "terms_found": [
+        "analytics manager"
+      ],
+      "answer_rank": 9,
+      "top_results": [
+        "fact: Two weeks in at Brightpath and I already like my team more than the one at Northwind.",
+        "fact: I got the offer from Brightpath and I accepted it!",
+        "fact: I gave notice at Northwind yesterday.",
+        "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards.",
+        "note: Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at No"
+      ],
+      "stale_in_context": [
+        "data analyst"
+      ],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2522,
+      "token_budget": 4096
+    },
+    {
+      "id": "start-date",
+      "question": "When did Dana start the new job?",
+      "answer_in_context": true,
+      "terms_found": [
+        "May 4",
+        "2026-05-04"
+      ],
+      "answer_rank": 4,
+      "top_results": [
+        "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou",
+        "note: Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at No",
+        "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
+        "note: I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4.",
+        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2577,
+      "token_budget": 4096
+    },
+    {
+      "id": "old-manager",
+      "question": "Who was Dana's manager at Northwind?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Priya"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboa",
+        "fact: I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboards.",
+        "fact: We use Tableau at Northwind.",
+        "fact: I gave notice at Northwind yesterday.",
+        "note: I gave notice at Northwind yesterday. Priya was really nice about it."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2518,
+      "token_budget": 4096
+    },
+    {
+      "id": "partner-job",
+      "question": "What does Dana's partner do for work?",
+      "answer_in_context": true,
+      "terms_found": [
+        "nurse"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite.",
+        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
+        "fact: Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboa",
+        "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite.",
+        "note: Mostly work stuff and planning. I'm a data analyst at Northwind, and my manager Priya keeps asking me for weekly dashboa"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2512,
+      "token_budget": 4096
+    },
+    {
+      "id": "allergy",
+      "question": "What is Sam allergic to?",
+      "answer_in_context": true,
+      "terms_found": [
+        "peanut"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Nothing with peanuts though, Sam is allergic to peanuts.",
+        "fact: My dog ate one of Sam's running shoes.",
+        "note: Can you suggest a quick vegetarian dinner I can make after runs? Nothing with peanuts though, Sam is allergic to peanuts",
+        "note: Will do. Biscuit is being a menace this week, by the way. My dog ate one of Sam's running shoes.",
+        "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "dog",
+      "question": "What kind of dog does Dana have, and what is it called?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Biscuit",
+        "golden"
+      ],
+      "answer_rank": 6,
+      "top_results": [
+        "fact: I'm planning the Portland trip for July to finally meet Ivy.",
+        "fact: I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours.",
+        "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
+        "fact: I had a first interview with Brightpath on Monday for an analytics manager role.",
+        "fact: I had a first interview with Brightpath on Monday for an analytics manager role."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "niece-name",
+      "question": "What is the name of Dana's niece?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Ivy"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: A girl named Ivy.",
+        "note: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
+        "note: Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to.",
+        "note: Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to t",
+        "fact: And she told me after the race that she got engaged to her boyfriend Tom last weekend!"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2518,
+      "token_budget": 4096
+    },
+    {
+      "id": "niece-born",
+      "question": "When was Ivy born?",
+      "answer_in_context": true,
+      "terms_found": [
+        "2026-03-12"
+      ],
+      "answer_rank": null,
+      "top_results": [
+        "fact: A girl named Ivy.",
+        "fact: Welcome to the world, Ivy.",
+        "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
+        "fact: I'm planning the Portland trip for July to finally meet Ivy.",
+        "note: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2580,
+      "token_budget": 4096
+    },
+    {
+      "id": "sister-city",
+      "question": "Where does Dana's sister live?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Portland"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: Big news: my sister Rachel had her baby last Thursday!",
+        "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
+        "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
+        "note: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
+        "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "running-partner",
+      "question": "Who is Dana's running partner?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Mel"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: My friend Melanie talked me into it.",
+        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
+        "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou",
+        "fact: Training update: Mel and I did a 10 mile long run on Saturday. Longest run of my life.",
+        "note: I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my runn"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "race-time",
+      "question": "What was Dana's half marathon finishing time?",
+      "answer_in_context": true,
+      "terms_found": [
+        "1:58"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: I signed up for the Cherry Creek Half Marathon on May 17!",
+        "fact: I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours.",
+        "note: I signed up for the Cherry Creek Half Marathon on May 17! My friend Melanie talked me into it. She's going to be my runn",
+        "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!",
+        "fact: Mel has run like ten half marathons, so she's making me a training plan."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2518,
+      "token_budget": 4096
+    },
+    {
+      "id": "coffee",
+      "question": "Does Dana drink coffee?",
+      "answer_in_context": true,
+      "terms_found": [
+        "green tea"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "note: About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now.",
+        "fact: Green tea now.",
+        "fact: Honestly I'd rather use Python, but Tableau is the standard there.",
+        "fact: Also I quit coffee last month, so mornings are rough.",
+        "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "diet",
+      "question": "What is Dana's diet now?",
+      "answer_in_context": true,
+      "terms_found": [
+        "pescatarian",
+        "eating fish"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian.",
+        "fact: Oh, and a food update: I've started eating fish again, so I guess I'm pescatarian now, not vegetarian.",
+        "fact: Green tea now.",
+        "note: About 5 miles. Also I quit coffee last month, so mornings are rough. Green tea now.",
+        "note: Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+      ],
+      "stale_in_context": [
+        "vegetarian"
+      ],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "mel-news",
+      "question": "What news did Melanie share after the race?",
+      "answer_in_context": true,
+      "terms_found": [
+        "engaged"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: And she told me after the race that she got engaged to her boyfriend Tom last weekend!",
+        "fact: Melanie finished in 1:41, she's so fast.",
+        "fact: Big news: my sister Rachel had her baby last Thursday!",
+        "fact: My friend Melanie talked me into it.",
+        "note: Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last w"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2574,
+      "token_budget": 4096
+    },
+    {
+      "id": "trip",
+      "question": "What is Dana planning for July?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Portland",
+        "Ivy"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: I'm planning the Portland trip for July to finally meet Ivy.",
+        "fact: I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours.",
+        "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
+        "fact: I had a first interview with Brightpath on Monday for an analytics manager role.",
+        "fact: I had a first interview with Brightpath on Monday for an analytics manager role."
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "overnight",
+      "question": "Where will Dana stop overnight on the drive?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Boise"
+      ],
+      "answer_rank": 1,
+      "top_results": [
+        "fact: Yes, somewhere around Boise for the overnight stop.",
+        "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
+        "note: Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to t",
+        "note: Drive. It's about 18 hours from Denver, so I'll split it over two days. Biscuit is a great road trip dog, he's our 3 yea",
+        "fact: I finished the Cherry Creek Half on Sunday in 1:58:30!"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 10,
+        "note": 52
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2515,
+      "token_budget": 4096
+    },
+    {
+      "id": "language",
+      "question": "Which programming language does Dana prefer?",
+      "answer_in_context": true,
+      "terms_found": [
+        "Python"
+      ],
+      "answer_rank": 2,
+      "top_results": [
+        "fact: Green tea now.",
+        "fact: Honestly I'd rather use Python, but Tableau is the standard there.",
+        "fact: Also I quit coffee last month, so mornings are rough.",
+        "fact: Their team uses Python for everything, which I love.",
+        "note: Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou"
+      ],
+      "stale_in_context": [],
+      "records": 63,
+      "record_types": {
+        "entity": 1,
+        "fact": 9,
+        "note": 53
+      },
+      "distinct_texts": 61,
+      "repeated_records": 2,
+      "repeated_share": 0.031746031746031744,
+      "record_lines": 63,
+      "repeated_lines": 0,
+      "tokens_used": 2509,
+      "token_budget": 4096
+    }
+  ],
+  "summary": {
+    "extraction calls": 0,
+    "active claims": 55,
+    "distinct claim texts": 35,
+    "claims whose text repeats another's": 20,
+    "claims repeating a subject, predicate and object": 3,
+    "claims whose text is the whole message": 5,
+    "claims from assistant turns only": 1,
+    "user claims attached to the named owner": 28,
+    "user claims attached to a first-person pronoun": 0,
+    "entities": 28,
+    "entities with no link": 0,
+    "pronoun entities": 0,
+    "key entities found / split / missing": "17/0/0",
+    "key links linked / via pronoun / not linked / missing": "14/0/0/0",
+    "probes with the answer in context": "18/18",
+    "probes with the answer ranked in the top 3": "14/18",
+    "probes with the answer ranked in the top 5": "15/18",
+    "probes with a stale value in context": 3,
+    "repeated records in contexts": "36/1134"
+  }
+}

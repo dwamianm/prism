@@ -183,5 +183,42 @@
    "probe_rank": 1,
    "union_rank": 1
   }
+ ],
+ "fx-B1s": [
+  {
+   "question": "Which cities will Alex and Jordan visit in Japan?",
+   "probe_rank": 5,
+   "union_rank": 5
+  },
+  {
+   "question": "What coding language is Alex learning?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "Which languages does Alex write at work?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "How does Alex prefer to travel in Japan?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who is allergic to shellfish?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did the team choose for the shipment table?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Who should review the runbook?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
  ]
 }

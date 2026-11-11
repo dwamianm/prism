@@ -172,3 +172,58 @@
 4. (fact) Maya Okafor is the partner of Theo.
 5. (fact) Maya Okafor is going to visit Jamaica.
 
+
+## B1 against B1s per question (rank, then path; union rank from union_ranks.py)
+
+**defects-v1**
+
+| Question | M1 | Round 1 B1 | B1 | B1 union | B1s | B1s union |
+|---|---:|---:|---|---:|---|---:|
+| Which cities will Alex and Jordan visit in Japan? | 2 | 5 | 25 (routed: visits) | 12 | 5 (routed: visits) | 5 |
+| What coding language is Alex learning? | 3 | 3 | 3 (routed: uses) | 3 | 3 (routed: uses) | 3 |
+| Which languages does Alex write at work? | 2 | 1 | 18 (catalog) | 2 | 1 (catalog) | 1 |
+| How does Alex prefer to travel in Japan? | 3 | 2 | 2 (routed: prefers, visits) | 2 | 1 (routed: prefers, visits) | 1 |
+| Who is allergic to shellfish? | 1 | 1 | 1 (routed: allergic_to) | 1 | 1 (routed: allergic_to) | 1 |
+| What did the team choose for the shipment table? | 1 | 1 | 1 (routed: member_of, part_of) | 1 | 1 (routed: member_of, part_of) | 1 |
+| Who should review the runbook? | 1 | 1 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+
+**chat-v1**
+
+| Question | M1 | Round 1 B1 | B1 | B1 union | B1s | B1s union |
+|---|---:|---:|---|---:|---|---:|
+| Where does Dana work now? | 2 | 1 | 1 (routed: works_at) | 1 | 1 (routed: works_at) | 1 |
+| What is Dana's job title now? | 12 | 7 | 1 (routed: works_at) | 1 | 9 (routed: works_at) | 9 |
+| When did Dana start the new job? | 2 | 10 | 22 (catalog) | 22 | 4 (catalog) | 4 |
+| Who was Dana's manager at Northwind? | 3 | 1 | 1 (routed: manager_of (manager)) | 1 | 1 (routed: manager_of (manager)) | 1 |
+| What does Dana's partner do for work? | 2 | 2 | 2 (routed: partner_of, works_at) | 2 | 1 (routed: partner_of, works_at) | 1 |
+| What is Sam allergic to? | 1 | 1 | 1 (routed: allergic_to) | 1 | 1 (routed: allergic_to) | 1 |
+| What kind of dog does Dana have, and what is it called? | 3 | 9 | 21 (routed: involved_in) | 21 | 6 (routed: involved_in) | 6 |
+| What is the name of Dana's niece? | 1 | 2 | 7 (catalog) | 7 | 1 (catalog) | 1 |
+| When was Ivy born? | none | none | 1 (catalog) | 1 | none (catalog) | none |
+| Where does Dana's sister live? | 2 | 2 | 2 (routed: kin_of (sister), lives_in) | 2 | 2 (routed: kin_of (sister), lives_in) | 2 |
+| Who is Dana's running partner? | 2 | 1 | 1 (routed: friend_of, partner_of) | 1 | 1 (routed: friend_of, partner_of) | 1 |
+| What was Dana's half marathon finishing time? | 1 | 3 | 10 (catalog) | 10 | 2 (catalog) | 2 |
+| Does Dana drink coffee? | 5 | 9 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| What is Dana's diet now? | 1 | 1 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| What news did Melanie share after the race? | 2 | 1 | 4 (catalog) | 4 | 1 (catalog) | 1 |
+| What is Dana planning for July? | 1 | 1 | 22 (catalog) | 14 | 1 (catalog) | 1 |
+| Where will Dana stop overnight on the drive? | 3 | 1 | 3 (catalog) | 3 | 1 (catalog) | 1 |
+| Which programming language does Dana prefer? | 3 | 2 | 2 (routed: prefers) | 2 | 2 (routed: prefers) | 2 |
+
+**member-v1**
+
+| Question | M1 | Round 1 B1 | B1 | B1 union | B1s | B1s union |
+|---|---:|---:|---|---:|---|---:|
+| Who is Maya's husband? | 1 | 1 | 1 (routed: partner_of) | 1 | 1 (routed: partner_of) | 1 |
+| What is the name of Maya's child? | 1 | 1 | 1 (routed: kin_of (child)) | 1 | 1 (routed: kin_of (child)) | 1 |
+| What are the names of Maya's dependents? | 1 | 2 | 7 (routed: kin_of (child), partner_of) | 2 | 1 (routed: kin_of (child), partner_of) | 1 |
+| Do you remember the names of my dependents? | 1 | 2 | 8 (routed: kin_of (child), partner_of) | 2 | 1 (routed: kin_of (child), partner_of) | 1 |
+| What was Maya diagnosed with? | 2 | 1 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| What did I tell you about my health? | 1 | 1 | 3 (text ranking only) | 3 | 1 (catalog) | 1 |
+| Where is Maya planning a trip? | 1 | 6 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| When is Maya's trip to Jamaica? | 1 | 2 | 3 (catalog) | 3 | 1 (catalog) | 1 |
+| Is Maya expecting a baby? | 3 | 3 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| What life event did Maya mention? | 4 | 5 | 8 (catalog) | 8 | 3 (catalog) | 3 |
+| What is my deductible? | 1 | 1 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+| What did Maya's coworker Dana ask about? | 2 | 1 | 1 (catalog) | 1 | 1 (catalog) | 1 |
+

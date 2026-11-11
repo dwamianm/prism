@@ -458,5 +458,97 @@
    "probe_rank": 2,
    "union_rank": 2
   }
+ ],
+ "fx-B1s": [
+  {
+   "question": "Where does Dana work now?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What is Dana's job title now?",
+   "probe_rank": 9,
+   "union_rank": 9
+  },
+  {
+   "question": "When did Dana start the new job?",
+   "probe_rank": 4,
+   "union_rank": 4
+  },
+  {
+   "question": "Who was Dana's manager at Northwind?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What does Dana's partner do for work?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What is Sam allergic to?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What kind of dog does Dana have, and what is it called?",
+   "probe_rank": 6,
+   "union_rank": 6
+  },
+  {
+   "question": "What is the name of Dana's niece?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "When was Ivy born?",
+   "probe_rank": null,
+   "union_rank": null
+  },
+  {
+   "question": "Where does Dana's sister live?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "Who is Dana's running partner?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What was Dana's half marathon finishing time?",
+   "probe_rank": 2,
+   "union_rank": 2
+  },
+  {
+   "question": "Does Dana drink coffee?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What is Dana's diet now?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What news did Melanie share after the race?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What is Dana planning for July?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Where will Dana stop overnight on the drive?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Which programming language does Dana prefer?",
+   "probe_rank": 2,
+   "union_rank": 2
+  }
  ]
 }

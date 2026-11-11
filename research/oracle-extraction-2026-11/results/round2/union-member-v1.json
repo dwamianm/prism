@@ -308,5 +308,67 @@
    "probe_rank": 1,
    "union_rank": 1
   }
+ ],
+ "fx-B1s": [
+  {
+   "question": "Who is Maya's husband?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What is the name of Maya's child?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What are the names of Maya's dependents?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Do you remember the names of my dependents?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What was Maya diagnosed with?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did I tell you about my health?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Where is Maya planning a trip?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "When is Maya's trip to Jamaica?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "Is Maya expecting a baby?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What life event did Maya mention?",
+   "probe_rank": 3,
+   "union_rank": 3
+  },
+  {
+   "question": "What is my deductible?",
+   "probe_rank": 1,
+   "union_rank": 1
+  },
+  {
+   "question": "What did Maya's coworker Dana ask about?",
+   "probe_rank": 1,
+   "union_rank": 1
+  }
  ]
 }

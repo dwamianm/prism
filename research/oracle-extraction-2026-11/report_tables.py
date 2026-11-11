@@ -130,7 +130,44 @@ def main() -> None:
             lines += [f"**{name}: {row['question']}** answer rank {row['answer_rank'] or 'none'}, {row['path']}", ""]
             lines += [f"{item['rank']}. ({item['type']}) {item['content'][:160]}" for item in row["top5"]]
             lines.append("")
+    lines += b1_against_b1s()
     print("\n".join(lines))
+
+
+def _served(row: dict) -> str:
+    relations = ", ".join(relation.split(" (")[0] + (" (" + relation.split(" (")[1].split("/")[0].rstrip(")") + ")"
+                                                     if " (" in relation else "") for relation in row["relations"])
+    return f"{row['answer_rank'] or 'none'} ({row['path']}{': ' + relations if relations else ''})"
+
+
+def b1_against_b1s() -> list[str]:
+    """Round 2 only: each question's rank and path in B1 (rendered claim text) and B1s (turn sentence text).
+
+    Reads ``serve-<probe>-B1.json``, ``serve-<probe>-B1s.json`` and ``union-<probe>.json`` (with ``fx-M1``,
+    ``ox-B1``, ``fx-B1`` and ``fx-B1s``); prints nothing when the B1s files are absent.
+    """
+    if not all((RESULTS / f"serve-{name}-B1s.json").exists() for name in NAMES):
+        return []
+    lines = ["", "## B1 against B1s per question (rank, then path; union rank from union_ranks.py)", ""]
+    for name in NAMES:
+        first, second = (json.loads((RESULTS / f"serve-{name}-{arm}.json").read_text()) for arm in ("B1", "B1s"))
+        union = json.loads((RESULTS / f"union-{name}.json").read_text())
+
+        def rank(label: str, index: int, key: str) -> str:
+            value = union[label][index][key]
+            return "none" if value is None else str(value)
+
+        lines += [f"**{name}**", "", "| Question | M1 | Round 1 B1 | B1 | B1 union | B1s | B1s union |",
+                  "|---|---:|---:|---|---:|---|---:|"]
+        for index, (row, other) in enumerate(zip(first, second, strict=True)):
+            if row["id"] != other["id"] or union["fx-B1"][index]["question"] != row["question"]:
+                raise ValueError(f"{name}: questions out of step at {index}")
+            lines.append(f"| {row['question']} | {rank('fx-M1', index, 'probe_rank')} | "
+                         f"{rank('ox-B1', index, 'probe_rank')} | {_served(row)} | "
+                         f"{rank('fx-B1', index, 'union_rank')} | {_served(other)} | "
+                         f"{rank('fx-B1s', index, 'union_rank')} |")
+        lines.append("")
+    return lines
 
 
 if __name__ == "__main__":

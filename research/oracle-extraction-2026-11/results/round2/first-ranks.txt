@@ -1,0 +1,80 @@
+defects-v1 fx-B1 cities: Which cities will Alex and Jordan visit in Japan?
+  'Tokyo': 7 (fact) Jordan is going to decide on Tokyo.
+  'Kyoto': 11 (fact) Jordan is going to decide on Kyoto.
+  'Kanazawa': 12 (fact) Jordan is going to decide on Kanazawa.
+  'Osaka': 8 (fact) Jordan is going to decide on Osaka.
+defects-v1 fx-B1 work-languages: Which languages does Alex write at work?
+  'Go': 1 (fact) Alex Rivera uses Go (writing).
+  'TypeScript': 2 (fact) Alex Rivera uses TypeScript (writing).
+defects-v1 fx-B1s cities: Which cities will Alex and Jordan visit in Japan?
+  'Tokyo': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kyoto': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Kanazawa': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+  'Osaka': 5 (fact) We chose Tokyo, Kyoto, Kanazawa, and Osaka.
+defects-v1 fx-B1s work-languages: Which languages does Alex write at work?
+  'Go': 1 (fact) Yes, I write Go for services and TypeScript for tooling.
+  'TypeScript': 1 (fact) Yes, I write Go for services and TypeScript for tooling.
+chat-v1 fx-B1 title-now: What is Dana's job title now?
+  'analytics manager': 1 (fact) Dana works at Brightpath as analytics manager.
+chat-v1 fx-B1 start-date: When did Dana start the new job?
+  'May 4': 30 (note) I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4.
+  '4 May': not ranked
+  '2026-05-04': 22 (fact) Dana is going to work at Brightpath as analytics manager (from 2026-05-04).
+chat-v1 fx-B1 dog: What kind of dog does Dana have, and what is it called?
+  'Biscuit': 16 (fact) Dana owns Biscuit.
+  'golden': 21 (note) Hi! I'm Dana. I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and ou
+chat-v1 fx-B1 niece-name: What is the name of Dana's niece?
+  'Ivy': 7 (fact) Dana is related to Ivy (aunt).
+chat-v1 fx-B1 niece-born: When was Ivy born?
+  '12 March': not ranked
+  'March 12': not ranked
+  '2026-03-12': 1 (fact) Rachel is related to Ivy (mother) (since 2026-03-12).
+  'Mar 12': not ranked
+chat-v1 fx-B1 race-time: What was Dana's half marathon finishing time?
+  '1:58': 10 (fact) Dana's race result is 1:58:30 (since 2026-05-17).
+chat-v1 fx-B1 mel-news: What news did Melanie share after the race?
+  'engaged': 4 (note) Melanie finished in 1:41, she's so fast. And she told me after the race that she got engaged to her boyfriend Tom last w
+chat-v1 fx-B1 trip: What is Dana planning for July?
+  'Portland': 1 (fact) Portland trip's trip month is going to be July.
+  'Ivy': 14 (fact) Dana is related to Ivy (aunt).
+chat-v1 fx-B1s title-now: What is Dana's job title now?
+  'analytics manager': 9 (note) Work is getting interesting too. I had a first interview with Brightpath on Monday for an analytics manager role.
+chat-v1 fx-B1s start-date: When did Dana start the new job?
+  'May 4': 4 (note) I got the offer from Brightpath and I accepted it! I start as analytics manager on May 4.
+  '4 May': not ranked
+  '2026-05-04': not ranked
+chat-v1 fx-B1s dog: What kind of dog does Dana have, and what is it called?
+  'Biscuit': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.
+  'golden': 6 (fact) Biscuit is a great road trip dog, he's our 3 year old golden.
+chat-v1 fx-B1s niece-name: What is the name of Dana's niece?
+  'Ivy': 1 (fact) A girl named Ivy.
+chat-v1 fx-B1s niece-born: When was Ivy born?
+  '12 March': not ranked
+  'March 12': not ranked
+  '2026-03-12': not ranked
+  'Mar 12': not ranked
+chat-v1 fx-B1s race-time: What was Dana's half marathon finishing time?
+  '1:58': 2 (fact) I finished the Cherry Creek Half on Sunday in 1:58:30! I'm so happy I got under two hours.
+chat-v1 fx-B1s mel-news: What news did Melanie share after the race?
+  'engaged': 1 (fact) And she told me after the race that she got engaged to her boyfriend Tom last weekend!
+chat-v1 fx-B1s trip: What is Dana planning for July?
+  'Portland': 1 (fact) I'm planning the Portland trip for July to finally meet Ivy.
+  'Ivy': 1 (fact) I'm planning the Portland trip for July to finally meet Ivy.
+member-v1 fx-B1 dependents: What are the names of Maya's dependents?
+  'Theo': 2 (fact) Maya Okafor is the partner of Theo.
+  'Nico': 1 (fact) Maya Okafor is related to Nico (child).
+member-v1 fx-B1 dependents-first-person: Do you remember the names of my dependents?
+  'Theo': 2 (fact) Maya Okafor is the partner of Theo.
+  'Nico': 1 (fact) Maya Okafor is related to Nico (child).
+member-v1 fx-B1 marriage: What life event did Maya mention?
+  'married': 8 (fact) Maya Okafor is going to be involved in getting married.
+  'marriage': 31 (note) Marriage is also a qualifying life event, so you can change plans within 30 days. With a spouse and a child on the plan,
+member-v1 fx-B1s dependents: What are the names of Maya's dependents?
+  'Theo': 1 (fact) My husband is Theo and my child is Nico.
+  'Nico': 1 (fact) My husband is Theo and my child is Nico.
+member-v1 fx-B1s dependents-first-person: Do you remember the names of my dependents?
+  'Theo': 1 (fact) My husband is Theo and my child is Nico.
+  'Nico': 1 (fact) My husband is Theo and my child is Nico.
+member-v1 fx-B1s marriage: What life event did Maya mention?
+  'married': 3 (note) I am getting married. What plan will be best for our new family?
+  'marriage': 7 (note) Marriage is also a qualifying life event, so you can change plans within 30 days. With a spouse and a child on the plan,

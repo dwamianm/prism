@@ -1,0 +1,15 @@
+2026-11-11 14:28:42 [info     ] write_queue.started
+2026-11-11 14:28:43 [info     ] ingestion.pipeline_shutdown
+2026-11-11 14:28:43 [info     ] write_queue.stopped
+1 | routed via partner_of; ledger from route | Who is Maya's husband?
+1 | routed via kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson); ledger from route | What is the name of Maya's child?
+1 | routed via kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson), partner_of; ledger from route | What are the names of Maya's dependents?
+1 | routed via kin_of (child/daughter/kid/son/stepchild/stepdaughter/stepson), partner_of; ledger from route | Do you remember the names of my dependents?
+1 | catalog; ledger from catalog | What was Maya diagnosed with?
+1 | catalog; ledger from catalog | What did I tell you about my health?
+1 | catalog; ledger from catalog | Where is Maya planning a trip?
+1 | catalog; ledger from catalog | When is Maya's trip to Jamaica?
+1 | catalog; ledger from catalog | Is Maya expecting a baby?
+3 | catalog; ledger from catalog | What life event did Maya mention?
+1 | catalog; ledger from catalog | What is my deductible?
+1 | catalog; ledger from catalog | What did Maya's coworker Dana ask about?

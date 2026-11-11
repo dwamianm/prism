@@ -1,0 +1,38 @@
+{
+  "kind": "oracle-extraction-build",
+  "round": 2,
+  "label": "fx-B1s",
+  "conversation": "member-v1",
+  "claim_text": "turn sentences (diagnostic)",
+  "levels": [
+    "O1",
+    "O2"
+  ],
+  "facts": "research/oracle-extraction-2026-11/facts/member-v1.json",
+  "facts_sha256": "3d5fdb2546c34538f60152ec5c53d8a5557f0fced8a0805ea56367d48885c67d",
+  "overrides": {
+    "enable_speaker_grounding": true,
+    "memory_mode": "address_first"
+  },
+  "speaker": true,
+  "model_calls": 0,
+  "turns": {
+    "without assertions": 18,
+    "with assertions": 12
+  },
+  "empty_extractions": 18,
+  "tally": {
+    "assertions": 23,
+    "accepted": 23,
+    "refused": 0,
+    "refused_by_reason": {},
+    "accepted_needing": {
+      "text only": 0,
+      "speaker": 8,
+      "memory": 15,
+      "closure": 0
+    }
+  },
+  "check_disagrees_with_the_build": [],
+  "refusals": []
+}

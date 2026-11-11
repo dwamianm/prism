@@ -1,7 +1,7 @@
-# Task 10 (round 2): where it stopped (2026-11-11, checkpoint before a machine restart)
+# Task 10 (round 2): state of the work (2026-11-11)
 
-Branch `fact-fields` in `/Users/dwamianm/Sites/prism-fields`. This checkpoint commit holds everything written so far.
-Nothing was pushed by this session.
+Branch `fact-fields` in `/Users/dwamianm/Sites/prism-fields`. Nothing was pushed by this session. The round 2
+result is in `round2/REPORT.md`; this file records how the work went and how to rerun it.
 
 ## Finished
 
@@ -53,7 +53,7 @@ holds, `time`, and the claim text of every status.
 gives each assertion to the engine's own `prepare_assertions`, turn by turn, with the probe's speaker and the
 memory earlier accepted assertions built. `oracle.py` asks the engine about each assertion against the pack
 (`_prepare_assertions`) and records whether the check agreed with the build. `union_ranks.py` (extra measure, see
-below). `run_oracle.py --sentence-text` (a diagnostic arm, not yet run).
+below). `run_oracle.py --sentence-text` (the diagnostic arm B1s).
 
 ## Checks that passed (summary lines)
 
@@ -103,12 +103,16 @@ answer rank except one chat question, race time, at 10 and then 8 (tied claims o
 Tables: `results/round2/tables.md`; per-question ranks in `results/round2/union-<probe>.json`; receipts and top 5
 in `results/round2/serve-<probe>-B1.json`; each arm's report, build and oracle record in `results/round2/arms/`.
 
-## Still running when stopped
+## After the restart
 
-- The full unit suite on this revision (`tests` without the contract directories). Not finished.
-- Not started: the diagnostic arm `--sentence-text` (B1 on the round 2 facts with a claim's text set to its turn
-  sentence, to separate change 3 from the new facts), the round 2 report, and the clean commit after the full
-  suite.
+- The diagnostic arm `fx-B1s` was built on the three probes (0 model calls; the check agreed with every build), with
+  `serve_paths.py` and `union_ranks.py` on it. `first_ranks.py` (new) records where each answer string first ranks
+  for every miss (`round2/first-ranks.txt`). `report_tables.py` adds the B1 against B1s table.
+- B1s top 3: defects 6/7, chat 14/18, member 12/12 (B1: 5, 12, 9). `round2/REPORT.md` has the per-question table
+  and which misses are read side and which are form.
+- Full unit suite on this revision: 1 failed, 7464 passed, 1644 skipped, 2 xfailed. The one failure is
+  `tests/test_checkout.py` (it expects a plain clone, not a worktree); `round2/REPORT.md`, "Engine checks on this
+  tree", explains it.
 
 ## Commands to rerun
 
@@ -143,9 +147,16 @@ done
 uv run python research/oracle-extraction-2026-11/report_tables.py fx results/round2 \
   > research/oracle-extraction-2026-11/results/round2/tables.md
 
-# The diagnostic arm, not yet run (member-v1 also takes --speaker --set enable_speaker_grounding=true).
+# The diagnostic arm B1s on each probe (member-v1 also takes --speaker --set enable_speaker_grounding=true),
+# then its serve paths and union ranks (this rewrites union-<probe>.json with fx-B1s), the first rank of each
+# answer string (round2/first-ranks.txt), and the tables again.
 uv run python research/oracle-extraction-2026-11/run_oracle.py defects-v1 fx-B1s --levels O1,O2 \
   --set 'memory_mode="address_first"' --sentence-text --replace
+uv run python research/oracle-extraction-2026-11/serve_paths.py defects-v1 fx-B1s \
+  --json research/oracle-extraction-2026-11/results/round2/serve-defects-v1-B1s.json
+uv run python research/oracle-extraction-2026-11/union_ranks.py defects-v1 fx-M0 fx-M1 ox-B1 fx-B0 fx-B1 fx-B1s \
+  --json research/oracle-extraction-2026-11/results/round2/union-defects-v1.json
+uv run python research/oracle-extraction-2026-11/first_ranks.py defects-v1 fx-B1 fx-B1s --ids cities work-languages
 ```
 
 ## The nine assistant-turn "your" facts in member-v1
