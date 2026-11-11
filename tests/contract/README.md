@@ -82,25 +82,27 @@ Every listed failure is a strict xfail, so neither a fix nor a regression can go
 | Chat `ingest()`, answers in top 3 | 13 | 6 / 7 | 6 / 1 / 6 / 0 | A, B, C, E |
 | Chat `ingest()`, no stale above the answer | 4 | 3 / 1 | 2 / 1 / 1 / 0 | B |
 | Chat `ingest()`, unanswerable | 1 | 0 / 1 | 0 / 0 / 1 / 0 | D |
-| Chat `ingest()`, answer first | 2 | 1 / 1 | 0 / 1 / 1 / 0 | B, E |
+| Chat `ingest()`, answer first | 2 | 1 / 1 | 1 / 1 / 0 / 0 | B, E |
 | Chat `ingest()`, ended never above current | 14 | 14 / 0 | 14 / 0 / 0 / 0 | |
 | Chat `ingest()`, corrected claim retired | 7 | 1 / 6 | 1 / 3 / 3 / 0 | B |
 | Chat `ingest()`, no true claim retired | 1 | 1 / 0 | 1 / 0 / 0 / 0 | |
-| **Total** | **160** | **73 / 87** | **71 / 57 / 32 / 0** | |
+| **Total** | **160** | **73 / 87** | **72 / 57 / 31 / 0** | |
 
 The classic results were the same in every run, and the same on 0.17.0a6 (29a0460d), before address-first memory
 existed. In the classic mode one key claim is retired with corrections off ("I'm vegetarian"), by the predicate
 supersedence that `ingest()` already runs.
 
-Two ingest() chat ids are known failures under address_first only (`XFAIL_INGEST_ADDRESS_FIRST`), each waiting for
-a design decision:
+One ingest() chat id is a known failure under address_first only (`XFAIL_INGEST_ADDRESS_FIRST`), waiting for a
+design decision:
 
 - `chat-stale-pet`: claim text split across two records. The ledger leads with the claim "We adopted a dog after
   all!", the beagle is named in the next sentence, which is another record, and "thinking about getting a dog" can
   rank above it. It failed with an earlier recording and passes with the present one.
-- `chat-first-work-now`: not deterministic. "I start at a pediatric clinic" and "Sam works schedule day shifts
-  only" come from one turn and share a stated time at `works_at`, and the ledger breaks the tie on node ids, which
-  are random for every build; it fails in about half of the runs.
+
+`chat-first-work-now` was not deterministic under address_first until 2026-11-11: two claims of one turn share a
+stated time, and the ledger broke the tie, and decided which of them an end closes, on node ids, which are new on
+every build. The ledger now orders claims of one time by their text and lets an end close only what was stated
+before it; the id passed on 5 of 5 fresh builds.
 
 ## How it is built
 

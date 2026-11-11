@@ -160,16 +160,20 @@ Every other relation holds a set (pets, allergies, relatives, preferences), wher
 superseded, or a validity end that has passed; `planned` for the status planned with a date still ahead; otherwise
 `current` (current, done, a plan whose date has come, and an untyped claim). Then, inside an address, in time order:
 
-- a claim that is `ended` or `negated` closes every earlier `current` claim that names the same value (one object
-  phrase's words contain the other's, so "the greyhound" and "a greyhound" are one value), and at a relation that
-  holds one value an `ended` claim closes every earlier claim, since "I quit" need not name the place;
-- at a relation that holds one value, the newest claim that still holds is `current` and the older ones `earlier`.
+- a claim that is `ended` or `negated` closes every `current` claim stated before it that names the same value
+  (one object phrase's words contain the other's, so "the greyhound" and "a greyhound" are one value), and at a
+  relation that holds one value an `ended` claim closes every claim stated before it, since "I quit" need not name
+  the place;
+- at a relation that holds one value, the newest claim that still holds is `current` and the older ones `earlier`;
+  claims stated at that same time are all `current`.
 
 For a question about now the ledger lists `current` (newest first), `planned` (soonest first), `earlier`, `ended` and
 `negated` (newest first). A question that is not about now (`is_current_state_question`) and asks for history
 ("when", "before", "use to", "every", "how long") reads it in time order. The names the ledger's claims use are
 taken out of the question before either check, so "Where is the first aid kit now?" asks about now: "first" there
-names the kit. Ties break on the node id.
+names the kit. Claims stated at one time are ordered by their text, and by node id only when the text is the same
+too, so a rebuild of the same log gives the same ledger: a node id is new on every build, and the claims of one turn
+have no recorded order, so the end one of them states does not close another.
 
 **Placement.** The ledger's claims lead the results in that order: the i-th of n takes the top result's score times
 `1 + (n - i) x 0.001`, with the top result's score provenance and a `belief` adjustment that names it, so the receipt

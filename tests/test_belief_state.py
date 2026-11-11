@@ -180,10 +180,60 @@ def test_history_reads_the_ledger_in_time_order():
     assert states(beliefs) == [(1, "ended"), (2, "ended"), (3, "current")]
 
 
+def said(number, text, *, days, obj, status="current") -> MemoryNode:
+    """A claim with its own text, stated ``days`` before NOW."""
+    node = claim(number, days=days, obj=obj, status=status)
+    return node.model_copy(update={"content": text})
+
+
 @pytest.mark.parametrize("history", [False, True])
-def test_ties_break_on_node_id(history):
-    beliefs = ledger(claim(5, days=3, obj="a beagle"), claim(3, days=3, obj="a cat"), history=history)
+def test_claims_stated_at_one_time_are_ordered_by_their_text(history):
+    beliefs = ledger(said(3, "We have a cat.", days=3, obj="a cat"),
+                     said(5, "We have a beagle.", days=3, obj="a beagle"), history=history)
+    assert [UUID(belief.node_id).int for belief in beliefs] == [5, 3]
+
+
+@pytest.mark.parametrize("history", [False, True])
+def test_equal_time_and_text_fall_back_on_node_id(history):
+    beliefs = ledger(said(5, "We have a cat.", days=3, obj="a cat"), said(3, "We have a cat.", days=3, obj="a cat"),
+                     history=history)
     assert [UUID(belief.node_id).int for belief in beliefs] == [3, 5]
+
+
+def test_two_claims_stated_at_one_time_at_works_at_are_both_current():
+    beliefs = ledger(said(1, "I work as a nurse at St. Mary's hospital.", days=60, obj="St. Mary's hospital"),
+                     said(2, "I start at a pediatric clinic on November 2.", days=20, obj="a pediatric clinic"),
+                     said(3, "Sam works day shifts only.", days=20, obj="day shifts only"),
+                     relation="works_at")
+    assert {UUID(belief.node_id).int: belief.state for belief in beliefs} == {1: "earlier", 2: "current", 3: "current"}
+
+
+# One chat turn as a build stores it: "Big news: I quit the hospital. I start at a pediatric clinic on November 2,
+# day shifts only." Its claims share a stated time; the nurse claim is weeks older.
+TURN = (
+    ("I work as a nurse at St. Mary's hospital.", 60, "St. Mary's hospital", "current"),
+    ("Big news: I quit the hospital.", 20, "the hospital", "past"),
+    ("I start at a pediatric clinic on November 2.", 20, "a pediatric clinic", "current"),
+    ("Sam works day shifts only.", 20, "day shifts only", "current"),
+)
+
+
+def built(ids: tuple[int, ...], order: tuple[int, ...]):
+    """The turn's claims with the node ids a build gave them, listed in ``order``: (text, state) in ledger order."""
+    nodes = [said(ids[index], text, days=days, obj=obj, status=status)
+             for index, (text, days, obj, status) in enumerate(TURN)]
+    beliefs = ledger(*[nodes[index] for index in order], relation="works_at")
+    by_id = {str(node.id): node.content for node in nodes}
+    return [(by_id[belief.node_id], belief.state) for belief in beliefs]
+
+
+@pytest.mark.parametrize("ids, order", [
+    ((1, 2, 3, 4), (0, 1, 2, 3)),
+    ((4, 3, 2, 1), (3, 2, 1, 0)),
+    ((2, 4, 1, 3), (2, 0, 3, 1)),
+])
+def test_the_same_claims_give_the_same_ledger_whatever_ids_and_order_a_build_gives_them(ids, order):
+    assert built(ids, order) == built((1, 2, 3, 4), (0, 1, 2, 3))
 
 
 def test_only_the_last_steps_claims_with_a_node_and_a_pivot_are_read():

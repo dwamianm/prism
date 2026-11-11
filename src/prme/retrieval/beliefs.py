@@ -138,7 +138,7 @@ def read_ledger(
     single-valued relation). Inside an address:
 
     - a claim that states an end (``past``, negative polarity) closes every
-      earlier claim that names the same value, and at a single-valued
+      claim stated before it that names the same value, and at a single-valued
       relation every earlier claim, since "I quit" need not name the place;
     - at a single-valued relation the newest claim that holds is ``current``
       and the older ones are ``earlier``; claims stated at the newest time
@@ -171,11 +171,14 @@ def read_ledger(
         states = {node_id: state for _when, node_id, state in members}
         values = {node_id: _words((nodes[node_id].metadata or {}).get("object")) for _when, node_id, _state in members}
         single = is_single_valued(relation)
-        for index, (_when, closer, state) in enumerate(members):
+        # An end closes what was stated before it. A claim stated at the same time is not earlier: "I quit the
+        # hospital. I start at a clinic." in one turn must not close the clinic, and their order in the log is
+        # not recorded.
+        for closed_at, closer, state in members:
             if state not in ("ended", "negated"):
                 continue
-            for _earlier_when, earlier, _earlier_state in members[:index]:
-                if states[earlier] == "current" and (
+            for earlier_when, earlier, _earlier_state in members:
+                if earlier_when < closed_at and states[earlier] == "current" and (
                     _same_value(values[earlier], values[closer]) or (single and state == "ended")
                 ):
                     states[earlier] = "ended"

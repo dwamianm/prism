@@ -106,8 +106,4 @@ XFAIL_INGEST_ADDRESS_FIRST: dict[str, str] = {
     # the present one; the cause stays in the data, so it is kept as known.
     "chat-stale-pet": "claim text split across two records: the ledger leads with 'We adopted a dog after all!' and "
                       "the beagle is named in the next sentence, another record, so the considered dog can rank above",
-    # Fails in about half of the runs: not a stable result, so not a pass.
-    "chat-first-work-now": "not deterministic: 'I start at a pediatric clinic' and 'Sam works schedule day shifts "
-                           "only' come from one turn and share a stated time at works_at, and the ledger breaks the "
-                           "tie on node ids, which are random for every build",
 }
