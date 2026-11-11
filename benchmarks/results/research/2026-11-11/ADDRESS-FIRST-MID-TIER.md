@@ -236,3 +236,59 @@ neither, so against the section above four ingest ids went from XPASS to XFAIL: 
 `chat-stale-pet` passes, and was taken off `XFAIL_INGEST_ADDRESS_FIRST`, which is now empty: it was listed while
 the ledger led the results. The ingest() chat gave the same per-id result on four runs. The hidden set, totals
 only: classic 82 passed, 80 xfailed; address_first 82 passed, 38 xpassed, 42 xfailed, 0 failed.
+
+## 2026-11-11, an investigation: which write-time option costs the answers
+
+The question: which of the two options taken out of the mode, typed extraction or corrections, costs the probe
+answers and the LoCoMo evidence in the top 25. No repair was tried and `src/` was not changed. Live builds on the
+defect and chat probes only, each option alone with the other defaults (the mode off), each built twice (the second
+with `--no-cache`), one at a time, through the local Ollama server (0.40.16, `deepseek-v4.1-flash:cloud`, model
+digest e04da138, the same as the off side). The off side is `af-off-1111` (cached). No mid tier build was made, so
+the top-25 loss is not separated here. Logs and the script in `data/mid-tier-v1/reports/probes/task8c/` (ignored).
+134 extraction calls for typed extraction and 135 for corrections; a first build replayed one or two turns whose
+request an earlier build had already sent.
+
+**Each option alone, the read-time settings at the defaults:**
+
+| Build | Calls (defects / chat) | Defects top 3 / top 5 | Defects owner claims | Chat top 3 / top 5 | Chat owner claims | Chat active claims |
+|---|---:|---:|---:|---:|---:|---:|
+| off (`af-off-1111`, cached) | 0 / 0 | 7 / 7 | 12 | 14 / 15 | 35 | 101 |
+| typed extraction, build 1 | 13 / 53 | 7 / 7 | 11 | 14 / 15 | 33 | 104 |
+| typed extraction, build 2 | 14 / 54 | 7 / 7 | 10 | 13 / 14 | 34 | 99 |
+| corrections, build 1 | 13 / 54 | 7 / 7 | 11 | 12 / 14 | 32 | 96 |
+| corrections, build 2 | 14 / 54 | 7 / 7 | 12 | 13 / 14 | 35 | 94 |
+
+Neither option alone moves a defect answer out of the top 3 or the top 5, on either build. On the chat probe,
+corrections are below off on both builds (top 3 at 12 and 13 against 14, top 5 at 14 and 14 against 15), and one
+answer falls on both: "What news did Melanie share after the race?" from rank 2 to 8 (the claim that Melanie got
+engaged to Tom is still stored and linked). Corrections retire claims, so 94 and 96 claims stay active against 101.
+Typed extraction equals off on its first build and is one answer lower in the top 3 and the top 5 on its second.
+The owner claims equal off only on corrections' second build, and are 1 to 3 lower on the others. A live build is one
+sample, and three live off samples of the member probe differed by up to two answers in the top 3, so a difference
+of one answer here is within that spread; corrections' chat losses repeat on both builds, the others do not.
+
+**The read-time mode on each option's extraction.** The mode does not change the extraction request, so each
+option's first build was read again with `memory_mode="address_first"` from its cache (0 calls; the stored claims
+and entities equal build 1's). Off against on, on the same extraction:
+
+| Extraction | Defects top 3 / top 5, mode off then on | Chat top 3 / top 5, mode off then on |
+|---|---:|---:|
+| off (`af-off-1111`) | 7 / 7, then 7 / 7 | 14 / 15, then 15 / 16 |
+| typed extraction, build 1 | 7 / 7, then 6 / 7 | 14 / 15, then 12 / 15 |
+| corrections, build 1 | 7 / 7, then 7 / 7 | 12 / 14, then 13 / 14 |
+
+On the untyped extractions the mode gains one chat answer in the top 3 and one in the top 5. On the typed
+extraction it loses answers: "How does Alex prefer to travel in Japan?" falls from 3 to 4 on the defect probe,
+and on the chat probe "What kind of dog does Dana have, and what is it called?" falls from 1 to 12, "Where will
+Dana stop overnight on the drive?" from 3 to 10 and "What does Dana's partner do for work?" from 2 to 5, while
+"Where does Dana work now?" rises from 9 to 1 and "What is Dana's job title now?" from 10 to 2. These pairs read
+one stored extraction, so the moves come from the mode's read-time settings on typed claims (routing reads the
+typed relation, and the ledger the typed status), not from a new sample.
+
+**Reading.** The defect losses of the whole mode (4 and 5 of 7 in the top 3) need typed extraction and the
+read-time mode together: neither write-time option alone loses a defect answer, the mode alone loses none, and the
+mode on typed claims loses one here. On the chat probe both write-time options cost answers by different paths:
+corrections at write time, on both builds, with the mode off; typed extraction mostly through the mode, which moves
+typed claims a long way in both directions. Which option costs the LoCoMo evidence in the top 25 is not measured:
+that needs a mid tier build of each, which this task did not run. The probe results suggest typed extraction under
+the mode as the first candidate, since that is where answers moved furthest, but that is a guess, not a result.
