@@ -1,0 +1,121 @@
+{
+ "model": "clef-flash",
+ "backend": "systemone",
+ "posthoc": true,
+ "templates_sha256": "27b76bc6245bb9173a79c504a5c5edb4fe9f803dd60ab9522eafc479baf2f5a1",
+ "right": 8,
+ "of": 9,
+ "rows": [
+  {
+   "prompt": "R2b.pick_record",
+   "options": [
+    "Bruno plays the guitar every evening.",
+    "Bruno bought his guitar from a man named Henrik.",
+    "The train to Bern was late again.",
+    "none of them"
+   ],
+   "expected": "Bruno bought his guitar from a man named Henrik.",
+   "chosen": "Bruno bought his guitar from a man named Henrik.",
+   "confidence": 0.9153,
+   "right": true
+  },
+  {
+   "prompt": "R2b.pick_record",
+   "options": [
+    "The weather was windy on Sunday.",
+    "Greta asked the neighbor to bring the kite.",
+    "Yusuf likes chess.",
+    "none of them"
+   ],
+   "expected": "Greta asked the neighbor to bring the kite.",
+   "chosen": "Greta asked the neighbor to bring the kite.",
+   "confidence": 0.9176,
+   "right": true
+  },
+  {
+   "prompt": "R2b.pick_record",
+   "options": [
+    "The train to Bern was late again.",
+    "Greta likes red things.",
+    "The bakery opens at 7.",
+    "none of them"
+   ],
+   "expected": "none of them",
+   "chosen": "none of them",
+   "confidence": 0.9841,
+   "right": true
+  },
+  {
+   "prompt": "W2b.depends_on",
+   "options": [
+    "(2026-02-01 09:00) I prefers green tea",
+    "(2026-02-01 09:00) I works at night bakery",
+    "none"
+   ],
+   "expected": "(2026-02-01 09:00) I works at night bakery",
+   "chosen": "none",
+   "confidence": 0.5048,
+   "right": false
+  },
+  {
+   "prompt": "W2b.depends_on",
+   "options": [
+    "(2026-02-01 09:00) I works at night bakery",
+    "(2026-01-01 09:00) I plays chess",
+    "none"
+   ],
+   "expected": "none",
+   "chosen": "none",
+   "confidence": 0.9591,
+   "right": true
+  },
+  {
+   "prompt": "W2b.depends_on",
+   "options": [
+    "(2026-02-01 09:00) I plays chess",
+    "(2026-01-15 09:00) I lives in Graz",
+    "none"
+   ],
+   "expected": "(2026-01-15 09:00) I lives in Graz",
+   "chosen": "(2026-01-15 09:00) I lives in Graz",
+   "confidence": 0.8723,
+   "right": true
+  },
+  {
+   "prompt": "W2b.recheck",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "no longer true",
+   "chosen": "no longer true",
+   "confidence": 0.8509,
+   "right": true
+  },
+  {
+   "prompt": "W2b.recheck",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "no longer true",
+   "chosen": "no longer true",
+   "confidence": 0.8986,
+   "right": true
+  },
+  {
+   "prompt": "W2b.recheck",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "still true",
+   "chosen": "still true",
+   "confidence": 0.7235,
+   "right": true
+  }
+ ]
+}

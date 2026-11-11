@@ -1,0 +1,1003 @@
+{
+ "differing_questions": [
+  "What pet does Sam have?",
+  "Where does Sam's sister live?",
+  "What time does Sam usually eat dinner?"
+ ],
+ "cases": {
+  "What pet does Sam have?": {
+   "build1": [
+    {
+     "rank": 1,
+     "node_id": "57aa1241-0a70-41f8-a393-c7b7b17c74d1",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:18.916263+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7323495132920833",
+     "semantic_score": "0.386252760887146",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4277639389038086"
+    },
+    {
+     "rank": 2,
+     "node_id": "cfddfea6-7a5c-47b8-910e-6ff1fa592ffe",
+     "text": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "event_time": "2026-11-05T20:03:00+00:00",
+     "created_at": "2026-11-11T06:00:23.582016+00:00",
+     "session_id": "s4",
+     "composite_score": "0.48412026039916667",
+     "semantic_score": "0.47098296880722046",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.39264917373657227"
+    },
+    {
+     "rank": 3,
+     "node_id": "7622abf3-8d4a-4b02-a4d6-5d00d1438535",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:18.490397+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.4277639389038086",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 4,
+     "node_id": "871e28a0-eae1-4533-8816-89828a972b03",
+     "text": "Then for Friday I recommend rice noodles with tofu.",
+     "event_time": "2026-09-01T19:03:00+00:00",
+     "created_at": "2026-11-11T06:00:18.664073+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.4097493290901184",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 5,
+     "node_id": "e6254235-738b-4e9a-9fca-c75de8781668",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:19.219175+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.3797091841697693",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4277639389038086"
+    },
+    {
+     "rank": 6,
+     "node_id": "f0625841-1193-4754-9dc7-569c8477ad47",
+     "text": "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "event_time": "2026-09-01T19:01:00+00:00",
+     "created_at": "2026-11-11T06:00:18.243441+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.42421334981918335",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 7,
+     "node_id": "8688f2cb-3c3d-4aa7-b0e6-521ca0961209",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:22.685265+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4348482708975",
+     "semantic_score": "0.6420164108276367",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4268556833267212"
+    },
+    {
+     "rank": 8,
+     "node_id": "c06956a2-550d-4d0d-916d-a016a0eaea54",
+     "text": "Miso chewed through my old running shoes, ha.",
+     "event_time": "2026-11-05T20:05:00+00:00",
+     "created_at": "2026-11-11T06:00:24.305981+00:00",
+     "session_id": "s4",
+     "composite_score": "0.4121621622",
+     "semantic_score": "0.39264917373657227",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47098296880722046"
+    },
+    {
+     "rank": 9,
+     "node_id": "4ac00fab-d42b-4536-be8d-0b0532fdf1c7",
+     "text": "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "event_time": "2026-10-15T18:01:00+00:00",
+     "created_at": "2026-11-11T06:00:21.436194+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4080838353958333",
+     "semantic_score": "0.44171828031539917",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4268556833267212"
+    },
+    {
+     "rank": 10,
+     "node_id": "dd52cd6d-723a-4478-b540-06b7f8f1a7a6",
+     "text": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+     "event_time": "2026-09-20T10:05:00+00:00",
+     "created_at": "2026-11-11T06:00:20.963121+00:00",
+     "session_id": "s2",
+     "composite_score": "0.403209185895",
+     "semantic_score": "0.5556506812572479",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.40779536962509155"
+    }
+   ],
+   "build2": [
+    {
+     "rank": 1,
+     "node_id": "18b30349-da1a-4b7c-8ff2-58cc2790f316",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:26.536455+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7323495132920833",
+     "semantic_score": "0.386252760887146",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4277639389038086"
+    },
+    {
+     "rank": 2,
+     "node_id": "14be3b83-be8d-47da-ac09-f3daec9912a7",
+     "text": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "event_time": "2026-11-05T20:03:00+00:00",
+     "created_at": "2026-11-11T06:00:30.854772+00:00",
+     "session_id": "s4",
+     "composite_score": "0.48412026039916667",
+     "semantic_score": "0.47098296880722046",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.39264917373657227"
+    },
+    {
+     "rank": 3,
+     "node_id": "2ffbbeaa-0d00-4544-b96f-189a980cf4a0",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:26.085386+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.4277639389038086",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 4,
+     "node_id": "4c4ffce2-8757-4e60-8deb-6750e746599f",
+     "text": "Then for Friday I recommend rice noodles with tofu.",
+     "event_time": "2026-09-01T19:03:00+00:00",
+     "created_at": "2026-11-11T06:00:26.335437+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.4097493290901184",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 5,
+     "node_id": "68bf3b87-c5e3-4727-b7d8-db24cbc9ab74",
+     "text": "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "event_time": "2026-09-01T19:01:00+00:00",
+     "created_at": "2026-11-11T06:00:25.837411+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.42421334981918335",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.44889187812805176"
+    },
+    {
+     "rank": 6,
+     "node_id": "95daf964-3de7-4398-adbd-1c05eafd91bb",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:26.760603+00:00",
+     "session_id": "s1",
+     "composite_score": "0.43940970797525",
+     "semantic_score": "0.3797091841697693",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4277639389038086"
+    },
+    {
+     "rank": 7,
+     "node_id": "8fde013a-7e59-4624-b647-fa1ecfa98e1e",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:29.868561+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4348482708975",
+     "semantic_score": "0.6420164108276367",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4268556833267212"
+    },
+    {
+     "rank": 8,
+     "node_id": "9567291d-4be4-4243-b400-17b59930cb37",
+     "text": "Miso chewed through my old running shoes, ha.",
+     "event_time": "2026-11-05T20:05:00+00:00",
+     "created_at": "2026-11-11T06:00:31.609190+00:00",
+     "session_id": "s4",
+     "composite_score": "0.4121621622",
+     "semantic_score": "0.39264917373657227",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47098296880722046"
+    },
+    {
+     "rank": 9,
+     "node_id": "af16e7ec-4bcb-4588-831f-599f7d422df0",
+     "text": "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "event_time": "2026-10-15T18:01:00+00:00",
+     "created_at": "2026-11-11T06:00:28.736140+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4080838353958333",
+     "semantic_score": "0.44171828031539917",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4268556833267212"
+    },
+    {
+     "rank": 10,
+     "node_id": "c93cc0b0-8c1e-4de2-a0b7-af2f6a283ae7",
+     "text": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+     "event_time": "2026-09-20T10:05:00+00:00",
+     "created_at": "2026-11-11T06:00:28.295565+00:00",
+     "session_id": "s2",
+     "composite_score": "0.403209185895",
+     "semantic_score": "0.5556506812572479",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.40779536962509155"
+    }
+   ]
+  },
+  "Where does Sam's sister live?": {
+   "build1": [
+    {
+     "rank": 1,
+     "node_id": "7622abf3-8d4a-4b02-a4d6-5d00d1438535",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:18.490397+00:00",
+     "session_id": "s1",
+     "composite_score": "0.99999999999125",
+     "semantic_score": "0.47833770513534546",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4310092329978943"
+    },
+    {
+     "rank": 2,
+     "node_id": "0d8a256d-39bf-4537-aa61-fffac68ecce8",
+     "text": "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "event_time": "2026-09-01T19:00:00+00:00",
+     "created_at": "2026-11-11T06:00:17.968923+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.4267043471336365",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 3,
+     "node_id": "57aa1241-0a70-41f8-a393-c7b7b17c74d1",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:18.916263+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.3213369846343994",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 4,
+     "node_id": "871e28a0-eae1-4533-8816-89828a972b03",
+     "text": "Then for Friday I recommend rice noodles with tofu.",
+     "event_time": "2026-09-01T19:03:00+00:00",
+     "created_at": "2026-11-11T06:00:18.664073+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.3415489196777344",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 5,
+     "node_id": "e6254235-738b-4e9a-9fca-c75de8781668",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:19.219175+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.4310092329978943",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 6,
+     "node_id": "f0625841-1193-4754-9dc7-569c8477ad47",
+     "text": "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "event_time": "2026-09-01T19:01:00+00:00",
+     "created_at": "2026-11-11T06:00:18.243441+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.39943838119506836",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 7,
+     "node_id": "8688f2cb-3c3d-4aa7-b0e6-521ca0961209",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:22.685265+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4919354838975",
+     "semantic_score": "0.45336610078811646",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4290648102760315"
+    },
+    {
+     "rank": 8,
+     "node_id": "c7bc681a-4979-49a2-a510-701e4e926513",
+     "text": "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "event_time": "2026-10-15T18:00:00+00:00",
+     "created_at": "2026-11-11T06:00:21.224025+00:00",
+     "session_id": "s3",
+     "composite_score": "0.47656249999541667",
+     "semantic_score": "0.43052709102630615",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4081122875213623"
+    },
+    {
+     "rank": 9,
+     "node_id": "304bd08b-8743-4264-9a81-7eda5311f848",
+     "text": "Longest run is now 19 km.",
+     "event_time": "2026-11-05T20:02:00+00:00",
+     "created_at": "2026-11-11T06:00:23.326167+00:00",
+     "session_id": "s4",
+     "composite_score": "0.46923076919875",
+     "semantic_score": "0.4291490912437439",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.3889119625091553"
+    },
+    {
+     "rank": 10,
+     "node_id": "51b48da3-10d0-42e5-8c9f-f3f9cd51242f",
+     "text": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "event_time": "2026-10-15T18:04:00+00:00",
+     "created_at": "2026-11-11T06:00:22.465389+00:00",
+     "session_id": "s3",
+     "composite_score": "0.46212121209708334",
+     "semantic_score": "0.4290648102760315",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.45336610078811646"
+    }
+   ],
+   "build2": [
+    {
+     "rank": 1,
+     "node_id": "2ffbbeaa-0d00-4544-b96f-189a980cf4a0",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:26.085386+00:00",
+     "session_id": "s1",
+     "composite_score": "0.99999999999125",
+     "semantic_score": "0.47833770513534546",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4310092329978943"
+    },
+    {
+     "rank": 2,
+     "node_id": "18b30349-da1a-4b7c-8ff2-58cc2790f316",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:26.536455+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.3213369846343994",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 3,
+     "node_id": "4c4ffce2-8757-4e60-8deb-6750e746599f",
+     "text": "Then for Friday I recommend rice noodles with tofu.",
+     "event_time": "2026-09-01T19:03:00+00:00",
+     "created_at": "2026-11-11T06:00:26.335437+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.3415489196777344",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 4,
+     "node_id": "546885e1-991a-4340-80f5-d8816c9bec62",
+     "text": "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "event_time": "2026-09-01T19:00:00+00:00",
+     "created_at": "2026-11-11T06:00:25.584271+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.4267043471336365",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 5,
+     "node_id": "68bf3b87-c5e3-4727-b7d8-db24cbc9ab74",
+     "text": "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "event_time": "2026-09-01T19:01:00+00:00",
+     "created_at": "2026-11-11T06:00:25.837411+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.39943838119506836",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 6,
+     "node_id": "95daf964-3de7-4398-adbd-1c05eafd91bb",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:26.760603+00:00",
+     "session_id": "s1",
+     "composite_score": "0.59999999999475",
+     "semantic_score": "0.4310092329978943",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.47833770513534546"
+    },
+    {
+     "rank": 7,
+     "node_id": "8fde013a-7e59-4624-b647-fa1ecfa98e1e",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:29.868561+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4919354838975",
+     "semantic_score": "0.45336610078811646",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4290648102760315"
+    },
+    {
+     "rank": 8,
+     "node_id": "ee1c4831-f688-4eaa-b171-22e617141724",
+     "text": "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "event_time": "2026-10-15T18:00:00+00:00",
+     "created_at": "2026-11-11T06:00:28.530482+00:00",
+     "session_id": "s3",
+     "composite_score": "0.47656249999541667",
+     "semantic_score": "0.43052709102630615",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4081122875213623"
+    },
+    {
+     "rank": 9,
+     "node_id": "86ef1a52-d220-4d63-bc53-733f109a9d64",
+     "text": "Longest run is now 19 km.",
+     "event_time": "2026-11-05T20:02:00+00:00",
+     "created_at": "2026-11-11T06:00:30.586402+00:00",
+     "session_id": "s4",
+     "composite_score": "0.46923076919875",
+     "semantic_score": "0.4291490912437439",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.3889119625091553"
+    },
+    {
+     "rank": 10,
+     "node_id": "7e95042f-905b-4d26-ba55-329fa07c6630",
+     "text": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "event_time": "2026-10-15T18:04:00+00:00",
+     "created_at": "2026-11-11T06:00:29.670951+00:00",
+     "session_id": "s3",
+     "composite_score": "0.46212121209708334",
+     "semantic_score": "0.4290648102760315",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.45336610078811646"
+    }
+   ]
+  },
+  "What time does Sam usually eat dinner?": {
+   "build1": [
+    {
+     "rank": 1,
+     "node_id": "51b48da3-10d0-42e5-8c9f-f3f9cd51242f",
+     "text": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "event_time": "2026-10-15T18:04:00+00:00",
+     "created_at": "2026-11-11T06:00:22.465389+00:00",
+     "session_id": "s3",
+     "composite_score": "0.8317745317970834",
+     "semantic_score": "0.41182559728622437",
+     "lexical_score": "0.3845384407955103",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 2,
+     "node_id": "4ac00fab-d42b-4536-be8d-0b0532fdf1c7",
+     "text": "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "event_time": "2026-10-15T18:01:00+00:00",
+     "created_at": "2026-11-11T06:00:21.436194+00:00",
+     "session_id": "s3",
+     "composite_score": "0.8039860637958334",
+     "semantic_score": "0.5113372504711151",
+     "lexical_score": "0.1903739202354172",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.48240453004837036"
+    },
+    {
+     "rank": 3,
+     "node_id": "742c6106-a1eb-4921-85d7-2f9c9b972d0c",
+     "text": "Did 16 km on Sunday. Knee was fine this time.",
+     "event_time": "2026-10-15T18:03:00+00:00",
+     "created_at": "2026-11-11T06:00:22.211186+00:00",
+     "session_id": "s3",
+     "composite_score": "0.7885204762966667",
+     "semantic_score": "0.41732072830200195",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 4,
+     "node_id": "e6254235-738b-4e9a-9fca-c75de8781668",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:19.219175+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7771425394925",
+     "semantic_score": "0.6695920825004578",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5149995684623718"
+    },
+    {
+     "rank": 5,
+     "node_id": "7622abf3-8d4a-4b02-a4d6-5d00d1438535",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:18.490397+00:00",
+     "session_id": "s1",
+     "composite_score": "0.75821040699125",
+     "semantic_score": "0.5149995684623718",
+     "lexical_score": "0.2818673751382225",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.6695920825004578"
+    },
+    {
+     "rank": 6,
+     "node_id": "57aa1241-0a70-41f8-a393-c7b7b17c74d1",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:18.916263+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7173035378920833",
+     "semantic_score": "0.406095027923584",
+     "lexical_score": "0.6547428201197717",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.6695920825004578"
+    },
+    {
+     "rank": 7,
+     "node_id": "8688f2cb-3c3d-4aa7-b0e6-521ca0961209",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:22.685265+00:00",
+     "session_id": "s3",
+     "composite_score": "0.49906471907825",
+     "semantic_score": "0.39059019088745117",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.48240453004837036"
+    },
+    {
+     "rank": 8,
+     "node_id": "8d127161-0d0f-4430-bab0-7eec5c4bccb9",
+     "text": "Understood, I'll include fish in your plans from now on.",
+     "event_time": "2026-10-15T18:02:00+00:00",
+     "created_at": "2026-11-11T06:00:21.663114+00:00",
+     "session_id": "s3",
+     "composite_score": "0.49906471907825",
+     "semantic_score": "0.48240453004837036",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 9,
+     "node_id": "c7bc681a-4979-49a2-a510-701e4e926513",
+     "text": "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "event_time": "2026-10-15T18:00:00+00:00",
+     "created_at": "2026-11-11T06:00:21.224025+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4823916382775",
+     "semantic_score": "0.42869967222213745",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 10,
+     "node_id": "cfddfea6-7a5c-47b8-910e-6ff1fa592ffe",
+     "text": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "event_time": "2026-11-05T20:03:00+00:00",
+     "created_at": "2026-11-11T06:00:23.582016+00:00",
+     "session_id": "s4",
+     "composite_score": "0.46922425239916665",
+     "semantic_score": "0.5388116836547852",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4465498924255371"
+    }
+   ],
+   "build2": [
+    {
+     "rank": 1,
+     "node_id": "7e95042f-905b-4d26-ba55-329fa07c6630",
+     "text": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "event_time": "2026-10-15T18:04:00+00:00",
+     "created_at": "2026-11-11T06:00:29.670951+00:00",
+     "session_id": "s3",
+     "composite_score": "0.8317745317970834",
+     "semantic_score": "0.41182559728622437",
+     "lexical_score": "0.3845384407955103",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 2,
+     "node_id": "af16e7ec-4bcb-4588-831f-599f7d422df0",
+     "text": "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "event_time": "2026-10-15T18:01:00+00:00",
+     "created_at": "2026-11-11T06:00:28.736140+00:00",
+     "session_id": "s3",
+     "composite_score": "0.8039860637958334",
+     "semantic_score": "0.5113372504711151",
+     "lexical_score": "0.1903739202354172",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.48240453004837036"
+    },
+    {
+     "rank": 3,
+     "node_id": "85b2563c-9d0a-4ed8-8b0d-4daa75a36ea4",
+     "text": "Did 16 km on Sunday. Knee was fine this time.",
+     "event_time": "2026-10-15T18:03:00+00:00",
+     "created_at": "2026-11-11T06:00:29.445692+00:00",
+     "session_id": "s3",
+     "composite_score": "0.7885204762966667",
+     "semantic_score": "0.41732072830200195",
+     "lexical_score": "1.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 4,
+     "node_id": "95daf964-3de7-4398-adbd-1c05eafd91bb",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "event_time": "2026-09-01T19:05:00+00:00",
+     "created_at": "2026-11-11T06:00:26.760603+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7771425394925",
+     "semantic_score": "0.6695920825004578",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5149995684623718"
+    },
+    {
+     "rank": 5,
+     "node_id": "2ffbbeaa-0d00-4544-b96f-189a980cf4a0",
+     "text": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "event_time": "2026-09-01T19:02:00+00:00",
+     "created_at": "2026-11-11T06:00:26.085386+00:00",
+     "session_id": "s1",
+     "composite_score": "0.75821040699125",
+     "semantic_score": "0.5149995684623718",
+     "lexical_score": "0.2818673751382225",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.6695920825004578"
+    },
+    {
+     "rank": 6,
+     "node_id": "18b30349-da1a-4b7c-8ff2-58cc2790f316",
+     "text": "Please always give me quantities in metric units. I never know what a cup is.",
+     "event_time": "2026-09-01T19:04:00+00:00",
+     "created_at": "2026-11-11T06:00:26.536455+00:00",
+     "session_id": "s1",
+     "composite_score": "0.7173035378920833",
+     "semantic_score": "0.406095027923584",
+     "lexical_score": "0.6547428201197717",
+     "paths": [
+      "VECTOR",
+      "LEXICAL",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.6695920825004578"
+    },
+    {
+     "rank": 7,
+     "node_id": "02b82f50-b9ca-464f-8fd5-0134d949363c",
+     "text": "Understood, I'll include fish in your plans from now on.",
+     "event_time": "2026-10-15T18:02:00+00:00",
+     "created_at": "2026-11-11T06:00:28.940586+00:00",
+     "session_id": "s3",
+     "composite_score": "0.49906471907825",
+     "semantic_score": "0.48240453004837036",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 8,
+     "node_id": "8fde013a-7e59-4624-b647-fa1ecfa98e1e",
+     "text": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "event_time": "2026-10-15T18:05:00+00:00",
+     "created_at": "2026-11-11T06:00:29.868561+00:00",
+     "session_id": "s3",
+     "composite_score": "0.49906471907825",
+     "semantic_score": "0.39059019088745117",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.48240453004837036"
+    },
+    {
+     "rank": 9,
+     "node_id": "ee1c4831-f688-4eaa-b171-22e617141724",
+     "text": "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "event_time": "2026-10-15T18:00:00+00:00",
+     "created_at": "2026-11-11T06:00:28.530482+00:00",
+     "session_id": "s3",
+     "composite_score": "0.4823916382775",
+     "semantic_score": "0.42869967222213745",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.5113372504711151"
+    },
+    {
+     "rank": 10,
+     "node_id": "14be3b83-be8d-47da-ac09-f3daec9912a7",
+     "text": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "event_time": "2026-11-05T20:03:00+00:00",
+     "created_at": "2026-11-11T06:00:30.854772+00:00",
+     "session_id": "s4",
+     "composite_score": "0.46922425239916665",
+     "semantic_score": "0.5388116836547852",
+     "lexical_score": "0.0",
+     "paths": [
+      "VECTOR",
+      "SESSION_CONTEXT"
+     ],
+     "context_relevance": "0.4465498924255371"
+    }
+   ]
+  }
+ }
+}

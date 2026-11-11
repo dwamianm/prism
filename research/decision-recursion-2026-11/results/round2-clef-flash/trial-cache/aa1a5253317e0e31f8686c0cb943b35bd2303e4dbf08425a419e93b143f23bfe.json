@@ -1,0 +1,1 @@
+{"choice": 2, "confidence": 0.8763, "ms": 170.42, "fallback": false, "api_confidence": 0.6137652193384949, "choice_is_argmax": true, "usage": {"input_tokens": 169, "output_tokens": 0}, "prompt_eval_cached_count": 36, "probabilities": {"A": 0.1063, "B": 0.0174, "C": 0.8763}}

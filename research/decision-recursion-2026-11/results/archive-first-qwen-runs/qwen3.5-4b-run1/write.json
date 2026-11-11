@@ -1,0 +1,1516 @@
+{
+ "experiment": "W",
+ "backend": "ollama",
+ "model": "qwen3.5:4b",
+ "seed": 7,
+ "ollama_version": "0.40.15",
+ "model_digest": "96f38c742e0a10e194b237d2ffb8b55925ebfeed9d27df72688f565e773569e7",
+ "templates_sha256": "fef7bf42e2247fd70efcbceaca9b50d78037972c5c43ace2ae1daaf919f33d74",
+ "key_sha256": "790c905303167268f66d43e7af5c2ca10619c6f016d9da69c447975e45675b16",
+ "at": "2026-11-11T05:41:33+00:00",
+ "wall_seconds": 12.5,
+ "facts": 43,
+ "model_calls": 113,
+ "cache_hits": 52,
+ "arms": {
+  "W0": {
+   "retired_correctly": 0,
+   "of_key": 10,
+   "retired_correctly_ids": [],
+   "missed": [
+    {
+     "id": "F01",
+     "triple": "I | diet | vegetarian | positive"
+    },
+    {
+     "id": "F02",
+     "triple": "I | planning | meals for the week | positive"
+    },
+    {
+     "id": "F04",
+     "triple": "Priya | visiting | I | positive"
+    },
+    {
+     "id": "F08",
+     "triple": "I | works_at | St. Mary's hospital | positive"
+    },
+    {
+     "id": "F09",
+     "triple": "I | shift_pattern | mostly night shifts | positive"
+    },
+    {
+     "id": "F10",
+     "triple": "I | dinner_time | about 6 am | positive"
+    },
+    {
+     "id": "F14",
+     "triple": "longest run | distance | 9 km | positive"
+    },
+    {
+     "id": "F18",
+     "triple": "I | thinking_about_getting | dog | positive"
+    },
+    {
+     "id": "F19",
+     "triple": "dog | maybe_breed | greyhound | positive"
+    },
+    {
+     "id": "F20",
+     "triple": "I | decided | getting a dog | negative"
+    }
+   ],
+   "retired_wrongly": 0,
+   "retired_wrongly_list": [],
+   "calls_per_new_fact": {
+    "mean": 0,
+    "median": 0,
+    "max": 0,
+    "total": 0
+   },
+   "ms_per_new_fact": {
+    "mean": 0.0,
+    "median": 0.0,
+    "p95": 0.0,
+    "total": 0.0
+   },
+   "retirements": {},
+   "WRITE_PASS": false
+  },
+  "W1": {
+   "retired_correctly": 10,
+   "of_key": 10,
+   "retired_correctly_ids": [
+    "F01",
+    "F02",
+    "F04",
+    "F08",
+    "F09",
+    "F10",
+    "F14",
+    "F18",
+    "F19",
+    "F20"
+   ],
+   "missed": [],
+   "retired_wrongly": 13,
+   "retired_wrongly_list": [
+    {
+     "id": "F03",
+     "triple": "Priya | kin_of | I | positive",
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.6361,
+     "by_triple": "I | knows | what a cup is | negative",
+     "contestable": false
+    },
+    {
+     "id": "F05",
+     "triple": "Priya | dietary_restriction | gluten | negative",
+     "by": "F30",
+     "stage": "W1",
+     "confidence": 0.5389,
+     "by_triple": "Priya | moved_to | Toronto | positive",
+     "contestable": false
+    },
+    {
+     "id": "F06",
+     "triple": "I | prefers | metric units | positive",
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.5359,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F07",
+     "triple": "I | knows | what a cup is | negative",
+     "by": "F08",
+     "stage": "W1",
+     "confidence": 0.8376,
+     "by_triple": "I | works_at | St. Mary's hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F11",
+     "triple": "I | training_for | half marathon | positive",
+     "by": "F23",
+     "stage": "W1",
+     "confidence": 0.4658,
+     "by_triple": "I | shift_schedule | day shifts only | positive",
+     "contestable": false
+    },
+    {
+     "id": "F15",
+     "triple": "knee | hurt_after | longest run | positive",
+     "by": "F29",
+     "stage": "W1",
+     "confidence": 0.8423,
+     "by_triple": "knee | condition | fine this time | positive",
+     "contestable": true
+    },
+    {
+     "id": "F21",
+     "triple": "I | quit | hospital | positive",
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6675,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F22",
+     "triple": "I | starts_at | pediatric clinic | positive",
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6968,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F23",
+     "triple": "I | shift_schedule | day shifts only | positive",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5559,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F24",
+     "triple": "I | eats | fish | positive",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5132,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F25",
+     "triple": "I | diet | not strictly vegetarian | negative",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9598,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": true
+    },
+    {
+     "id": "F26",
+     "triple": "I | eats | meat | negative",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9384,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F27",
+     "triple": "I | will_include | fish | positive",
+     "by": "F28",
+     "stage": "W1",
+     "confidence": 0.377,
+     "by_triple": "I | ran | 16 km | positive",
+     "contestable": false
+    }
+   ],
+   "calls_per_new_fact": {
+    "mean": 2.33,
+    "median": 2,
+    "max": 8,
+    "total": 100
+   },
+   "ms_per_new_fact": {
+    "mean": 248.2,
+    "median": 197.3,
+    "p95": 635.2,
+    "total": 10670.5
+   },
+   "retirements": {
+    "F01": {
+     "by": "F24",
+     "stage": "W1",
+     "confidence": 0.8795,
+     "triple": "I | diet | vegetarian | positive"
+    },
+    "F02": {
+     "by": "F10",
+     "stage": "W1",
+     "confidence": 0.7127,
+     "triple": "I | planning | meals for the week | positive"
+    },
+    "F03": {
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.6361,
+     "triple": "Priya | kin_of | I | positive"
+    },
+    "F04": {
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.5658,
+     "triple": "Priya | visiting | I | positive"
+    },
+    "F05": {
+     "by": "F30",
+     "stage": "W1",
+     "confidence": 0.5389,
+     "triple": "Priya | dietary_restriction | gluten | negative"
+    },
+    "F06": {
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.5359,
+     "triple": "I | prefers | metric units | positive"
+    },
+    "F07": {
+     "by": "F08",
+     "stage": "W1",
+     "confidence": 0.8376,
+     "triple": "I | knows | what a cup is | negative"
+    },
+    "F08": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.9579,
+     "triple": "I | works_at | St. Mary's hospital | positive"
+    },
+    "F09": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.6811,
+     "triple": "I | shift_pattern | mostly night shifts | positive"
+    },
+    "F10": {
+     "by": "F11",
+     "stage": "W1",
+     "confidence": 0.6463,
+     "triple": "I | dinner_time | about 6 am | positive"
+    },
+    "F11": {
+     "by": "F23",
+     "stage": "W1",
+     "confidence": 0.4658,
+     "triple": "I | training_for | half marathon | positive"
+    },
+    "F14": {
+     "by": "F40",
+     "stage": "W1",
+     "confidence": 0.9918,
+     "triple": "longest run | distance | 9 km | positive"
+    },
+    "F15": {
+     "by": "F29",
+     "stage": "W1",
+     "confidence": 0.8423,
+     "triple": "knee | hurt_after | longest run | positive"
+    },
+    "F18": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.4819,
+     "triple": "I | thinking_about_getting | dog | positive"
+    },
+    "F19": {
+     "by": "F33",
+     "stage": "W1",
+     "confidence": 0.9103,
+     "triple": "dog | maybe_breed | greyhound | positive"
+    },
+    "F20": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.6124,
+     "triple": "I | decided | getting a dog | negative"
+    },
+    "F21": {
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6675,
+     "triple": "I | quit | hospital | positive"
+    },
+    "F22": {
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6968,
+     "triple": "I | starts_at | pediatric clinic | positive"
+    },
+    "F23": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5559,
+     "triple": "I | shift_schedule | day shifts only | positive"
+    },
+    "F24": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5132,
+     "triple": "I | eats | fish | positive"
+    },
+    "F25": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9598,
+     "triple": "I | diet | not strictly vegetarian | negative"
+    },
+    "F26": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9384,
+     "triple": "I | eats | meat | negative"
+    },
+    "F27": {
+     "by": "F28",
+     "stage": "W1",
+     "confidence": 0.377,
+     "triple": "I | will_include | fish | positive"
+    }
+   },
+   "WRITE_PASS": false
+  },
+  "W2": {
+   "retired_correctly": 10,
+   "of_key": 10,
+   "retired_correctly_ids": [
+    "F01",
+    "F02",
+    "F04",
+    "F08",
+    "F09",
+    "F10",
+    "F14",
+    "F18",
+    "F19",
+    "F20"
+   ],
+   "missed": [],
+   "retired_wrongly": 14,
+   "retired_wrongly_list": [
+    {
+     "id": "F03",
+     "triple": "Priya | kin_of | I | positive",
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.6361,
+     "by_triple": "I | knows | what a cup is | negative",
+     "contestable": false
+    },
+    {
+     "id": "F05",
+     "triple": "Priya | dietary_restriction | gluten | negative",
+     "by": "F07",
+     "via": "F03",
+     "stage": "W2.depth1",
+     "confidence": 0.8757,
+     "by_triple": "I | knows | what a cup is | negative",
+     "contestable": false
+    },
+    {
+     "id": "F06",
+     "triple": "I | prefers | metric units | positive",
+     "by": "F08",
+     "via": "F07",
+     "stage": "W2.depth1",
+     "confidence": 0.5954,
+     "by_triple": "I | works_at | St. Mary's hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F07",
+     "triple": "I | knows | what a cup is | negative",
+     "by": "F08",
+     "stage": "W1",
+     "confidence": 0.8376,
+     "by_triple": "I | works_at | St. Mary's hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F11",
+     "triple": "I | training_for | half marathon | positive",
+     "by": "F21",
+     "via": "F16",
+     "stage": "W2.depth2",
+     "confidence": 0.6135,
+     "by_triple": "I | quit | hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F15",
+     "triple": "knee | hurt_after | longest run | positive",
+     "by": "F29",
+     "stage": "W1",
+     "confidence": 0.8423,
+     "by_triple": "knee | condition | fine this time | positive",
+     "contestable": true
+    },
+    {
+     "id": "F16",
+     "triple": "I | bought | Brooks Ghost | positive",
+     "by": "F21",
+     "via": "F18",
+     "stage": "W2.depth1",
+     "confidence": 0.5957,
+     "by_triple": "I | quit | hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F21",
+     "triple": "I | quit | hospital | positive",
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6675,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F22",
+     "triple": "I | starts_at | pediatric clinic | positive",
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6968,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F23",
+     "triple": "I | shift_schedule | day shifts only | positive",
+     "by": "F25",
+     "via": "F22",
+     "stage": "W2.depth1",
+     "confidence": 0.72,
+     "by_triple": "I | diet | not strictly vegetarian | negative",
+     "contestable": false
+    },
+    {
+     "id": "F24",
+     "triple": "I | eats | fish | positive",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5132,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F25",
+     "triple": "I | diet | not strictly vegetarian | negative",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9598,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": true
+    },
+    {
+     "id": "F26",
+     "triple": "I | eats | meat | negative",
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9384,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F27",
+     "triple": "I | will_include | fish | positive",
+     "by": "F28",
+     "stage": "W1",
+     "confidence": 0.377,
+     "by_triple": "I | ran | 16 km | positive",
+     "contestable": false
+    }
+   ],
+   "calls_per_new_fact": {
+    "mean": 1.51,
+    "median": 0,
+    "max": 8,
+    "total": 65
+   },
+   "ms_per_new_fact": {
+    "mean": 171.6,
+    "median": 0,
+    "p95": 593.6,
+    "total": 7380.5
+   },
+   "retirements": {
+    "F01": {
+     "by": "F08",
+     "via": "F07",
+     "stage": "W2.depth1",
+     "confidence": 0.5359,
+     "triple": "I | diet | vegetarian | positive"
+    },
+    "F02": {
+     "by": "F08",
+     "via": "F01",
+     "stage": "W2.depth2",
+     "confidence": 0.6352,
+     "triple": "I | planning | meals for the week | positive"
+    },
+    "F03": {
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.6361,
+     "triple": "Priya | kin_of | I | positive"
+    },
+    "F04": {
+     "by": "F07",
+     "stage": "W1",
+     "confidence": 0.5658,
+     "triple": "Priya | visiting | I | positive"
+    },
+    "F05": {
+     "by": "F07",
+     "via": "F03",
+     "stage": "W2.depth1",
+     "confidence": 0.8757,
+     "triple": "Priya | dietary_restriction | gluten | negative"
+    },
+    "F06": {
+     "by": "F08",
+     "via": "F07",
+     "stage": "W2.depth1",
+     "confidence": 0.5954,
+     "triple": "I | prefers | metric units | positive"
+    },
+    "F07": {
+     "by": "F08",
+     "stage": "W1",
+     "confidence": 0.8376,
+     "triple": "I | knows | what a cup is | negative"
+    },
+    "F08": {
+     "by": "F11",
+     "via": "F10",
+     "stage": "W2.depth1",
+     "confidence": 0.6627,
+     "triple": "I | works_at | St. Mary's hospital | positive"
+    },
+    "F09": {
+     "by": "F11",
+     "via": "F10",
+     "stage": "W2.depth1",
+     "confidence": 0.5262,
+     "triple": "I | shift_pattern | mostly night shifts | positive"
+    },
+    "F10": {
+     "by": "F11",
+     "stage": "W1",
+     "confidence": 0.6463,
+     "triple": "I | dinner_time | about 6 am | positive"
+    },
+    "F11": {
+     "by": "F21",
+     "via": "F16",
+     "stage": "W2.depth2",
+     "confidence": 0.6135,
+     "triple": "I | training_for | half marathon | positive"
+    },
+    "F14": {
+     "by": "F40",
+     "stage": "W1",
+     "confidence": 0.9918,
+     "triple": "longest run | distance | 9 km | positive"
+    },
+    "F15": {
+     "by": "F29",
+     "stage": "W1",
+     "confidence": 0.8423,
+     "triple": "knee | hurt_after | longest run | positive"
+    },
+    "F16": {
+     "by": "F21",
+     "via": "F18",
+     "stage": "W2.depth1",
+     "confidence": 0.5957,
+     "triple": "I | bought | Brooks Ghost | positive"
+    },
+    "F18": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.4819,
+     "triple": "I | thinking_about_getting | dog | positive"
+    },
+    "F19": {
+     "by": "F33",
+     "stage": "W1",
+     "confidence": 0.9103,
+     "triple": "dog | maybe_breed | greyhound | positive"
+    },
+    "F20": {
+     "by": "F21",
+     "stage": "W1",
+     "confidence": 0.6124,
+     "triple": "I | decided | getting a dog | negative"
+    },
+    "F21": {
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6675,
+     "triple": "I | quit | hospital | positive"
+    },
+    "F22": {
+     "by": "F25",
+     "stage": "W1",
+     "confidence": 0.6968,
+     "triple": "I | starts_at | pediatric clinic | positive"
+    },
+    "F23": {
+     "by": "F25",
+     "via": "F22",
+     "stage": "W2.depth1",
+     "confidence": 0.72,
+     "triple": "I | shift_schedule | day shifts only | positive"
+    },
+    "F24": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.5132,
+     "triple": "I | eats | fish | positive"
+    },
+    "F25": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9598,
+     "triple": "I | diet | not strictly vegetarian | negative"
+    },
+    "F26": {
+     "by": "F27",
+     "stage": "W1",
+     "confidence": 0.9384,
+     "triple": "I | eats | meat | negative"
+    },
+    "F27": {
+     "by": "F28",
+     "stage": "W1",
+     "confidence": 0.377,
+     "triple": "I | will_include | fish | positive"
+    }
+   },
+   "WRITE_PASS": false
+  }
+ },
+ "decisions": [
+  [
+   "W1",
+   "c422a759380e0f0424555cdbd3059b4235b20f5e9111d9c30c61607f3edd739a",
+   2
+  ],
+  [
+   "W1",
+   "95512ce4cca82566709d75b8dc92ddcbe6e258bd88475f2e53a77d9889e09654",
+   2
+  ],
+  [
+   "W1",
+   "edc0e19d135bc4b91f80861f5a2debee38a21c8c2fe520ba05600308de42c322",
+   2
+  ],
+  [
+   "W1",
+   "7d76a25be7401f93d69a295569a39c9de4b3f948cd0c78b9c98e270042179879",
+   2
+  ],
+  [
+   "W1",
+   "c810669c9c0e882e3fd35c51cff56281d396a466d5c0a932a0814f50996699de",
+   2
+  ],
+  [
+   "W1",
+   "2cc92ac541897ef6fd603f4e66157bf86e69a6c972269d13ee5a7abbce21e4e2",
+   2
+  ],
+  [
+   "W1",
+   "0335ad879d96c7cde8e4399c67b9296ab91fb1f581bbd419a7b870ec20c1f141",
+   1
+  ],
+  [
+   "W1",
+   "441b516cbc9c15f595aa54c27f7f14aad13de959dca05d4c77f928931c70bb78",
+   1
+  ],
+  [
+   "W1",
+   "0438234dba8469ffadf355599730c4929d46310d1c033fdb96e601e0fe837ffb",
+   2
+  ],
+  [
+   "W1",
+   "3e198a49e4543e5b981c81c37545f44a5a8099155954b91ebd6680125d64b9a1",
+   2
+  ],
+  [
+   "W1",
+   "4badb618a08fcc563d590a91a840fb08332efcf2da27db3cf168f741b1053504",
+   0
+  ],
+  [
+   "W1",
+   "0bbf45a602c6f84fc3e9bac8897ca8344ba6aabb32113562280d6d9efcbdea87",
+   1
+  ],
+  [
+   "W1",
+   "983e95903f67cf9f954140cee9a6edc6d7e8474c0771c6a55042d067f82dbaf0",
+   2
+  ],
+  [
+   "W1",
+   "ddd6f17b335f4c6f4c7aa49f5b428a45c50d6fa687983b63e501b9a73dfb8564",
+   2
+  ],
+  [
+   "W1",
+   "c7105a9e5c46e09d29101c9e4852b560749dcd2ddb88c50470792fb0645fd2e6",
+   2
+  ],
+  [
+   "W1",
+   "1b5fd4f42526f136de7a7b326d14da315f3b0dc85c3113b65469df6185fc4258",
+   2
+  ],
+  [
+   "W1",
+   "569fbfc59ac0f1c8c34615c34753c9a062b6715a34f091e5ecba63943959328a",
+   1
+  ],
+  [
+   "W1",
+   "70f3db8424be146ac3433686f2dae70bd8fa8a514d4574cc159c85d4718c7899",
+   0
+  ],
+  [
+   "W1",
+   "2539ec8d6f84df6418eeae4abc49a80adda946e0194265ca32d8a1f1e4fad9e0",
+   2
+  ],
+  [
+   "W1",
+   "949c10956e94769f89f0cfff7dd8277050bc7f8840050054f21f41c5d51cdb2b",
+   2
+  ],
+  [
+   "W1",
+   "efe3f6e09a1f3349b259d2083dc4df5eed6d935932383de1db1d1e4279d37ac5",
+   2
+  ],
+  [
+   "W1",
+   "43a9be306a6014317339e17b6d70794304343c4f39bf2ddb075a242edf339040",
+   2
+  ],
+  [
+   "W1",
+   "64b2f879b43735cef15c7793db717fb7586a96a8f8f4b8051cf31af893582529",
+   1
+  ],
+  [
+   "W1",
+   "13554c735b7627f2921e7bad196b3cf6c4559d0e0ffbd531c939861a4396fc97",
+   2
+  ],
+  [
+   "W1",
+   "ca7d19f89b2d6ae263ac3e919944b817f5e1b7fec5c0529b2672f347db014f6e",
+   0
+  ],
+  [
+   "W1",
+   "7bf4deecbc69f08e657decb9e8cca977d33bb289d31bf88e29b8719b72765505",
+   2
+  ],
+  [
+   "W1",
+   "aabac4b2384e4eaed7492264ac91d5eabb79223e9dc221c9083b78ed37dfdcba",
+   2
+  ],
+  [
+   "W1",
+   "0f69d1d19bd81ab3cef95a121ed9944f9fee9afe8796b4c893ed789c00bc3d8c",
+   0
+  ],
+  [
+   "W1",
+   "8a22b6c44cbc63814e29fba123a039eafe8ccc391fdd4f1a574a91771f6dbb6a",
+   2
+  ],
+  [
+   "W1",
+   "47269e368632fe7fa1e61e9063aa3b27bd61d2efad256f949156d850b91151b4",
+   2
+  ],
+  [
+   "W1",
+   "0f55b637221393b28d27eabeea6fe9172b1c27037907ff155c7efcffcd629192",
+   2
+  ],
+  [
+   "W1",
+   "8e14747707fb7e2b41a84ba34405e96581c8c2b18094733bdb15d3fc7b9ebc2c",
+   2
+  ],
+  [
+   "W1",
+   "73f637bac2aaa3da02e3a73df02ecead89e80887087de9e972b205e952cdccda",
+   2
+  ],
+  [
+   "W1",
+   "f02b18bccdfa9778350c9b358630abb9a419cb5b4428a423b59b42cb71ae2c04",
+   2
+  ],
+  [
+   "W1",
+   "ebb438dcf7ccf3bba5ada0d22f661c3a62cc6075df87295b21cd5c52b109ff52",
+   2
+  ],
+  [
+   "W1",
+   "b8f178d809dc00df98212ca5b3054b8d23e1f3b68548a369e4a11801b21c03fc",
+   2
+  ],
+  [
+   "W1",
+   "d03db98e880271502ed041b84f902250500baa4fb22821717ba54b2681331a3f",
+   2
+  ],
+  [
+   "W1",
+   "ec77d4a546e469c8ae96296b725fd11542ba925919cd5756308288a0e43f9d39",
+   2
+  ],
+  [
+   "W1",
+   "e65f419bf5b9941668c731709077001d2c874366481ee10174aeb9ee64e01e12",
+   2
+  ],
+  [
+   "W1",
+   "9ee76c2d1f1be05fbffaff369342f6a19fbc33fb439a5717ac6172c55be5408b",
+   2
+  ],
+  [
+   "W1",
+   "61d560d2ada0a41b15b05c440bef8e22c7ac89899876773ad04fff9de0466884",
+   2
+  ],
+  [
+   "W1",
+   "62fa07aa33958c99b6e609fefe7353302d3b594979d19bb8fac8abe47c7d40d2",
+   2
+  ],
+  [
+   "W1",
+   "30cb153348c312f6db5786f60857b08e00da4a2e4a7b5a4ba70c9ac35a1ec798",
+   1
+  ],
+  [
+   "W1",
+   "8bd60f70115f598691f9b38374d47f2e5286e3af4c25c16427c2d57b72de7c57",
+   1
+  ],
+  [
+   "W1",
+   "44a2df56d85453eff18c2a0361f36f8c3d5b5c15f1d7235f0504f832db75f32f",
+   2
+  ],
+  [
+   "W1",
+   "961e1babad04b97625dda35ce8a6c448211b6e99787f6312df00eb88730878a9",
+   2
+  ],
+  [
+   "W1",
+   "ac1280b11aaad1c889a99f5bb6f26a52c1992b6a3001464bba8f35cf41039039",
+   1
+  ],
+  [
+   "W1",
+   "97fa07eb0ba13ae8f112a09f28b6abf571bf3f4bb4151ebd0338b850481ec67e",
+   1
+  ],
+  [
+   "W1",
+   "c48b433065a0aed6f0a8d62c99db7f99a353c56983a5dcb8110dde860bb9d789",
+   2
+  ],
+  [
+   "W1",
+   "e4b2ace231248799f13c8e926d7048ec96585f0b24ae5b5613df0cc7deb00e6a",
+   0
+  ],
+  [
+   "W1",
+   "ed49e1b2762fa670edfd3359c15bee093d71909fad8667cff35f1e47aec78124",
+   2
+  ],
+  [
+   "W1",
+   "09965bdebbb77d8987fb339d0fc4040ca68c28389ef0dfeb359e8886f86bc4e4",
+   2
+  ],
+  [
+   "W1",
+   "e33b8e6ba3663b7f52bdcd6688c14c9d5946e118b8323af562d7eb13feb5e816",
+   2
+  ],
+  [
+   "W1",
+   "805cdfb160870a1f66fab165e3c235d24ddf82a1372384408b496c4b2f050843",
+   2
+  ],
+  [
+   "W1",
+   "c35545b7451342a3e515b046a6b2e00ed18a87a1dff272da7c8ff11f0ecc4d9f",
+   1
+  ],
+  [
+   "W1",
+   "bbfb47400ee22722219f29cdfe321e2b3b14f6ee9417b72129c7eb52cacb7e64",
+   0
+  ],
+  [
+   "W1",
+   "8bd1069f9543c103fd4289dc6fa23f6dab5cfcc18fc53145f1fed61a1032d2a6",
+   1
+  ],
+  [
+   "W1",
+   "ce4c30e5ffb873322d3dab54cfe05b4b44099e65933f0c9f88547337426ba15c",
+   2
+  ],
+  [
+   "W1",
+   "a28e72b5c055c240e891cb8e57c96f5c21a111641a5ea3ba9dd467079a57b255",
+   0
+  ],
+  [
+   "W1",
+   "51785db6f168255581f00ea26ddc919ec71c6dc29155a82ea26f78df936b4797",
+   2
+  ],
+  [
+   "W1",
+   "69fcef2ed554121166f6e1880d168b923e62902328a19266c329d7e7ee1a2072",
+   0
+  ],
+  [
+   "W1",
+   "34031ac03b1095ff93beec29d11892ce0e27b3bd571cb824a4241fb4a14b2e9d",
+   2
+  ],
+  [
+   "W1",
+   "6ef7e22c00c8bfc43a144d4723bb9eb05c10fc5b98f63fee110eb1699dca1c1a",
+   1
+  ],
+  [
+   "W1",
+   "7f7d8a8f2c13e034db2199c50f8d6ac2fcb297a4ebf3409207d0dc41922a3f82",
+   2
+  ],
+  [
+   "W1",
+   "bd3ae771a7a9ea4b12a8e24cc5ba61e9e6eb7f08cfac09625565f765a5ca973c",
+   1
+  ],
+  [
+   "W1",
+   "c072f5b542936c072de45aabb2fdb523cf1cc6962f4c326b6b2ccc5527a8e342",
+   1
+  ],
+  [
+   "W1",
+   "dd45dc8e542c4b113e223d8452f12af27bf72e6def9aa44649f10ce3513a035c",
+   0
+  ],
+  [
+   "W1",
+   "6b16b79178ce3e5bd88d2fd123f4f7af85ab8bd5c57b861465f8b601ffa7cddc",
+   2
+  ],
+  [
+   "W1",
+   "26b373eaba182d2d1c09767ec4e4eb890494db2d9528de53265bf11f6bd98490",
+   2
+  ],
+  [
+   "W1",
+   "682d9b7f8b9eef9b78831a5704e2a3823f1aa4fc45c6f585a76aebd4f784c362",
+   2
+  ],
+  [
+   "W1",
+   "3bce95eaecf2893b84ce9a9f71634374f6b92fd5f424f0ada63fe136ef0a67c3",
+   1
+  ],
+  [
+   "W1",
+   "a24d35b708e945c6b1a9d4448eb1d4eb31a871d306cfd004796e213a6be8d99e",
+   1
+  ],
+  [
+   "W1",
+   "51733f314879dd1414e297d288f1d6c0bfa7a451cbd688595fac68e8ea0d98aa",
+   1
+  ],
+  [
+   "W1",
+   "940269fd4fc80ac06bdfbe008e672adda26c4e226a079f8567f089e5218321a1",
+   1
+  ],
+  [
+   "W1",
+   "ab30b05225f9eb39f4ceea839467311652b1a2ce502649944f1c73293ab2d390",
+   0
+  ],
+  [
+   "W1",
+   "6da2b74fc3d734262a1e1c8244868d79b951f6f5098afda20fce2cdc039451e5",
+   1
+  ],
+  [
+   "W1",
+   "db7ab0ccfdf89fd737b1212da129deba52295a98c3f344e070d7d9c6f084c2b5",
+   1
+  ],
+  [
+   "W1",
+   "ebf194d270cf70a26812703a51ecc4b1a7580026ae888dc026da5ab1abba73bd",
+   1
+  ],
+  [
+   "W1",
+   "f6df5636c7189780f5d57a953e999ae734fe8553d03d4e620b2c3b45de9eac91",
+   2
+  ],
+  [
+   "W1",
+   "5c5f6b5c723f3cf7622e9361540becce2bfe6ecae19e5598d20ade3905749cfe",
+   2
+  ],
+  [
+   "W1",
+   "ab1aa286809e50a3ec88d1af9b70939e0fa3ae9f2f2c1e5ef8619c937bd5379c",
+   1
+  ],
+  [
+   "W1",
+   "ea206665e4877aa18db2ccd8c441329344a7a034d7f0ce9dc403c8a6bc57d0a2",
+   2
+  ],
+  [
+   "W1",
+   "0458a0e417cd326a509098a678b6d584c44a5034e863fc45c897b3335bc73181",
+   2
+  ],
+  [
+   "W1",
+   "b093aaef9091cbb44cb90844ae20075ea007ee36361a226175855e490ea22ed3",
+   2
+  ],
+  [
+   "W1",
+   "533a8f676c0c181d316e8cb4bfc4c2bbcbae7b72072f9cb17e7594f34b9b4716",
+   2
+  ],
+  [
+   "W1",
+   "9c68c83d3648734b9e462713007fa3d477a5809e5efb27348c9eec22c1fcc48a",
+   2
+  ],
+  [
+   "W1",
+   "6c9cd453aae511df4de91a7eb296984f34db61f5e7434087d48c12bb6fdbff58",
+   2
+  ],
+  [
+   "W1",
+   "baf302ece23add9b0c2da8332d5240d2e943076f24bf227b9f6fa8bf08703959",
+   2
+  ],
+  [
+   "W1",
+   "a680e9ab7acd44f01eed3a69390c04cf6d49d3c076cd48ba2e1e91b3433e7487",
+   0
+  ],
+  [
+   "W1",
+   "e7af32c3e7ae1b6d9bd13b23bcfe9a285914a7338b3d98ea551d643ddbafc695",
+   2
+  ],
+  [
+   "W1",
+   "8f07f86e92b4dd01e376e41f0c97e1af79c6757690fa102a4aeb956750dfcee3",
+   2
+  ],
+  [
+   "W1",
+   "e310cbe99ec77e469f3592842446061edd0148b271734cf217b18d6397b5723d",
+   2
+  ],
+  [
+   "W1",
+   "9e56fda2fcc23dc04b265421b34c0e0bf87c159217cc1e27a3f8dcb4e22709f0",
+   1
+  ],
+  [
+   "W1",
+   "d071cf6e2db02a85f4e9a9a89057013714d4a131200581221650d68eb480cf61",
+   2
+  ],
+  [
+   "W1",
+   "99ae59a466961e43aadb2cd583daa24f32b24e571c130028a4af65b11b27c85a",
+   2
+  ],
+  [
+   "W1",
+   "d9d51c68c6f58bfbea0e301a5992bd1e4dacb9e6ebd56961e29ba526afb232ec",
+   2
+  ],
+  [
+   "W1",
+   "4e32e6fb58d6410eb115b9cf9c197be1956551196e8aa57907388244b9115e4d",
+   2
+  ],
+  [
+   "W1",
+   "9c574a97233f32fea7f10c4d982814bb25dc73b961eaa0b8fd3ad03fb50c0283",
+   2
+  ],
+  [
+   "W1",
+   "fac79a75f95539099765d2644cd6dcde466ea37c4b54a16a39ec90c51586a3be",
+   2
+  ],
+  [
+   "W1",
+   "0ee4c09414488eb314c58e97a813903d11c537b865060ccec552ca23ff9ab29e",
+   0
+  ],
+  [
+   "W1",
+   "c422a759380e0f0424555cdbd3059b4235b20f5e9111d9c30c61607f3edd739a",
+   2
+  ],
+  [
+   "W1",
+   "95512ce4cca82566709d75b8dc92ddcbe6e258bd88475f2e53a77d9889e09654",
+   2
+  ],
+  [
+   "W1",
+   "edc0e19d135bc4b91f80861f5a2debee38a21c8c2fe520ba05600308de42c322",
+   2
+  ],
+  [
+   "W1",
+   "7d76a25be7401f93d69a295569a39c9de4b3f948cd0c78b9c98e270042179879",
+   2
+  ],
+  [
+   "W1",
+   "c810669c9c0e882e3fd35c51cff56281d396a466d5c0a932a0814f50996699de",
+   2
+  ],
+  [
+   "W1",
+   "2cc92ac541897ef6fd603f4e66157bf86e69a6c972269d13ee5a7abbce21e4e2",
+   2
+  ],
+  [
+   "W1",
+   "0335ad879d96c7cde8e4399c67b9296ab91fb1f581bbd419a7b870ec20c1f141",
+   1
+  ],
+  [
+   "W1",
+   "441b516cbc9c15f595aa54c27f7f14aad13de959dca05d4c77f928931c70bb78",
+   1
+  ],
+  [
+   "W2.depth1",
+   "2d2b4ff18f8776e7cbb91091f090e26d85d80d3f0941057a9770e03617d83640",
+   1
+  ],
+  [
+   "W1",
+   "0438234dba8469ffadf355599730c4929d46310d1c033fdb96e601e0fe837ffb",
+   2
+  ],
+  [
+   "W1",
+   "3e198a49e4543e5b981c81c37545f44a5a8099155954b91ebd6680125d64b9a1",
+   2
+  ],
+  [
+   "W1",
+   "4badb618a08fcc563d590a91a840fb08332efcf2da27db3cf168f741b1053504",
+   0
+  ],
+  [
+   "W1",
+   "0bbf45a602c6f84fc3e9bac8897ca8344ba6aabb32113562280d6d9efcbdea87",
+   1
+  ],
+  [
+   "W2.depth1",
+   "584e1f5ef17fce83a98ee29147c7f47e0f959a5fe55dfa11cc8ba028c5847ed8",
+   1
+  ],
+  [
+   "W2.depth1",
+   "5f89506368d29baf1fb782c687076696df65c49da2a21dbf4a4011d3e27021f0",
+   2
+  ],
+  [
+   "W2.depth1",
+   "b0a2faf14028aa0e3ea7e9438a709d850107e20f468fe8463d45e9db1239125e",
+   1
+  ],
+  [
+   "W2.depth2",
+   "cd63072b802bbad38cf1104872852c1a903c324b4c25b5ab03e039f698ba5d49",
+   1
+  ],
+  [
+   "W1",
+   "efe3f6e09a1f3349b259d2083dc4df5eed6d935932383de1db1d1e4279d37ac5",
+   2
+  ],
+  [
+   "W1",
+   "43a9be306a6014317339e17b6d70794304343c4f39bf2ddb075a242edf339040",
+   2
+  ],
+  [
+   "W1",
+   "64b2f879b43735cef15c7793db717fb7586a96a8f8f4b8051cf31af893582529",
+   1
+  ],
+  [
+   "W2.depth1",
+   "ab66f9f0a5d8c27b66b69b822127ffc8404c959a72fe09dc302abb00c3adf270",
+   1
+  ],
+  [
+   "W2.depth1",
+   "784dc6fb974156b46325c7ad6c68cd518f69c821a14cfb1b393eaf8024871a27",
+   1
+  ],
+  [
+   "W1",
+   "0f69d1d19bd81ab3cef95a121ed9944f9fee9afe8796b4c893ed789c00bc3d8c",
+   0
+  ],
+  [
+   "W1",
+   "73f637bac2aaa3da02e3a73df02ecead89e80887087de9e972b205e952cdccda",
+   2
+  ],
+  [
+   "W1",
+   "f02b18bccdfa9778350c9b358630abb9a419cb5b4428a423b59b42cb71ae2c04",
+   2
+  ],
+  [
+   "W1",
+   "e65f419bf5b9941668c731709077001d2c874366481ee10174aeb9ee64e01e12",
+   2
+  ],
+  [
+   "W1",
+   "9ee76c2d1f1be05fbffaff369342f6a19fbc33fb439a5717ac6172c55be5408b",
+   2
+  ],
+  [
+   "W1",
+   "44a2df56d85453eff18c2a0361f36f8c3d5b5c15f1d7235f0504f832db75f32f",
+   2
+  ],
+  [
+   "W1",
+   "961e1babad04b97625dda35ce8a6c448211b6e99787f6312df00eb88730878a9",
+   2
+  ],
+  [
+   "W1",
+   "ac1280b11aaad1c889a99f5bb6f26a52c1992b6a3001464bba8f35cf41039039",
+   1
+  ],
+  [
+   "W1",
+   "97fa07eb0ba13ae8f112a09f28b6abf571bf3f4bb4151ebd0338b850481ec67e",
+   1
+  ],
+  [
+   "W2.depth1",
+   "d4ba3d3087399181c1c2f2c07633585394d7c9441c758f4540cab5f585273ed3",
+   2
+  ],
+  [
+   "W2.depth1",
+   "abec954b8db72afbbf4667cca12a59e48a51f0a8618ee38aadfd4ee1ae511542",
+   1
+  ],
+  [
+   "W2.depth1",
+   "c8208f846be4cea515ae4a2b436803bae7e81e72199d5ab01606b05b5ece918b",
+   2
+  ],
+  [
+   "W2.depth2",
+   "4e3a6f7d99e788fb7013f86d8f99a320f10cc036e5d4518ec3aece8c40900873",
+   1
+  ],
+  [
+   "W1",
+   "51785db6f168255581f00ea26ddc919ec71c6dc29155a82ea26f78df936b4797",
+   2
+  ],
+  [
+   "W1",
+   "69fcef2ed554121166f6e1880d168b923e62902328a19266c329d7e7ee1a2072",
+   0
+  ],
+  [
+   "W1",
+   "34031ac03b1095ff93beec29d11892ce0e27b3bd571cb824a4241fb4a14b2e9d",
+   2
+  ],
+  [
+   "W1",
+   "bd3ae771a7a9ea4b12a8e24cc5ba61e9e6eb7f08cfac09625565f765a5ca973c",
+   1
+  ],
+  [
+   "W1",
+   "c072f5b542936c072de45aabb2fdb523cf1cc6962f4c326b6b2ccc5527a8e342",
+   1
+  ],
+  [
+   "W1",
+   "dd45dc8e542c4b113e223d8452f12af27bf72e6def9aa44649f10ce3513a035c",
+   0
+  ],
+  [
+   "W2.depth1",
+   "93e161b70e98b7f775b0975a9481d4d4afc07ae280777d887d40c50818d8c2c0",
+   2
+  ],
+  [
+   "W2.depth1",
+   "33ff0fcead7d096896990a106c579da96b509ec0dd47d2f21d768c31a20ddf12",
+   1
+  ],
+  [
+   "W1",
+   "a24d35b708e945c6b1a9d4448eb1d4eb31a871d306cfd004796e213a6be8d99e",
+   1
+  ],
+  [
+   "W1",
+   "51733f314879dd1414e297d288f1d6c0bfa7a451cbd688595fac68e8ea0d98aa",
+   1
+  ],
+  [
+   "W1",
+   "940269fd4fc80ac06bdfbe008e672adda26c4e226a079f8567f089e5218321a1",
+   1
+  ],
+  [
+   "W1",
+   "6da2b74fc3d734262a1e1c8244868d79b951f6f5098afda20fce2cdc039451e5",
+   1
+  ],
+  [
+   "W1",
+   "db7ab0ccfdf89fd737b1212da129deba52295a98c3f344e070d7d9c6f084c2b5",
+   1
+  ],
+  [
+   "W1",
+   "5c5f6b5c723f3cf7622e9361540becce2bfe6ecae19e5598d20ade3905749cfe",
+   2
+  ],
+  [
+   "W1",
+   "ab1aa286809e50a3ec88d1af9b70939e0fa3ae9f2f2c1e5ef8619c937bd5379c",
+   1
+  ],
+  [
+   "W1",
+   "0458a0e417cd326a509098a678b6d584c44a5034e863fc45c897b3335bc73181",
+   2
+  ],
+  [
+   "W1",
+   "b093aaef9091cbb44cb90844ae20075ea007ee36361a226175855e490ea22ed3",
+   2
+  ],
+  [
+   "W1",
+   "9c68c83d3648734b9e462713007fa3d477a5809e5efb27348c9eec22c1fcc48a",
+   2
+  ],
+  [
+   "W1",
+   "6c9cd453aae511df4de91a7eb296984f34db61f5e7434087d48c12bb6fdbff58",
+   2
+  ],
+  [
+   "W1",
+   "baf302ece23add9b0c2da8332d5240d2e943076f24bf227b9f6fa8bf08703959",
+   2
+  ],
+  [
+   "W1",
+   "e7af32c3e7ae1b6d9bd13b23bcfe9a285914a7338b3d98ea551d643ddbafc695",
+   2
+  ],
+  [
+   "W1",
+   "8f07f86e92b4dd01e376e41f0c97e1af79c6757690fa102a4aeb956750dfcee3",
+   2
+  ],
+  [
+   "W1",
+   "e310cbe99ec77e469f3592842446061edd0148b271734cf217b18d6397b5723d",
+   2
+  ],
+  [
+   "W1",
+   "9e56fda2fcc23dc04b265421b34c0e0bf87c159217cc1e27a3f8dcb4e22709f0",
+   1
+  ],
+  [
+   "W1",
+   "99ae59a466961e43aadb2cd583daa24f32b24e571c130028a4af65b11b27c85a",
+   2
+  ],
+  [
+   "W1",
+   "d9d51c68c6f58bfbea0e301a5992bd1e4dacb9e6ebd56961e29ba526afb232ec",
+   2
+  ],
+  [
+   "W1",
+   "4e32e6fb58d6410eb115b9cf9c197be1956551196e8aa57907388244b9115e4d",
+   2
+  ],
+  [
+   "W1",
+   "9c574a97233f32fea7f10c4d982814bb25dc73b961eaa0b8fd3ad03fb50c0283",
+   2
+  ],
+  [
+   "W1",
+   "fac79a75f95539099765d2644cd6dcde466ea37c4b54a16a39ec90c51586a3be",
+   2
+  ],
+  [
+   "W1",
+   "0ee4c09414488eb314c58e97a813903d11c537b865060ccec552ca23ff9ab29e",
+   0
+  ]
+ ]
+}

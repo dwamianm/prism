@@ -1,0 +1,1798 @@
+{
+ "random": {
+  "read": {
+   "R0": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 0
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 0,
+     "of_7": 0,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 0,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 0.0,
+     "max": 0
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 0.0
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   },
+   "R1": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 2,
+     "top3": 4,
+     "stale_above": 3,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 3,
+     "top3": 2,
+     "stale_above": 1,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 0,
+     "top3": 2,
+     "stale_above": 17,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 3,
+     "top3": 4,
+     "top5": 4,
+     "false_unknown": 1
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 1,
+     "of_7": 1,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 1,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 10
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 0.0
+    },
+    "rank1_chat_store_gain_over_R0": -3,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   },
+   "R2": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 2,
+     "top3": 4,
+     "stale_above": 3,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 3,
+     "top3": 2,
+     "stale_above": 1,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 0,
+     "top3": 2,
+     "stale_above": 17,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 2,
+     "top3": 3,
+     "top5": 3,
+     "false_unknown": 1
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 1,
+     "of_7": 1,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 1,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 21
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 96.1
+    },
+    "rank1_chat_store_gain_over_R0": -3,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   },
+   "R3": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 0,
+     "top3": 3,
+     "stale_above": 2,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 1,
+     "top3": 4,
+     "stale_above": 2,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 1,
+     "top3": 4,
+     "stale_above": 15,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 2,
+     "top3": 3,
+     "top5": 5,
+     "false_unknown": 1
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 1,
+     "of_7": 1,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 1,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 14.0,
+     "max": 24
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 96.1
+    },
+    "rank1_chat_store_gain_over_R0": -5,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   }
+  },
+  "write": {
+   "W0": {
+    "retired_correctly": 0,
+    "of_key": 10,
+    "retired_correctly_ids": [],
+    "missed": [
+     {
+      "id": "F01",
+      "triple": "I | diet | vegetarian | positive"
+     },
+     {
+      "id": "F02",
+      "triple": "I | planning | meals for the week | positive"
+     },
+     {
+      "id": "F04",
+      "triple": "Priya | visiting | I | positive"
+     },
+     {
+      "id": "F08",
+      "triple": "I | works_at | St. Mary's hospital | positive"
+     },
+     {
+      "id": "F09",
+      "triple": "I | shift_pattern | mostly night shifts | positive"
+     },
+     {
+      "id": "F10",
+      "triple": "I | dinner_time | about 6 am | positive"
+     },
+     {
+      "id": "F14",
+      "triple": "longest run | distance | 9 km | positive"
+     },
+     {
+      "id": "F18",
+      "triple": "I | thinking_about_getting | dog | positive"
+     },
+     {
+      "id": "F19",
+      "triple": "dog | maybe_breed | greyhound | positive"
+     },
+     {
+      "id": "F20",
+      "triple": "I | decided | getting a dog | negative"
+     }
+    ],
+    "retired_wrongly": 0,
+    "retired_wrongly_list": [],
+    "calls_per_new_fact": {
+     "mean": 0,
+     "median": 0,
+     "max": 0,
+     "total": 0
+    },
+    "ms_per_new_fact": {
+     "mean": 0.0,
+     "median": 0.0,
+     "p95": 0.0,
+     "total": 0.0
+    },
+    "WRITE_PASS": false
+   },
+   "W1": {
+    "retired_correctly": 8,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F02",
+     "F04",
+     "F08",
+     "F09",
+     "F10",
+     "F18",
+     "F20"
+    ],
+    "missed": [
+     {
+      "id": "F14",
+      "triple": "longest run | distance | 9 km | positive"
+     },
+     {
+      "id": "F19",
+      "triple": "dog | maybe_breed | greyhound | positive"
+     }
+    ],
+    "retired_wrongly": 15,
+    "retired_wrongly_list": [
+     {
+      "id": "F03",
+      "triple": "Priya | kin_of | I | positive",
+      "by": "F06",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | prefers | metric units | positive",
+      "contestable": false
+     },
+     {
+      "id": "F05",
+      "triple": "Priya | dietary_restriction | gluten | negative",
+      "by": "F30",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "Priya | moved_to | Toronto | positive",
+      "contestable": false
+     },
+     {
+      "id": "F06",
+      "triple": "I | prefers | metric units | positive",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F07",
+      "triple": "I | knows | what a cup is | negative",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F11",
+      "triple": "I | training_for | half marathon | positive",
+      "by": "F18",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | thinking_about_getting | dog | positive",
+      "contestable": false
+     },
+     {
+      "id": "F15",
+      "triple": "knee | hurt_after | longest run | positive",
+      "by": "F40",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "Longest run | is | 19 km | positive",
+      "contestable": true
+     },
+     {
+      "id": "F16",
+      "triple": "I | bought | Brooks Ghost | positive",
+      "by": "F24",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | eats | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F21",
+      "triple": "I | quit | hospital | positive",
+      "by": "F26",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | eats | meat | negative",
+      "contestable": false
+     },
+     {
+      "id": "F22",
+      "triple": "I | starts_at | pediatric clinic | positive",
+      "by": "F26",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | eats | meat | negative",
+      "contestable": false
+     },
+     {
+      "id": "F23",
+      "triple": "I | shift_schedule | day shifts only | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F24",
+      "triple": "I | eats | fish | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F25",
+      "triple": "I | diet | not strictly vegetarian | negative",
+      "by": "F28",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | ran | 16 km | positive",
+      "contestable": true
+     },
+     {
+      "id": "F26",
+      "triple": "I | eats | meat | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F27",
+      "triple": "I | will_include | fish | positive",
+      "by": "F38",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | spent | 60 euros on running gels | positive",
+      "contestable": false
+     },
+     {
+      "id": "F28",
+      "triple": "I | ran | 16 km | positive",
+      "by": "F38",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | spent | 60 euros on running gels | positive",
+      "contestable": true
+     }
+    ],
+    "calls_per_new_fact": {
+     "mean": 1.86,
+     "median": 1,
+     "max": 5,
+     "total": 80
+    },
+    "ms_per_new_fact": {
+     "mean": 0.0,
+     "median": 0.0,
+     "p95": 0,
+     "total": 0.0
+    },
+    "WRITE_PASS": false,
+    "right_reason_posthoc": [
+     "F08"
+    ]
+   },
+   "W2": {
+    "retired_correctly": 8,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F02",
+     "F04",
+     "F08",
+     "F09",
+     "F10",
+     "F18",
+     "F20"
+    ],
+    "missed": [
+     {
+      "id": "F14",
+      "triple": "longest run | distance | 9 km | positive"
+     },
+     {
+      "id": "F19",
+      "triple": "dog | maybe_breed | greyhound | positive"
+     }
+    ],
+    "retired_wrongly": 15,
+    "retired_wrongly_list": [
+     {
+      "id": "F03",
+      "triple": "Priya | kin_of | I | positive",
+      "by": "F06",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | prefers | metric units | positive",
+      "contestable": false
+     },
+     {
+      "id": "F05",
+      "triple": "Priya | dietary_restriction | gluten | negative",
+      "by": "F06",
+      "via": "F03",
+      "stage": "W2.depth1",
+      "confidence": 0.3333,
+      "by_triple": "I | prefers | metric units | positive",
+      "contestable": false
+     },
+     {
+      "id": "F06",
+      "triple": "I | prefers | metric units | positive",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F07",
+      "triple": "I | knows | what a cup is | negative",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F11",
+      "triple": "I | training_for | half marathon | positive",
+      "by": "F18",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | thinking_about_getting | dog | positive",
+      "contestable": false
+     },
+     {
+      "id": "F15",
+      "triple": "knee | hurt_after | longest run | positive",
+      "by": "F40",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "Longest run | is | 19 km | positive",
+      "contestable": true
+     },
+     {
+      "id": "F16",
+      "triple": "I | bought | Brooks Ghost | positive",
+      "by": "F18",
+      "via": "F08",
+      "stage": "W2.depth2",
+      "confidence": 0.3333,
+      "by_triple": "I | thinking_about_getting | dog | positive",
+      "contestable": false
+     },
+     {
+      "id": "F21",
+      "triple": "I | quit | hospital | positive",
+      "by": "F24",
+      "via": "F22",
+      "stage": "W2.depth2",
+      "confidence": 0.3333,
+      "by_triple": "I | eats | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F22",
+      "triple": "I | starts_at | pediatric clinic | positive",
+      "by": "F24",
+      "via": "F20",
+      "stage": "W2.depth1",
+      "confidence": 0.3333,
+      "by_triple": "I | eats | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F23",
+      "triple": "I | shift_schedule | day shifts only | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F24",
+      "triple": "I | eats | fish | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F25",
+      "triple": "I | diet | not strictly vegetarian | negative",
+      "by": "F27",
+      "via": "F23",
+      "stage": "W2.depth1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": true
+     },
+     {
+      "id": "F26",
+      "triple": "I | eats | meat | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F27",
+      "triple": "I | will_include | fish | positive",
+      "by": "F38",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | spent | 60 euros on running gels | positive",
+      "contestable": false
+     },
+     {
+      "id": "F28",
+      "triple": "I | ran | 16 km | positive",
+      "by": "F38",
+      "stage": "W1",
+      "confidence": 0.3333,
+      "by_triple": "I | spent | 60 euros on running gels | positive",
+      "contestable": true
+     }
+    ],
+    "calls_per_new_fact": {
+     "mean": 1.93,
+     "median": 1,
+     "max": 9,
+     "total": 83
+    },
+    "ms_per_new_fact": {
+     "mean": 0.0,
+     "median": 0.0,
+     "p95": 0,
+     "total": 0.0
+    },
+    "WRITE_PASS": false,
+    "right_reason_posthoc": []
+   }
+  },
+  "repeat": {
+   "read": {
+    "compared": true,
+    "identical": false,
+    "decisions_run1": 972,
+    "decisions_run2": 973,
+    "prompts_in_both": 746,
+    "same_prompt_changed": 0,
+    "prme_r0_top5_differs": [
+     "chat_store:pet",
+     "chat_store:sister",
+     "chat_ingest:sister"
+    ]
+   },
+   "write": {
+    "compared": true,
+    "identical": true,
+    "decisions_run1": 163,
+    "decisions_run2": 163,
+    "prompts_in_both": 104,
+    "same_prompt_changed": 0
+   }
+  }
+ },
+ "qwen3.5-4b": {
+  "read": {
+   "R0": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 0
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 0,
+     "of_7": 0,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 0,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 0.0,
+     "max": 0
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 0.0
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   },
+   "R1": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 5
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 4,
+     "top3": 5,
+     "stale_above": 1,
+     "false_unknown": 7
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 8
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 22,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 10
+    },
+    "added_ms_per_question": {
+     "median": 979.8,
+     "p95": 1236.7
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   },
+   "R2": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 5
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 4,
+     "top3": 5,
+     "stale_above": 1,
+     "false_unknown": 7
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 8
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 22,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 10
+    },
+    "added_ms_per_question": {
+     "median": 979.8,
+     "p95": 1236.7
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   },
+   "R3": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 5
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 3,
+     "top3": 5,
+     "stale_above": 2,
+     "false_unknown": 7
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 8
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 6,
+     "top3": 10,
+     "stale_above": 12,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 22,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 28
+    },
+    "added_ms_per_question": {
+     "median": 1046.7,
+     "p95": 2823.3
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   }
+  },
+  "write": {
+   "W0": {
+    "retired_correctly": 0,
+    "of_key": 10,
+    "retired_correctly_ids": [],
+    "missed": [
+     {
+      "id": "F01",
+      "triple": "I | diet | vegetarian | positive"
+     },
+     {
+      "id": "F02",
+      "triple": "I | planning | meals for the week | positive"
+     },
+     {
+      "id": "F04",
+      "triple": "Priya | visiting | I | positive"
+     },
+     {
+      "id": "F08",
+      "triple": "I | works_at | St. Mary's hospital | positive"
+     },
+     {
+      "id": "F09",
+      "triple": "I | shift_pattern | mostly night shifts | positive"
+     },
+     {
+      "id": "F10",
+      "triple": "I | dinner_time | about 6 am | positive"
+     },
+     {
+      "id": "F14",
+      "triple": "longest run | distance | 9 km | positive"
+     },
+     {
+      "id": "F18",
+      "triple": "I | thinking_about_getting | dog | positive"
+     },
+     {
+      "id": "F19",
+      "triple": "dog | maybe_breed | greyhound | positive"
+     },
+     {
+      "id": "F20",
+      "triple": "I | decided | getting a dog | negative"
+     }
+    ],
+    "retired_wrongly": 0,
+    "retired_wrongly_list": [],
+    "calls_per_new_fact": {
+     "mean": 0,
+     "median": 0,
+     "max": 0,
+     "total": 0
+    },
+    "ms_per_new_fact": {
+     "mean": 0.0,
+     "median": 0.0,
+     "p95": 0.0,
+     "total": 0.0
+    },
+    "WRITE_PASS": false
+   },
+   "W1": {
+    "retired_correctly": 10,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F02",
+     "F04",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F18",
+     "F19",
+     "F20"
+    ],
+    "missed": [],
+    "retired_wrongly": 13,
+    "retired_wrongly_list": [
+     {
+      "id": "F03",
+      "triple": "Priya | kin_of | I | positive",
+      "by": "F07",
+      "stage": "W1",
+      "confidence": 0.6361,
+      "by_triple": "I | knows | what a cup is | negative",
+      "contestable": false
+     },
+     {
+      "id": "F05",
+      "triple": "Priya | dietary_restriction | gluten | negative",
+      "by": "F30",
+      "stage": "W1",
+      "confidence": 0.5389,
+      "by_triple": "Priya | moved_to | Toronto | positive",
+      "contestable": false
+     },
+     {
+      "id": "F06",
+      "triple": "I | prefers | metric units | positive",
+      "by": "F25",
+      "stage": "W1",
+      "confidence": 0.5359,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F07",
+      "triple": "I | knows | what a cup is | negative",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.8376,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F11",
+      "triple": "I | training_for | half marathon | positive",
+      "by": "F23",
+      "stage": "W1",
+      "confidence": 0.4658,
+      "by_triple": "I | shift_schedule | day shifts only | positive",
+      "contestable": false
+     },
+     {
+      "id": "F15",
+      "triple": "knee | hurt_after | longest run | positive",
+      "by": "F29",
+      "stage": "W1",
+      "confidence": 0.8423,
+      "by_triple": "knee | condition | fine this time | positive",
+      "contestable": true
+     },
+     {
+      "id": "F21",
+      "triple": "I | quit | hospital | positive",
+      "by": "F25",
+      "stage": "W1",
+      "confidence": 0.6675,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F22",
+      "triple": "I | starts_at | pediatric clinic | positive",
+      "by": "F25",
+      "stage": "W1",
+      "confidence": 0.6968,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F23",
+      "triple": "I | shift_schedule | day shifts only | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.5559,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F24",
+      "triple": "I | eats | fish | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.5132,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F25",
+      "triple": "I | diet | not strictly vegetarian | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.9598,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": true
+     },
+     {
+      "id": "F26",
+      "triple": "I | eats | meat | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.9384,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F27",
+      "triple": "I | will_include | fish | positive",
+      "by": "F28",
+      "stage": "W1",
+      "confidence": 0.377,
+      "by_triple": "I | ran | 16 km | positive",
+      "contestable": false
+     }
+    ],
+    "calls_per_new_fact": {
+     "mean": 2.33,
+     "median": 2,
+     "max": 8,
+     "total": 100
+    },
+    "ms_per_new_fact": {
+     "mean": 248.2,
+     "median": 197.3,
+     "p95": 635.2,
+     "total": 10670.5
+    },
+    "WRITE_PASS": false,
+    "right_reason_posthoc": [
+     "F01",
+     "F08",
+     "F09",
+     "F14",
+     "F19"
+    ]
+   },
+   "W2": {
+    "retired_correctly": 10,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F02",
+     "F04",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F18",
+     "F19",
+     "F20"
+    ],
+    "missed": [],
+    "retired_wrongly": 14,
+    "retired_wrongly_list": [
+     {
+      "id": "F03",
+      "triple": "Priya | kin_of | I | positive",
+      "by": "F07",
+      "stage": "W1",
+      "confidence": 0.6361,
+      "by_triple": "I | knows | what a cup is | negative",
+      "contestable": false
+     },
+     {
+      "id": "F05",
+      "triple": "Priya | dietary_restriction | gluten | negative",
+      "by": "F07",
+      "via": "F03",
+      "stage": "W2.depth1",
+      "confidence": 0.8757,
+      "by_triple": "I | knows | what a cup is | negative",
+      "contestable": false
+     },
+     {
+      "id": "F06",
+      "triple": "I | prefers | metric units | positive",
+      "by": "F08",
+      "via": "F07",
+      "stage": "W2.depth1",
+      "confidence": 0.5954,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F07",
+      "triple": "I | knows | what a cup is | negative",
+      "by": "F08",
+      "stage": "W1",
+      "confidence": 0.8376,
+      "by_triple": "I | works_at | St. Mary's hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F11",
+      "triple": "I | training_for | half marathon | positive",
+      "by": "F21",
+      "via": "F16",
+      "stage": "W2.depth2",
+      "confidence": 0.6135,
+      "by_triple": "I | quit | hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F15",
+      "triple": "knee | hurt_after | longest run | positive",
+      "by": "F29",
+      "stage": "W1",
+      "confidence": 0.8423,
+      "by_triple": "knee | condition | fine this time | positive",
+      "contestable": true
+     },
+     {
+      "id": "F16",
+      "triple": "I | bought | Brooks Ghost | positive",
+      "by": "F21",
+      "via": "F18",
+      "stage": "W2.depth1",
+      "confidence": 0.5957,
+      "by_triple": "I | quit | hospital | positive",
+      "contestable": false
+     },
+     {
+      "id": "F21",
+      "triple": "I | quit | hospital | positive",
+      "by": "F25",
+      "stage": "W1",
+      "confidence": 0.6675,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F22",
+      "triple": "I | starts_at | pediatric clinic | positive",
+      "by": "F25",
+      "stage": "W1",
+      "confidence": 0.6968,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F23",
+      "triple": "I | shift_schedule | day shifts only | positive",
+      "by": "F25",
+      "via": "F22",
+      "stage": "W2.depth1",
+      "confidence": 0.72,
+      "by_triple": "I | diet | not strictly vegetarian | negative",
+      "contestable": false
+     },
+     {
+      "id": "F24",
+      "triple": "I | eats | fish | positive",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.5132,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F25",
+      "triple": "I | diet | not strictly vegetarian | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.9598,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": true
+     },
+     {
+      "id": "F26",
+      "triple": "I | eats | meat | negative",
+      "by": "F27",
+      "stage": "W1",
+      "confidence": 0.9384,
+      "by_triple": "I | will_include | fish | positive",
+      "contestable": false
+     },
+     {
+      "id": "F27",
+      "triple": "I | will_include | fish | positive",
+      "by": "F28",
+      "stage": "W1",
+      "confidence": 0.377,
+      "by_triple": "I | ran | 16 km | positive",
+      "contestable": false
+     }
+    ],
+    "calls_per_new_fact": {
+     "mean": 1.51,
+     "median": 0,
+     "max": 8,
+     "total": 65
+    },
+    "ms_per_new_fact": {
+     "mean": 171.6,
+     "median": 0,
+     "p95": 593.6,
+     "total": 7380.5
+    },
+    "WRITE_PASS": false,
+    "right_reason_posthoc": [
+     "F14",
+     "F19"
+    ]
+   }
+  },
+  "repeat": {
+   "read": {
+    "compared": true,
+    "identical": false,
+    "decisions_run1": 852,
+    "decisions_run2": 852,
+    "prompts_in_both": 643,
+    "same_prompt_changed": 0,
+    "prme_r0_top5_differs": [
+     "chat_store:pet",
+     "chat_store:sister",
+     "chat_ingest:sister"
+    ]
+   },
+   "write": {
+    "compared": true,
+    "identical": true,
+    "decisions_run1": 165,
+    "decisions_run2": 165,
+    "prompts_in_both": 113,
+    "same_prompt_changed": 0
+   }
+  }
+ },
+ "qwen3.5-9b": {
+  "read": {
+   "R0": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 5,
+     "top3": 6,
+     "stale_above": 2,
+     "false_unknown": 0
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 0
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 0
+    },
+    "unknown_right": {
+     "cat_store": 0,
+     "unseen": 0,
+     "of_7": 0,
+     "cat_ingest": 0
+    },
+    "false_unknown_total": 0,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 0.0,
+     "max": 0
+    },
+    "added_ms_per_question": {
+     "median": 0.0,
+     "p95": 0.0
+    },
+    "rank1_chat_store_gain_over_R0": 0,
+    "bars": {
+     "unknown_right_at_least_6_of_7": false,
+     "false_unknowns_at_most_1": true,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": true
+    },
+    "READ_PASS": false
+   },
+   "R1": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 8,
+     "top3": 8,
+     "stale_above": 2,
+     "false_unknown": 2
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 4
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 8,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 10
+    },
+    "added_ms_per_question": {
+     "median": 1498.5,
+     "p95": 1614.4
+    },
+    "rank1_chat_store_gain_over_R0": 3,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   },
+   "R2": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 8,
+     "top3": 8,
+     "stale_above": 2,
+     "false_unknown": 2
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 4
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 4,
+     "top3": 10,
+     "stale_above": 14,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 8,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 10
+    },
+    "added_ms_per_question": {
+     "median": 1498.5,
+     "p95": 1614.4
+    },
+    "rank1_chat_store_gain_over_R0": 3,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": false,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   },
+   "R3": {
+    "chat_store": {
+     "n": 13,
+     "rank1": 9,
+     "top3": 8,
+     "stale_above": 2,
+     "false_unknown": 2
+    },
+    "chat_ingest": {
+     "n": 13,
+     "rank1": 7,
+     "top3": 6,
+     "stale_above": 1,
+     "false_unknown": 4
+    },
+    "hops": {
+     "n": 8,
+     "rank1": 0,
+     "top3": 0,
+     "both_in_top5": 0,
+     "false_unknown": 0
+    },
+    "churn10": {
+     "n": 18,
+     "rank1": 14,
+     "top3": 14,
+     "stale_above": 4,
+     "false_unknown": 0
+    },
+    "flood": {
+     "n": 8,
+     "rank1": 6,
+     "top3": 6,
+     "top5": 6,
+     "false_unknown": 2
+    },
+    "unknown_right": {
+     "cat_store": 1,
+     "unseen": 6,
+     "of_7": 7,
+     "cat_ingest": 1
+    },
+    "false_unknown_total": 8,
+    "answerable_total": 60,
+    "calls_per_question": {
+     "median": 10.0,
+     "max": 28
+    },
+    "added_ms_per_question": {
+     "median": 1555.4,
+     "p95": 3410.4
+    },
+    "rank1_chat_store_gain_over_R0": 4,
+    "bars": {
+     "unknown_right_at_least_6_of_7": true,
+     "false_unknowns_at_most_1": false,
+     "rank1_chat_store_gain_at_least_4": true,
+     "median_added_ms_at_most_300": false
+    },
+    "READ_PASS": false
+   }
+  },
+  "write": {
+   "W0": {
+    "retired_correctly": 0,
+    "of_key": 10,
+    "retired_correctly_ids": [],
+    "missed": [
+     {
+      "id": "F01",
+      "triple": "I | diet | vegetarian | positive"
+     },
+     {
+      "id": "F02",
+      "triple": "I | planning | meals for the week | positive"
+     },
+     {
+      "id": "F04",
+      "triple": "Priya | visiting | I | positive"
+     },
+     {
+      "id": "F08",
+      "triple": "I | works_at | St. Mary's hospital | positive"
+     },
+     {
+      "id": "F09",
+      "triple": "I | shift_pattern | mostly night shifts | positive"
+     },
+     {
+      "id": "F10",
+      "triple": "I | dinner_time | about 6 am | positive"
+     },
+     {
+      "id": "F14",
+      "triple": "longest run | distance | 9 km | positive"
+     },
+     {
+      "id": "F18",
+      "triple": "I | thinking_about_getting | dog | positive"
+     },
+     {
+      "id": "F19",
+      "triple": "dog | maybe_breed | greyhound | positive"
+     },
+     {
+      "id": "F20",
+      "triple": "I | decided | getting a dog | negative"
+     }
+    ],
+    "retired_wrongly": 0,
+    "retired_wrongly_list": [],
+    "calls_per_new_fact": {
+     "mean": 0,
+     "median": 0,
+     "max": 0,
+     "total": 0
+    },
+    "ms_per_new_fact": {
+     "mean": 0.0,
+     "median": 0.0,
+     "p95": 0.0,
+     "total": 0.0
+    },
+    "WRITE_PASS": false
+   },
+   "W1": {
+    "retired_correctly": 6,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F19"
+    ],
+    "missed": [
+     {
+      "id": "F02",
+      "triple": "I | planning | meals for the week | positive"
+     },
+     {
+      "id": "F04",
+      "triple": "Priya | visiting | I | positive"
+     },
+     {
+      "id": "F18",
+      "triple": "I | thinking_about_getting | dog | positive"
+     },
+     {
+      "id": "F20",
+      "triple": "I | decided | getting a dog | negative"
+     }
+    ],
+    "retired_wrongly": 0,
+    "retired_wrongly_list": [],
+    "calls_per_new_fact": {
+     "mean": 6.37,
+     "median": 4,
+     "max": 21,
+     "total": 274
+    },
+    "ms_per_new_fact": {
+     "mean": 1057.8,
+     "median": 634.1,
+     "p95": 3536.5,
+     "total": 45487.0
+    },
+    "WRITE_PASS": true,
+    "right_reason_posthoc": [
+     "F01",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F19"
+    ]
+   },
+   "W2": {
+    "retired_correctly": 6,
+    "of_key": 10,
+    "retired_correctly_ids": [
+     "F01",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F19"
+    ],
+    "missed": [
+     {
+      "id": "F02",
+      "triple": "I | planning | meals for the week | positive"
+     },
+     {
+      "id": "F04",
+      "triple": "Priya | visiting | I | positive"
+     },
+     {
+      "id": "F18",
+      "triple": "I | thinking_about_getting | dog | positive"
+     },
+     {
+      "id": "F20",
+      "triple": "I | decided | getting a dog | negative"
+     }
+    ],
+    "retired_wrongly": 0,
+    "retired_wrongly_list": [],
+    "calls_per_new_fact": {
+     "mean": 7.4,
+     "median": 4,
+     "max": 43,
+     "total": 318
+    },
+    "ms_per_new_fact": {
+     "mean": 1314.2,
+     "median": 634.1,
+     "p95": 3839.2,
+     "total": 56512.1
+    },
+    "WRITE_PASS": true,
+    "right_reason_posthoc": [
+     "F01",
+     "F08",
+     "F09",
+     "F10",
+     "F14",
+     "F19"
+    ]
+   }
+  },
+  "repeat": {
+   "read": {
+    "compared": true,
+    "identical": false,
+    "decisions_run1": 833,
+    "decisions_run2": 833,
+    "prompts_in_both": 627,
+    "same_prompt_changed": 0,
+    "prme_r0_top5_differs": [
+     "chat_store:pet",
+     "chat_store:sister",
+     "chat_ingest:sister",
+     "churn-10min-2moves-wool-scarf"
+    ]
+   },
+   "write": {
+    "compared": true,
+    "identical": true,
+    "decisions_run1": 592,
+    "decisions_run2": 592,
+    "prompts_in_both": 318,
+    "same_prompt_changed": 0
+   }
+  }
+ }
+}

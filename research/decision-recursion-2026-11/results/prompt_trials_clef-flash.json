@@ -1,0 +1,258 @@
+{
+ "model": "clef-flash",
+ "backend": "systemone",
+ "posthoc": false,
+ "templates_sha256": "fef7bf42e2247fd70efcbceaca9b50d78037972c5c43ace2ae1daaf919f33d74",
+ "right": 17,
+ "of": 21,
+ "rows": [
+  {
+   "prompt": "R1.judge",
+   "options": [
+    "yes",
+    "partly",
+    "no"
+   ],
+   "expected": "yes",
+   "chosen": "yes",
+   "confidence": 0.9009,
+   "right": true
+  },
+  {
+   "prompt": "R1.judge",
+   "options": [
+    "yes",
+    "partly",
+    "no"
+   ],
+   "expected": "partly",
+   "chosen": "no",
+   "confidence": 0.9367,
+   "right": false
+  },
+  {
+   "prompt": "R1.judge",
+   "options": [
+    "yes",
+    "partly",
+    "no"
+   ],
+   "expected": "no",
+   "chosen": "no",
+   "confidence": 0.985,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_record",
+   "options": [
+    "Bruno plays the guitar every evening.",
+    "Bruno bought his guitar from a man named Henrik."
+   ],
+   "expected": "Bruno bought his guitar from a man named Henrik.",
+   "chosen": "Bruno bought his guitar from a man named Henrik.",
+   "confidence": 0.9865,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_record",
+   "options": [
+    "Greta borrowed her uncle's car for the weekend.",
+    "Greta likes red things."
+   ],
+   "expected": "Greta borrowed her uncle's car for the weekend.",
+   "chosen": "Greta borrowed her uncle's car for the weekend.",
+   "confidence": 0.9236,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_record",
+   "options": [
+    "Yusuf said work was busy.",
+    "Yusuf walks to work.",
+    "Yusuf works at a hardware shop called Bolt and Nut."
+   ],
+   "expected": "Yusuf works at a hardware shop called Bolt and Nut.",
+   "chosen": "Yusuf works at a hardware shop called Bolt and Nut.",
+   "confidence": 0.8976,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_word",
+   "options": [
+    "courier",
+    "bring",
+    "toolbox",
+    "tomorrow",
+    "none"
+   ],
+   "expected": "toolbox",
+   "chosen": "toolbox",
+   "confidence": 0.3726,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_word",
+   "options": [
+    "Anton",
+    "moved",
+    "Oslo",
+    "none"
+   ],
+   "expected": "Anton",
+   "chosen": "Anton",
+   "confidence": 0.8257,
+   "right": true
+  },
+  {
+   "prompt": "R2.pick_word",
+   "options": [
+    "mentioned",
+    "weather",
+    "nice",
+    "none"
+   ],
+   "expected": "none",
+   "chosen": "none",
+   "confidence": 0.4846,
+   "right": true
+  },
+  {
+   "prompt": "R3.conflict",
+   "options": [
+    "no, both can be true",
+    "yes, they conflict"
+   ],
+   "expected": "yes, they conflict",
+   "chosen": "yes, they conflict",
+   "confidence": 0.908,
+   "right": true
+  },
+  {
+   "prompt": "R3.conflict",
+   "options": [
+    "no, both can be true",
+    "yes, they conflict"
+   ],
+   "expected": "no, both can be true",
+   "chosen": "no, both can be true",
+   "confidence": 0.9711,
+   "right": true
+  },
+  {
+   "prompt": "R3.conflict",
+   "options": [
+    "no, both can be true",
+    "yes, they conflict"
+   ],
+   "expected": "yes, they conflict",
+   "chosen": "yes, they conflict",
+   "confidence": 0.931,
+   "right": true
+  },
+  {
+   "prompt": "R3.true_now",
+   "options": [
+    "(2026-03-01 09:00) Greta lives in Graz.",
+    "(2026-07-10 09:00) Greta moved to Linz."
+   ],
+   "expected": "(2026-07-10 09:00) Greta moved to Linz.",
+   "chosen": "(2026-03-01 09:00) Greta lives in Graz.",
+   "confidence": 0.5098,
+   "right": false
+  },
+  {
+   "prompt": "R3.true_now",
+   "options": [
+    "(2026-05-02 09:00) The bakery now opens at 8.",
+    "(2026-01-10 09:00) The bakery opens at 7."
+   ],
+   "expected": "(2026-05-02 09:00) The bakery now opens at 8.",
+   "chosen": "(2026-01-10 09:00) The bakery opens at 7.",
+   "confidence": 0.6859,
+   "right": false
+  },
+  {
+   "prompt": "R3.true_now",
+   "options": [
+    "(2026-04-01 10:20) The blue kettle is on the stove.",
+    "(2026-04-01 10:40) The blue kettle is in the sink."
+   ],
+   "expected": "(2026-04-01 10:40) The blue kettle is in the sink.",
+   "chosen": "(2026-04-01 10:40) The blue kettle is in the sink.",
+   "confidence": 0.5545,
+   "right": true
+  },
+  {
+   "prompt": "W1.still_true",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "no longer true",
+   "chosen": "no longer true",
+   "confidence": 0.9429,
+   "right": true
+  },
+  {
+   "prompt": "W1.still_true",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "still true",
+   "chosen": "still true",
+   "confidence": 0.8185,
+   "right": true
+  },
+  {
+   "prompt": "W1.still_true",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "still true",
+   "chosen": "still true",
+   "confidence": 0.3657,
+   "right": true
+  },
+  {
+   "prompt": "W2.dependent",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "no longer true",
+   "chosen": "no longer true",
+   "confidence": 0.7445,
+   "right": true
+  },
+  {
+   "prompt": "W2.dependent",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "still true",
+   "chosen": "cannot tell",
+   "confidence": 0.8648,
+   "right": false
+  },
+  {
+   "prompt": "W2.dependent",
+   "options": [
+    "still true",
+    "no longer true",
+    "cannot tell"
+   ],
+   "expected": "no longer true",
+   "chosen": "no longer true",
+   "confidence": 0.6441,
+   "right": true
+  }
+ ]
+}

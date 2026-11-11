@@ -1,0 +1,5 @@
+W0: retired correctly 0/10 wrongly 0 [] | calls/fact mean 0 max 0 | ms/fact mean 0.0 | PASS False
+W1: retired correctly 6/10 wrongly 0 [] | calls/fact mean 6.37 max 21 | ms/fact mean 1007.6 | PASS True
+W2: retired correctly 6/10 wrongly 0 [] | calls/fact mean 7.4 max 43 | ms/fact mean 1246.3 | PASS True
+W2b: retired correctly 6/10 wrongly 0 [] | calls/fact mean 6.88 max 25 | ms/fact mean 1163.2 | PASS True
+wall 61s, model calls 335, cache hits 553

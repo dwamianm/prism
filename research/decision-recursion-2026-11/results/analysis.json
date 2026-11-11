@@ -1,0 +1,564 @@
+{
+ "clef-flash": {
+  "write_sweep": {
+   "own_rule": {
+    "retired_correctly": 9,
+    "retired_wrongly": 3,
+    "prompts_not_cached": 0,
+    "judgments": 218
+   },
+   "wrong_pairs": {
+    "F07": {
+     "triple": "I | knows | what a cup is | negative",
+     "text": "It is not true that I knows what a cup is",
+     "by": "F16",
+     "by_text": "I bought Brooks Ghost",
+     "date_old": "2026-09-01 19:04",
+     "date_new": "2026-09-20 10:03",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.1104,
+      0.4487,
+      0.4409
+     ],
+     "contestable": false
+    },
+    "F15": {
+     "triple": "knee | hurt_after | longest run | positive",
+     "text": "knee hurt after longest run",
+     "by": "F29",
+     "by_text": "knee condition fine this time",
+     "date_old": "2026-09-20 10:02",
+     "date_new": "2026-10-15 18:03",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.042,
+      0.9042,
+      0.0539
+     ],
+     "contestable": true
+    },
+    "F25": {
+     "triple": "I | diet | not strictly vegetarian | negative",
+     "text": "It is not true that I diet not strictly vegetarian",
+     "by": "F27",
+     "by_text": "I will include fish",
+     "date_old": "2026-10-15 18:01",
+     "date_new": "2026-10-15 18:02",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.2368,
+      0.624,
+      0.1392
+     ],
+     "contestable": true
+    }
+   },
+   "sweep": {
+    "0.6": {
+     "retired_correctly": 6,
+     "retired_wrongly": 2,
+     "wrong_ids": [
+      "F15",
+      "F25"
+     ],
+     "prompts_not_cached": 56,
+     "judgments": 274
+    },
+    "0.7": {
+     "retired_correctly": 6,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F15"
+     ],
+     "prompts_not_cached": 62,
+     "judgments": 280
+    },
+    "0.8": {
+     "retired_correctly": 4,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F15"
+     ],
+     "prompts_not_cached": 67,
+     "judgments": 285
+    },
+    "0.9": {
+     "retired_correctly": 1,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F15"
+     ],
+     "prompts_not_cached": 89,
+     "judgments": 307
+    }
+   }
+  },
+  "read_sweep": {
+   "0.4": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 16,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.5": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 16,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.6": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 17,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.7": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 19,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.8": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 25,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.9": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 37,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   }
+  },
+  "r4_split": {
+   "R2b": {
+    "questions": 29,
+    "median_ms": 1870.4,
+    "max_ms": 3278.5
+   },
+   "gate at rank 1": {
+    "questions": 37,
+    "median_ms": 138.1,
+    "max_ms": 205.2
+   },
+   "gate at rank 2": {
+    "questions": 1,
+    "median_ms": 288.2,
+    "max_ms": 288.2
+   },
+   "gate at rank 3": {
+    "questions": 1,
+    "median_ms": 408.3,
+    "max_ms": 408.3
+   }
+  }
+ },
+ "clef": {
+  "write_sweep": {
+   "own_rule": {
+    "retired_correctly": 9,
+    "retired_wrongly": 4,
+    "prompts_not_cached": 0,
+    "judgments": 218
+   },
+   "wrong_pairs": {
+    "F21": {
+     "triple": "I | quit | hospital | positive",
+     "text": "I quit hospital",
+     "by": "F24",
+     "by_text": "I eats fish",
+     "date_old": "2026-10-15 18:00",
+     "date_new": "2026-10-15 18:01",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.2301,
+      0.4721,
+      0.2978
+     ],
+     "contestable": false
+    },
+    "F22": {
+     "triple": "I | starts_at | pediatric clinic | positive",
+     "text": "I starts at pediatric clinic",
+     "by": "F24",
+     "by_text": "I eats fish",
+     "date_old": "2026-10-15 18:00",
+     "date_new": "2026-10-15 18:01",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.1842,
+      0.4183,
+      0.3976
+     ],
+     "contestable": false
+    },
+    "F25": {
+     "triple": "I | diet | not strictly vegetarian | negative",
+     "text": "It is not true that I diet not strictly vegetarian",
+     "by": "F27",
+     "by_text": "I will include fish",
+     "date_old": "2026-10-15 18:01",
+     "date_new": "2026-10-15 18:02",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.0683,
+      0.8191,
+      0.1126
+     ],
+     "contestable": true
+    },
+    "F26": {
+     "triple": "I | eats | meat | negative",
+     "text": "It is not true that I eats meat",
+     "by": "F27",
+     "by_text": "I will include fish",
+     "date_old": "2026-10-15 18:01",
+     "date_new": "2026-10-15 18:02",
+     "chosen": "no longer true",
+     "probabilities": [
+      0.3081,
+      0.4002,
+      0.2917
+     ],
+     "contestable": false
+    }
+   },
+   "sweep": {
+    "0.6": {
+     "retired_correctly": 7,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F25"
+     ],
+     "prompts_not_cached": 48,
+     "judgments": 266
+    },
+    "0.7": {
+     "retired_correctly": 5,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F25"
+     ],
+     "prompts_not_cached": 62,
+     "judgments": 280
+    },
+    "0.8": {
+     "retired_correctly": 4,
+     "retired_wrongly": 1,
+     "wrong_ids": [
+      "F25"
+     ],
+     "prompts_not_cached": 74,
+     "judgments": 292
+    },
+    "0.9": {
+     "retired_correctly": 3,
+     "retired_wrongly": 0,
+     "wrong_ids": [],
+     "prompts_not_cached": 89,
+     "judgments": 307
+    }
+   }
+  },
+  "read_sweep": {
+   "0.4": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 17,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.5": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 17,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.6": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 19,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.7": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 19,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.8": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 20,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   },
+   "0.9": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 22,
+    "questions_scored": 67,
+    "questions_skipped": 0
+   }
+  },
+  "r4_split": {
+   "R2b": {
+    "questions": 30,
+    "median_ms": 6107.6,
+    "max_ms": 13943.6
+   },
+   "gate at rank 1": {
+    "questions": 35,
+    "median_ms": 369.4,
+    "max_ms": 556.5
+   },
+   "gate at rank 2": {
+    "questions": 2,
+    "median_ms": 875.1,
+    "max_ms": 887.7
+   },
+   "gate at rank 3": {
+    "questions": 1,
+    "median_ms": 1228.7,
+    "max_ms": 1228.7
+   }
+  }
+ },
+ "qwen3.5-9b": {
+  "write_sweep": {
+   "own_rule": {
+    "retired_correctly": 6,
+    "retired_wrongly": 0,
+    "prompts_not_cached": 0,
+    "judgments": 274
+   },
+   "wrong_pairs": {},
+   "sweep": {
+    "0.6": {
+     "retired_correctly": 4,
+     "retired_wrongly": 13,
+     "wrong_ids": [
+      "F03",
+      "F06",
+      "F07",
+      "F15",
+      "F16",
+      "F21",
+      "F23",
+      "F24",
+      "F25",
+      "F26",
+      "F28",
+      "F37",
+      "F39"
+     ],
+     "prompts_not_cached": 37,
+     "judgments": 165
+    },
+    "0.7": {
+     "retired_correctly": 4,
+     "retired_wrongly": 12,
+     "wrong_ids": [
+      "F03",
+      "F06",
+      "F07",
+      "F15",
+      "F16",
+      "F21",
+      "F24",
+      "F25",
+      "F26",
+      "F28",
+      "F37",
+      "F39"
+     ],
+     "prompts_not_cached": 37,
+     "judgments": 183
+    },
+    "0.8": {
+     "retired_correctly": 2,
+     "retired_wrongly": 8,
+     "wrong_ids": [
+      "F07",
+      "F16",
+      "F21",
+      "F24",
+      "F25",
+      "F26",
+      "F28",
+      "F39"
+     ],
+     "prompts_not_cached": 46,
+     "judgments": 257
+    },
+    "0.9": {
+     "retired_correctly": 2,
+     "retired_wrongly": 4,
+     "wrong_ids": [
+      "F07",
+      "F21",
+      "F24",
+      "F26"
+     ],
+     "prompts_not_cached": 46,
+     "judgments": 277
+    }
+   }
+  },
+  "read_sweep": {
+   "0.4": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 5,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   },
+   "0.5": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 5,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   },
+   "0.6": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 5,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   },
+   "0.7": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 7,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   },
+   "0.8": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 11,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   },
+   "0.9": {
+    "unknown_right_of_7": 7,
+    "false_unknown": 17,
+    "questions_scored": 38,
+    "questions_skipped": 29
+   }
+  },
+  "r4_split": {
+   "R2b": {
+    "questions": 21,
+    "median_ms": 1586.1,
+    "max_ms": 3310.0
+   },
+   "gate at rank 1": {
+    "questions": 46,
+    "median_ms": 133.9,
+    "max_ms": 149.9
+   },
+   "gate at rank 3": {
+    "questions": 1,
+    "median_ms": 413.0,
+    "max_ms": 413.0
+   }
+  }
+ },
+ "random": {
+  "write_sweep": {
+   "own_rule": {
+    "retired_correctly": 0,
+    "retired_wrongly": 0,
+    "prompts_not_cached": 320,
+    "judgments": 320
+   },
+   "wrong_pairs": {},
+   "sweep": {
+    "0.6": {
+     "retired_correctly": 0,
+     "retired_wrongly": 0,
+     "wrong_ids": [],
+     "prompts_not_cached": 320,
+     "judgments": 320
+    },
+    "0.7": {
+     "retired_correctly": 0,
+     "retired_wrongly": 0,
+     "wrong_ids": [],
+     "prompts_not_cached": 320,
+     "judgments": 320
+    },
+    "0.8": {
+     "retired_correctly": 0,
+     "retired_wrongly": 0,
+     "wrong_ids": [],
+     "prompts_not_cached": 320,
+     "judgments": 320
+    },
+    "0.9": {
+     "retired_correctly": 0,
+     "retired_wrongly": 0,
+     "wrong_ids": [],
+     "prompts_not_cached": 320,
+     "judgments": 320
+    }
+   }
+  },
+  "read_sweep": {
+   "0.4": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   },
+   "0.5": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   },
+   "0.6": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   },
+   "0.7": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   },
+   "0.8": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   },
+   "0.9": {
+    "unknown_right_of_7": 0,
+    "false_unknown": 0,
+    "questions_scored": 0,
+    "questions_skipped": 67
+   }
+  },
+  "r4_split": {
+   "R2b": {
+    "questions": 26,
+    "median_ms": 0.0,
+    "max_ms": 344.1
+   },
+   "gate at rank 1": {
+    "questions": 22,
+    "median_ms": 0.0,
+    "max_ms": 0.0
+   },
+   "gate at rank 2": {
+    "questions": 15,
+    "median_ms": 0.0,
+    "max_ms": 0.0
+   },
+   "gate at rank 3": {
+    "questions": 5,
+    "median_ms": 0.0,
+    "max_ms": 0.0
+   }
+  }
+ }
+}

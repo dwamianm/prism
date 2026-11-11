@@ -1,0 +1,5 @@
+W0: retired correctly 0/10 wrongly 0 [] | calls/fact mean 0 max 0 | ms/fact mean 0.0 | PASS False
+W1: retired correctly 8/10 wrongly 15 ['F03', 'F05', 'F06', 'F07', 'F11', 'F15', 'F16', 'F21', 'F22', 'F23', 'F24', 'F25', 'F26', 'F27', 'F28'] | calls/fact mean 1.86 max 5 | ms/fact mean 0.0 | PASS False
+W2: retired correctly 8/10 wrongly 15 ['F03', 'F05', 'F06', 'F07', 'F11', 'F15', 'F16', 'F21', 'F22', 'F23', 'F24', 'F25', 'F26', 'F27', 'F28'] | calls/fact mean 1.93 max 9 | ms/fact mean 0.0 | PASS False
+W2b: retired correctly 8/10 wrongly 15 ['F03', 'F05', 'F06', 'F07', 'F11', 'F15', 'F16', 'F21', 'F22', 'F23', 'F24', 'F25', 'F26', 'F27', 'F28'] | calls/fact mean 2.09 max 7 | ms/fact mean 0.0 | PASS False
+wall 0s, model calls 114, cache hits 139

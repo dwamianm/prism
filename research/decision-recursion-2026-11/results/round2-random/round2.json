@@ -1,0 +1,2677 @@
+{
+ "round": 2,
+ "backend": "random",
+ "model": null,
+ "seed": 7,
+ "loaded_before_warm": [],
+ "warm_ms": 0.0,
+ "templates_sha256": "fef7bf42e2247fd70efcbceaca9b50d78037972c5c43ace2ae1daaf919f33d74",
+ "posthoc_sha256": "27b76bc6245bb9173a79c504a5c5edb4fe9f803dd60ab9522eafc479baf2f5a1",
+ "round2_sha256": "f7bb50dece39d9674e963600c9265b1b7491260b84b4cc5873086f397564a47f",
+ "key_sha256": "790c905303167268f66d43e7af5c2ca10619c6f016d9da69c447975e45675b16",
+ "at": "2026-11-11T06:47:21+00:00",
+ "write": {
+  "W3": {
+   "retired_correctly": 4,
+   "of_key": 10,
+   "retired_correctly_ids": [
+    "F01",
+    "F08",
+    "F18",
+    "F20"
+   ],
+   "missed": [
+    {
+     "id": "F02",
+     "triple": "I | planning | meals for the week | positive"
+    },
+    {
+     "id": "F04",
+     "triple": "Priya | visiting | I | positive"
+    },
+    {
+     "id": "F09",
+     "triple": "I | shift_pattern | mostly night shifts | positive"
+    },
+    {
+     "id": "F10",
+     "triple": "I | dinner_time | about 6 am | positive"
+    },
+    {
+     "id": "F14",
+     "triple": "longest run | distance | 9 km | positive"
+    },
+    {
+     "id": "F19",
+     "triple": "dog | maybe_breed | greyhound | positive"
+    }
+   ],
+   "retired_wrongly": 3,
+   "retired_wrongly_list": [
+    {
+     "id": "F06",
+     "triple": "I | prefers | metric units | positive",
+     "by": "F24",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | eats | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F22",
+     "triple": "I | starts_at | pediatric clinic | positive",
+     "by": "F37",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | gets_home_at | 5:30 pm | positive",
+     "contestable": false
+    },
+    {
+     "id": "F24",
+     "triple": "I | eats | fish | positive",
+     "by": "F27",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    }
+   ],
+   "calls_per_new_fact": {
+    "mean": 0.35,
+    "median": 0,
+    "max": 3,
+    "total": 15
+   },
+   "ms_per_new_fact": {
+    "mean": 0.0,
+    "median": 0.0,
+    "p95": 0,
+    "total": 0.0
+   },
+   "retirements": {
+    "F01": {
+     "by": "F25",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | diet | vegetarian | positive"
+    },
+    "F06": {
+     "by": "F24",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | prefers | metric units | positive"
+    },
+    "F08": {
+     "by": "F22",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | works_at | St. Mary's hospital | positive"
+    },
+    "F18": {
+     "by": "F24",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | thinking_about_getting | dog | positive"
+    },
+    "F20": {
+     "by": "F42",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | decided | getting a dog | negative"
+    },
+    "F22": {
+     "by": "F37",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | starts_at | pediatric clinic | positive"
+    },
+    "F24": {
+     "by": "F27",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | eats | fish | positive"
+    }
+   },
+   "WRITE_PASS": false,
+   "decisions": 15
+  },
+  "W3b": {
+   "retired_correctly": 5,
+   "of_key": 10,
+   "retired_correctly_ids": [
+    "F01",
+    "F08",
+    "F10",
+    "F18",
+    "F20"
+   ],
+   "missed": [
+    {
+     "id": "F02",
+     "triple": "I | planning | meals for the week | positive"
+    },
+    {
+     "id": "F04",
+     "triple": "Priya | visiting | I | positive"
+    },
+    {
+     "id": "F09",
+     "triple": "I | shift_pattern | mostly night shifts | positive"
+    },
+    {
+     "id": "F14",
+     "triple": "longest run | distance | 9 km | positive"
+    },
+    {
+     "id": "F19",
+     "triple": "dog | maybe_breed | greyhound | positive"
+    }
+   ],
+   "retired_wrongly": 8,
+   "retired_wrongly_list": [
+    {
+     "id": "F05",
+     "triple": "Priya | dietary_restriction | gluten | negative",
+     "by": "F30",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "Priya | moved_to | Toronto | positive",
+     "contestable": false
+    },
+    {
+     "id": "F06",
+     "triple": "I | prefers | metric units | positive",
+     "by": "F08",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | works_at | St. Mary's hospital | positive",
+     "contestable": false
+    },
+    {
+     "id": "F07",
+     "triple": "I | knows | what a cup is | negative",
+     "by": "F10",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | dinner_time | about 6 am | positive",
+     "contestable": false
+    },
+    {
+     "id": "F22",
+     "triple": "I | starts_at | pediatric clinic | positive",
+     "by": "F26",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | eats | meat | negative",
+     "contestable": false
+    },
+    {
+     "id": "F23",
+     "triple": "I | shift_schedule | day shifts only | positive",
+     "by": "F31",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | has_dinners_with | Priya | negative",
+     "contestable": false
+    },
+    {
+     "id": "F24",
+     "triple": "I | eats | fish | positive",
+     "by": "F27",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | will_include | fish | positive",
+     "contestable": false
+    },
+    {
+     "id": "F25",
+     "triple": "I | diet | not strictly vegetarian | negative",
+     "by": "F28",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | ran | 16 km | positive",
+     "contestable": true
+    },
+    {
+     "id": "F28",
+     "triple": "I | ran | 16 km | positive",
+     "by": "F39",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "by_triple": "I | spent | 85 euros on a race belt and socks | positive",
+     "contestable": true
+    }
+   ],
+   "calls_per_new_fact": {
+    "mean": 0.98,
+    "median": 1,
+    "max": 3,
+    "total": 42
+   },
+   "ms_per_new_fact": {
+    "mean": 0.0,
+    "median": 0.0,
+    "p95": 0,
+    "total": 0.0
+   },
+   "retirements": {
+    "F01": {
+     "by": "F25",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | diet | vegetarian | positive"
+    },
+    "F05": {
+     "by": "F30",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "Priya | dietary_restriction | gluten | negative"
+    },
+    "F06": {
+     "by": "F08",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | prefers | metric units | positive"
+    },
+    "F07": {
+     "by": "F10",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | knows | what a cup is | negative"
+    },
+    "F08": {
+     "by": "F22",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | works_at | St. Mary's hospital | positive"
+    },
+    "F10": {
+     "by": "F20",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | dinner_time | about 6 am | positive"
+    },
+    "F18": {
+     "by": "F24",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | thinking_about_getting | dog | positive"
+    },
+    "F20": {
+     "by": "F42",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | decided | getting a dog | negative"
+    },
+    "F22": {
+     "by": "F26",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | starts_at | pediatric clinic | positive"
+    },
+    "F23": {
+     "by": "F31",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | shift_schedule | day shifts only | positive"
+    },
+    "F24": {
+     "by": "F27",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | eats | fish | positive"
+    },
+    "F25": {
+     "by": "F28",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | diet | not strictly vegetarian | negative"
+    },
+    "F28": {
+     "by": "F39",
+     "stage": "W3",
+     "confidence": 0.3333,
+     "triple": "I | ran | 16 km | positive"
+    }
+   },
+   "WRITE_PASS": false,
+   "decisions": 42
+  }
+ },
+ "wrong_pairs": {},
+ "read": {
+  "chat_store": {
+   "n": 13,
+   "rank1": 1,
+   "top3": 4,
+   "stale_above": 2
+  },
+  "chat_ingest": {
+   "n": 13,
+   "rank1": 3,
+   "top3": 6,
+   "stale_above": 1
+  },
+  "hops": {
+   "n": 8,
+   "rank1": 0,
+   "both_in_top5": 0
+  },
+  "churn10": {
+   "n": 18,
+   "rank1": 1
+  },
+  "flood": {
+   "n": 8,
+   "top5": 2
+  },
+  "unknown_right": {
+   "of_7": 0,
+   "cat_ingest": false
+  },
+  "false_unknown": [
+   "chat_store:household-restrictions",
+   "chat_store:sister",
+   "chat_store:alex",
+   "churn-10min-12moves-tv-remote",
+   "churn-10min-12moves-water-bottle"
+  ],
+  "calls_per_question": {
+   "median": 1.0,
+   "max": 4
+  },
+  "added_ms_per_question": {
+   "median": 0.0,
+   "p95": 0.0
+  },
+  "false_unknown_total": 5,
+  "rank1_chat_store_gain_over_R0": -4,
+  "bars": {
+   "unknown_right_at_least_6_of_7": false,
+   "false_unknowns_at_most_1": false,
+   "rank1_chat_store_gain_at_least_4": false,
+   "median_added_ms_at_most_300": true
+  },
+  "READ_PASS": false
+ },
+ "rows": [
+  {
+   "group": "chat_store",
+   "id": "chat_store:work-now",
+   "question": "What does Sam do for work now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "pediatric clinic": null
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "The new job is great. I get home at 5:30 pm now.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "Longest run is now 19 km.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:vegetarian",
+   "question": "Is Sam vegetarian?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "fish": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:household-restrictions",
+   "question": "What food restrictions should I respect when cooking for Sam's household?",
+   "unknown": true,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "peanut": null,
+    "meat": null
+   },
+   "stale_above": false,
+   "calls": 3,
+   "added_ms": 0.0,
+   "stopped": "unknown (no record or word picked)",
+   "word": null,
+   "top5": [
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "Please always give me quantities in metric units. I never know what a cup is.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:pet",
+   "question": "What pet does Sam have?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "beagle": 7
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "Please always give me quantities in metric units. I never know what a cup is.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+    "Then for Friday I recommend rice noodles with tofu."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:sister",
+   "question": "Where does Sam's sister live?",
+   "unknown": true,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "Toronto": null
+   },
+   "stale_above": false,
+   "calls": 2,
+   "added_ms": 0.0,
+   "stopped": "unknown (no record or word picked)",
+   "word": null,
+   "top5": [
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+    "Please always give me quantities in metric units. I never know what a cup is.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:units",
+   "question": "How should I format ingredient amounts?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "metric": 4
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+    "Please always give me quantities in metric units. I never know what a cup is.",
+    "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:running-spend",
+   "question": "How much has Sam spent on running gear in total?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "140": null,
+    "60 euros": 2,
+    "85": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Miso chewed through my old running shoes, ha.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+    "Longest run is now 19 km.",
+    "My longest run so far is 9 km. My knee hurt a bit after it."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:run-distance",
+   "question": "How far can Sam run at the moment?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "19 km": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Miso chewed through my old running shoes, ha.",
+    "Longest run is now 19 km.",
+    "The new job is great. I get home at 5:30 pm now.",
+    "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+    "My longest run so far is 9 km. My knee hurt a bit after it."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:race",
+   "question": "When is the race and where?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "November 22": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+    "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+    "Longest run is now 19 km.",
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:friday-dinner",
+   "question": "What did you recommend for the Friday dinner?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "rice noodles": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+    "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+    "Priya moved to Toronto last week, so no more Friday dinners with her.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Did 16 km on Sunday. Knee was fine this time."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:dinner-time",
+   "question": "What time does Sam usually eat dinner?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "5:30": null
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Did 16 km on Sunday. Knee was fine this time.",
+    "Priya moved to Toronto last week, so no more Friday dinners with her.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:alex",
+   "question": "Who is Alex?",
+   "unknown": true,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "partner": null
+   },
+   "stale_above": false,
+   "calls": 3,
+   "added_ms": 0.0,
+   "stopped": "unknown (no record or word picked)",
+   "word": null,
+   "top5": [
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "The new job is great. I get home at 5:30 pm now.",
+    "Longest run is now 19 km.",
+    "My longest run so far is 9 km. My knee hurt a bit after it.",
+    "I've started training for a half marathon. The race is on November 22 in Lisbon."
+   ]
+  },
+  {
+   "group": "chat_store",
+   "id": "chat_store:old-shoes",
+   "question": "What happened to Sam's old running shoes?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "chewed": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "Miso chewed through my old running shoes, ha.",
+    "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+    "My longest run so far is 9 km. My knee hurt a bit after it.",
+    "Longest run is now 19 km."
+   ]
+  },
+  {
+   "group": "cat_store",
+   "id": "chat_store:cat",
+   "question": "Does Sam own a cat?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "My longest run so far is 9 km. My knee hurt a bit after it.",
+    "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+    "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+    "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+    "Please always give me quantities in metric units. I never know what a cup is."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:work-now",
+   "question": "What does Sam do for work now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "pediatric clinic": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "I start at a pediatric clinic on November 2, day shifts only.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Priya visiting Sam.",
+    "I get home at 5:30 pm now."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:vegetarian",
+   "question": "Is Sam vegetarian?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "fish": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+    "I'm vegetarian, by the way.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Priya visiting Sam.",
+    "I start at a pediatric clinic on November 2, day shifts only."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:household-restrictions",
+   "question": "What food restrictions should I respect when cooking for Sam's household?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "peanut": 3,
+    "meat": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Hi, I'm planning meals for the week.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "My sister Priya is visiting on Friday and she can't eat gluten.",
+    "I'm vegetarian, by the way."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:pet",
+   "question": "What pet does Sam have?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "beagle": null
+   },
+   "stale_above": false,
+   "calls": 4,
+   "added_ms": 41.8,
+   "stopped": "round 2 (answer chosen)",
+   "word": "visiting",
+   "top5": [
+    "Understood, I'll include fish in your plans from now on.",
+    "I start at a pediatric clinic on November 2, day shifts only.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "Priya visiting Sam.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:sister",
+   "question": "Where does Sam's sister live?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "Toronto": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Please always give me quantities in metric units. I never know what a cup is.",
+    "My sister Priya is visiting on Friday and she can't eat gluten.",
+    "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+    "Priya visiting Sam.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:units",
+   "question": "How should I format ingredient amounts?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "metric": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I never know what a cup is.",
+    "Hi, I'm planning meals for the week.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+    "I'm vegetarian, by the way.",
+    "Understood, I'll include fish in your plans from now on."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:running-spend",
+   "question": "How much has Sam spent on running gear in total?",
+   "unknown": false,
+   "rank1": true,
+   "top3": false,
+   "answer_ranks": {
+    "140": null,
+    "60 euros": 1,
+    "85": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "I start at a pediatric clinic on November 2, day shifts only.",
+    "Priya visiting Sam.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:run-distance",
+   "question": "How far can Sam run at the moment?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "19 km": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "Longest run is now 19 km.",
+    "My longest run so far is 9 km.",
+    "I start at a pediatric clinic on November 2, day shifts only.",
+    "Priya visiting Sam."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:race",
+   "question": "When is the race and where?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "November 22": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "My longest run so far is 9 km.",
+    "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+    "Longest run is now 19 km.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "Hi, I'm planning meals for the week."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:friday-dinner",
+   "question": "What did you recommend for the Friday dinner?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "rice noodles": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Hi, I'm planning meals for the week.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "Priya moved to Toronto last week, so no more Friday dinners with her.",
+    "My sister Priya is visiting on Friday and she can't eat gluten."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:dinner-time",
+   "question": "What time does Sam usually eat dinner?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "5:30": null
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "I start at a pediatric clinic on November 2, day shifts only.",
+    "Priya visiting Sam.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:alex",
+   "question": "Who is Alex?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "partner": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Longest run is now 19 km.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "The new job is great.",
+    "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+   ]
+  },
+  {
+   "group": "chat_ingest",
+   "id": "chat_ingest:old-shoes",
+   "question": "What happened to Sam's old running shoes?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "chewed": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Miso chewed through my old running shoes, ha.",
+    "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+    "Longest run is now 19 km.",
+    "Miso chewed through my old running shoes, ha.",
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks."
+   ]
+  },
+  {
+   "group": "cat_ingest",
+   "id": "chat_ingest:cat",
+   "question": "Does Sam own a cat?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+    "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+    "Priya visiting Sam.",
+    "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+    "I start at a pediatric clinic on November 2, day shifts only."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-violin-case",
+   "question": "Where is the violin case now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-ski-boots",
+   "question": "Where is the ski boots now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-wedding-album",
+   "question": "Where is the wedding album now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-soldering-iron",
+   "question": "Where is the soldering iron now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-tennis-racket",
+   "question": "Where is the tennis racket now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "unseen",
+   "id": "unseen-bird-feeder",
+   "question": "Where is the bird feeder now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {},
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Kitchen check: nothing moved since the last pass.",
+    "Kitchen check: nothing moved since the last pass.",
+    "Kitchen check: nothing moved since the last pass.",
+    "Kitchen check: nothing moved since the last pass.",
+    "Kitchen check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "hops",
+   "id": "hops-dana",
+   "question": "Where is the thing Dana asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The red mug is on the laundry room.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hana asked the robot to bring the laptop bag later.",
+    "Dana asked the robot to bring the red mug later.",
+    "Nora asked the robot to bring the screwdriver set later.",
+    "Lena asked the robot to bring the car keys later.",
+    "Bedroom check: nothing moved since the last pass."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-ravi",
+   "question": "Where is the thing Ravi asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The house keys is on the guest room dresser.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Ravi asked the robot to bring the house keys later.",
+    "Ines asked the robot to bring the yoga mat later.",
+    "Tomas asked the robot to bring the phone charger later.",
+    "Ivan asked the robot to bring the tape measure later.",
+    "Ben asked the robot to bring the guitar tuner later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-aisha",
+   "question": "Where is the thing Aisha asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The reading glasses is on the balcony.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Aisha asked the robot to bring the reading glasses later.",
+    "Hana asked the robot to bring the laptop bag later.",
+    "Mei asked the robot to bring the blue notebook later.",
+    "Lena asked the robot to bring the car keys later.",
+    "Sara asked the robot to bring the wool scarf later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-priya",
+   "question": "Where is the thing Priya asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The black umbrella is on the sofa armrest.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Ines asked the robot to bring the yoga mat later.",
+    "Priya asked the robot to bring the black umbrella later.",
+    "Hana asked the robot to bring the laptop bag later.",
+    "Mei asked the robot to bring the blue notebook later.",
+    "Dana asked the robot to bring the red mug later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-ines",
+   "question": "Where is the thing Ines asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The yoga mat is on the dining table.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Ben asked the robot to bring the guitar tuner later.",
+    "Ines asked the robot to bring the yoga mat later.",
+    "Marco asked the robot to bring the sewing kit later.",
+    "Nora asked the robot to bring the screwdriver set later.",
+    "Kofi asked the robot to bring the passport folder later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-zoe",
+   "question": "Where is the thing Zoe asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The flashlight is on the study windowsill.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Sara asked the robot to bring the wool scarf later.",
+    "Zoe asked the robot to bring the flashlight later.",
+    "Lena asked the robot to bring the car keys later.",
+    "Nora asked the robot to bring the screwdriver set later.",
+    "Felix asked the robot to bring the water bottle later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-sara",
+   "question": "Where is the thing Sara asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The wool scarf is on the sofa armrest.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Nora asked the robot to bring the screwdriver set later.",
+    "Sara asked the robot to bring the wool scarf later.",
+    "Zoe asked the robot to bring the flashlight later.",
+    "Lena asked the robot to bring the car keys later.",
+    "Marco asked the robot to bring the sewing kit later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "hops",
+   "id": "hops-ben",
+   "question": "Where is the thing Ben asked for?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The guitar tuner is on the basement shelf.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Ben asked the robot to bring the guitar tuner later.",
+    "Jonas asked the robot to bring the tv remote later.",
+    "Mei asked the robot to bring the blue notebook later.",
+    "Lena asked the robot to bring the car keys later.",
+    "Nora asked the robot to bring the screwdriver set later."
+   ],
+   "both_in_top5": false
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-wool-scarf",
+   "question": "Where is the wool scarf now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The wool scarf is on the bedroom nightstand.": 3
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The flashlight is on the study windowsill.",
+    "The wool scarf is on the sofa armrest.",
+    "The wool scarf is on the bedroom nightstand.",
+    "The tape measure is on the bookshelf.",
+    "The reading glasses is on the balcony."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-yoga-mat",
+   "question": "Where is the yoga mat now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The yoga mat is on the garage workbench.": 2
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The yoga mat is on the dining table.",
+    "The yoga mat is on the garage workbench.",
+    "The tape measure is on the bookshelf.",
+    "The sewing kit is on the study windowsill.",
+    "The guitar tuner is on the bookshelf."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-house-keys",
+   "question": "Where is the house keys now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The house keys is on the bookshelf.": 2
+   },
+   "stale_above": false,
+   "calls": 4,
+   "added_ms": 20.3,
+   "stopped": "round 2 (answer chosen)",
+   "word": "guest",
+   "top5": [
+    "The passport folder is on the living room table.",
+    "The house keys is on the bookshelf.",
+    "The house keys is on the guest room dresser.",
+    "The car keys is on the dishwasher.",
+    "The car keys is on the study windowsill."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-dog-leash",
+   "question": "Where is the dog leash now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The dog leash is on the garage workbench.": 3
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The passport folder is on the hallway shelf.",
+    "The dog leash is on the dining table.",
+    "The dog leash is on the garage workbench.",
+    "The flashlight is on the study windowsill.",
+    "The house keys is on the bookshelf."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-sewing-kit",
+   "question": "Where is the sewing kit now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The sewing kit is on the living room table.": 3
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The first aid kit is on the study windowsill.",
+    "The sewing kit is on the study windowsill.",
+    "The sewing kit is on the living room table.",
+    "The first aid kit is on the bedroom nightstand.",
+    "The tape measure is on the bookshelf."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-2moves-water-bottle",
+   "question": "Where is the water bottle now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The water bottle is on the laundry room.": 3
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The house keys is on the bookshelf.",
+    "The water bottle is on the bathroom cabinet.",
+    "The water bottle is on the laundry room.",
+    "The car keys is on the dishwasher.",
+    "The flashlight is on the study windowsill."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-sewing-kit",
+   "question": "Where is the sewing kit now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The sewing kit is on the kitchen counter.": 5
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The sewing kit is on the living room table.",
+    "The sewing kit is on the study windowsill.",
+    "The sewing kit is on the front porch.",
+    "The sewing kit is on the office desk.",
+    "The sewing kit is on the kitchen counter."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-guitar-tuner",
+   "question": "Where is the guitar tuner now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The guitar tuner is on the living room table.": 5
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The guitar tuner is on the bookshelf.",
+    "The guitar tuner is on the garage workbench.",
+    "The guitar tuner is on the basement shelf.",
+    "The guitar tuner is on the laundry room.",
+    "The guitar tuner is on the living room table."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-red-mug",
+   "question": "Where is the red mug now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The red mug is on the balcony.": 2
+   },
+   "stale_above": false,
+   "calls": 4,
+   "added_ms": 35.4,
+   "stopped": "round 2 (answer chosen)",
+   "word": "balcony",
+   "top5": [
+    "The reading glasses is on the balcony.",
+    "The red mug is on the balcony.",
+    "The red mug is on the hallway shelf.",
+    "The red mug is on the balcony.",
+    "The red mug is on the laundry room."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-wool-scarf",
+   "question": "Where is the wool scarf now?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "The wool scarf is on the entry bench.": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The wool scarf is on the entry bench.",
+    "The wool scarf is on the pantry.",
+    "The wool scarf is on the coat closet.",
+    "The wool scarf is on the sofa armrest.",
+    "The wool scarf is on the bedroom nightstand."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-screwdriver-set",
+   "question": "Where is the screwdriver set now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The screwdriver set is on the coat closet.": 3
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The screwdriver set is on the pantry.",
+    "The screwdriver set is on the hallway shelf.",
+    "The screwdriver set is on the coat closet.",
+    "The screwdriver set is on the bedroom nightstand.",
+    "The screwdriver set is on the guest room dresser."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-5moves-blue-notebook",
+   "question": "Where is the blue notebook now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The blue notebook is on the laundry room.": 4
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The blue notebook is on the bedroom nightstand.",
+    "The blue notebook is on the garage workbench.",
+    "The blue notebook is on the front porch.",
+    "The blue notebook is on the laundry room.",
+    "The blue notebook is on the coat closet."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-tape-measure",
+   "question": "Where is the tape measure now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The tape measure is on the piano top.": null
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The tape measure is on the dishwasher.",
+    "The tape measure is on the bookshelf.",
+    "The tape measure is on the hallway shelf.",
+    "The tape measure is on the hallway shelf.",
+    "The tape measure is on the balcony."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-tv-remote",
+   "question": "Where is the tv remote now?",
+   "unknown": true,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The tv remote is on the guest room dresser.": null
+   },
+   "stale_above": false,
+   "calls": 2,
+   "added_ms": 0.0,
+   "stopped": "unknown (no record or word picked)",
+   "word": null,
+   "top5": [
+    "The tv remote is on the sofa armrest.",
+    "The tv remote is on the balcony.",
+    "The tv remote is on the garage workbench.",
+    "The tv remote is on the dining table.",
+    "The tv remote is on the dining table."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-black-umbrella",
+   "question": "Where is the black umbrella now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The black umbrella is on the garage workbench.": 7
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The black umbrella is on the office desk.",
+    "The black umbrella is on the entry bench.",
+    "The black umbrella is on the entry bench.",
+    "The black umbrella is on the bookshelf.",
+    "The black umbrella is on the study windowsill."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-passport-folder",
+   "question": "Where is the passport folder now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "The passport folder is on the office desk.": 2
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The passport folder is on the hallway shelf.",
+    "The passport folder is on the office desk.",
+    "The passport folder is on the office desk.",
+    "The passport folder is on the hallway shelf.",
+    "The passport folder is on the coat closet."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-blue-notebook",
+   "question": "Where is the blue notebook now?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The blue notebook is on the kids room floor.": null
+   },
+   "stale_above": true,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The blue notebook is on the bookshelf.",
+    "The blue notebook is on the entry bench.",
+    "The blue notebook is on the pantry.",
+    "The blue notebook is on the study windowsill.",
+    "The blue notebook is on the bedroom nightstand."
+   ]
+  },
+  {
+   "group": "churn10",
+   "id": "churn-10min-12moves-water-bottle",
+   "question": "Where is the water bottle now?",
+   "unknown": true,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The water bottle is on the entry bench.": null
+   },
+   "stale_above": false,
+   "calls": 3,
+   "added_ms": 0.0,
+   "stopped": "unknown (no record or word picked)",
+   "word": null,
+   "top5": [
+    "The water bottle is on the pantry.",
+    "The water bottle is on the dishwasher.",
+    "The water bottle is on the dishwasher.",
+    "The water bottle is on the entry bench.",
+    "The water bottle is on the hallway shelf."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-leak",
+   "question": "Is there a leak anywhere?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "Water is pooling under the kitchen sink.": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The cat knocked a vase off the bookshelf and it broke.",
+    "Water is pooling under the kitchen sink.",
+    "A package was dropped on the front porch by a courier.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-door-open",
+   "question": "Was any entrance left unlocked or open?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "The front door was left open for eleven minutes.": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The front door was left open for eleven minutes.",
+    "The stove burner was on with no pot on it.",
+    "A package was dropped on the front porch by a courier.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-alarm",
+   "question": "Does any alarm need maintenance?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "Smoke detector in the garage chirped: low battery.": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Garage check: nothing moved since the last pass.",
+    "Smoke detector in the garage chirped: low battery.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass.",
+    "Garage check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-medication",
+   "question": "Did she take her medication?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "Grandma took her blood pressure pill at the dining table.": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Bedroom check: nothing moved since the last pass.",
+    "Grandma took her blood pressure pill at the dining table.",
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass.",
+    "Bedroom check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-delivery",
+   "question": "Did a delivery arrive?",
+   "unknown": false,
+   "rank1": false,
+   "top3": true,
+   "answer_ranks": {
+    "A package was dropped on the front porch by a courier.": 2
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Office check: nothing moved since the last pass.",
+    "A package was dropped on the front porch by a courier.",
+    "The cat knocked a vase off the bookshelf and it broke.",
+    "Office check: nothing moved since the last pass.",
+    "Office check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-stove",
+   "question": "Was any appliance left running unsafely?",
+   "unknown": false,
+   "rank1": true,
+   "top3": true,
+   "answer_ranks": {
+    "The stove burner was on with no pot on it.": 1
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "The stove burner was on with no pot on it.",
+    "The front door was left open for eleven minutes.",
+    "A package was dropped on the front porch by a courier.",
+    "Kitchen check: nothing moved since the last pass.",
+    "Kitchen check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-broken",
+   "question": "Did anything get broken?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "The cat knocked a vase off the bookshelf and it broke.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  },
+  {
+   "group": "flood",
+   "id": "flood-rare-stranger",
+   "question": "Was there a stranger near the house?",
+   "unknown": false,
+   "rank1": false,
+   "top3": false,
+   "answer_ranks": {
+    "An unknown person stood at the back gate for two minutes.": null
+   },
+   "stale_above": false,
+   "calls": 1,
+   "added_ms": 0.0,
+   "stopped": "round 1 (answer chosen)",
+   "word": null,
+   "top5": [
+    "Hallway check: nothing moved since the last pass.",
+    "A package was dropped on the front porch by a courier.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass.",
+    "Hallway check: nothing moved since the last pass."
+   ]
+  }
+ ],
+ "write_wall_seconds": 0.0,
+ "read_wall_seconds": 32.5,
+ "model_calls": 131,
+ "cache_hits": 11,
+ "decisions": [
+  [
+   "W3.judge",
+   "317f062132490c9ebd533af42b980d4279ea4abcc201f9205d3de06473b8438e",
+   2
+  ],
+  [
+   "W3.judge",
+   "f89e3ede12417f626de6ce6723fc624dbf5e813154a30072fbe854e86c1d387c",
+   0
+  ],
+  [
+   "W3.judge",
+   "fbeafc94bdc3383f2310d059fe1bef6515c31c4803cabeee5f93de1f77082cd6",
+   1
+  ],
+  [
+   "W3.judge",
+   "36bc1e2e1c9b9d02a7817d28b9ce29d1fb4753b1a32e61e6b691f3037badbb4f",
+   0
+  ],
+  [
+   "W3.judge",
+   "6679e1f90e40f16fee923c7299d3af4d136630972990d9de741f8a16090b65f4",
+   1
+  ],
+  [
+   "W3.judge",
+   "642d4e10152a4af6fc26ba6c95e858fceeedcda01021f4c18cfa47da7bd29964",
+   1
+  ],
+  [
+   "W3.judge",
+   "7cf1a9ef74e4f95d4318419a7e61cd81c349871d3c394d80d6ddace26918016d",
+   1
+  ],
+  [
+   "W3.judge",
+   "714fdce7a85dc4c6355a5660ed4134c159fb38f230d995b23291f346182e6c5a",
+   1
+  ],
+  [
+   "W3.judge",
+   "721c1ee2b95ef48903384a1374112255d995f0fe1e4076433471d7e78ac838e2",
+   2
+  ],
+  [
+   "W3.judge",
+   "4b655895dcfa82225f803fcdce65aa11023d2875c58b50968e42e5de9b4a8846",
+   0
+  ],
+  [
+   "W3.judge",
+   "4487186d9d3c0a876a079d64dcf92874c49d622ec8fcb7157662ce432d6deded",
+   0
+  ],
+  [
+   "W3.judge",
+   "373e87963ac0d879a0764495044e19bdcaa4db71e6ba2abf35a96aac6d2c63bd",
+   1
+  ],
+  [
+   "W3.judge",
+   "209ea8b03232da88e816fd4155f3193756a73ac2f37e8ca4b134ddbccee6a5f6",
+   1
+  ],
+  [
+   "W3.judge",
+   "801cc786a0c82af04ba5840b0a848a50359ac99520011238e6a84d568ab1c967",
+   2
+  ],
+  [
+   "W3.judge",
+   "4f6278bcb48689eaa70110776b35a4fbf3b301834a1a98d7bea863176f38bf41",
+   2
+  ],
+  [
+   "W3b.topic",
+   "f62f9acf7ac66c02456a7698d838bc48351eb3408ff7f1f640a62a634b73ef47",
+   1
+  ],
+  [
+   "W3.judge",
+   "8ecac2e9cf3ae0fdcd289202bdd5717b56934344d9d0ca71d3ea1e8c4d73dbca",
+   2
+  ],
+  [
+   "W3b.topic",
+   "306c1f010da18277bfc5aab0c3b403cccc62e96ab87571e710d63081038accad",
+   2
+  ],
+  [
+   "W3b.topic",
+   "c6e51f2a12fe9852e39c1a935a4f78cc8172f63fd754d029433b8562d171020b",
+   0
+  ],
+  [
+   "W3.judge",
+   "3973fba1e17981741e3f7fe48f30fd889ad5a227bd556cca36d6c4b8183b7d2d",
+   1
+  ],
+  [
+   "W3b.topic",
+   "e2216d3739f2170ff6f979f8d66faef3cdaf0a3a07f2a511527301441ade2343",
+   1
+  ],
+  [
+   "W3.judge",
+   "50a43b9a4fcbedd9ecdbfe26774d8f06610184458abddc075edf70928d6af058",
+   2
+  ],
+  [
+   "W3b.topic",
+   "a237dad1122f51891a7e4823983c1d90f8d42f5fa1bc6f9bc05cf4efb4a4aa97",
+   0
+  ],
+  [
+   "W3.judge",
+   "9af88136648d97cb194043e48dd5123e5e32275f3327f8d7e9b5e561e95130dd",
+   1
+  ],
+  [
+   "W3b.topic",
+   "70ad8f1b12d31dc919139f34e0038016049bc5e559111347c6de5c5c75414cc6",
+   2
+  ],
+  [
+   "W3.judge",
+   "3d8c712255f18b5e499c4aa395a53915df6f075935518bba137ab77de9f4930c",
+   2
+  ],
+  [
+   "W3b.topic",
+   "1a2e45c4af3ed923498249d7e75926568c501a79fee1870e6f128b182116db35",
+   2
+  ],
+  [
+   "W3.judge",
+   "dcc7a038461f2efad3f9a6f5fcaddcb6adeb33bc4f1c0e3ad12ae85dc6f57e87",
+   0
+  ],
+  [
+   "W3b.topic",
+   "dc5a3c962770e975f67e1d51a742e8ee02db14683dfc54ff4fbdbacb82d377f1",
+   7
+  ],
+  [
+   "W3b.topic",
+   "8d719e83be322c8e0ceddb7ac97111d888516bc4e82acdbae70e7d7d06947883",
+   4
+  ],
+  [
+   "W3.judge",
+   "dcfc3038d5bca9042754e95d891f02feea5092a2ea2da2de04372a7f3462b72a",
+   1
+  ],
+  [
+   "W3.judge",
+   "f89e3ede12417f626de6ce6723fc624dbf5e813154a30072fbe854e86c1d387c",
+   0
+  ],
+  [
+   "W3.judge",
+   "fbeafc94bdc3383f2310d059fe1bef6515c31c4803cabeee5f93de1f77082cd6",
+   1
+  ],
+  [
+   "W3.judge",
+   "36bc1e2e1c9b9d02a7817d28b9ce29d1fb4753b1a32e61e6b691f3037badbb4f",
+   0
+  ],
+  [
+   "W3.judge",
+   "642d4e10152a4af6fc26ba6c95e858fceeedcda01021f4c18cfa47da7bd29964",
+   1
+  ],
+  [
+   "W3.judge",
+   "7cf1a9ef74e4f95d4318419a7e61cd81c349871d3c394d80d6ddace26918016d",
+   1
+  ],
+  [
+   "W3b.topic",
+   "7e18e3fc44d251d41c76ba5a77c5755f75a3dd0df5bade49b1d86f69a8bbad90",
+   1
+  ],
+  [
+   "W3.judge",
+   "4d229582c98abfade0728e707759b6a408a2277f26369d0c0d4a6b22f82915d3",
+   1
+  ],
+  [
+   "W3.judge",
+   "714fdce7a85dc4c6355a5660ed4134c159fb38f230d995b23291f346182e6c5a",
+   1
+  ],
+  [
+   "W3b.topic",
+   "c06a3019bfbc7fa7447d052f0e258324be01017c449e233834095707dc1a54ff",
+   1
+  ],
+  [
+   "W3.judge",
+   "8b876b02312ee5c442fbff552d5e57c2efdc69e411c376f42023e5ce5ad4673d",
+   1
+  ],
+  [
+   "W3b.topic",
+   "6998a29a8e63a4497026fb1a45fdf507d970ad2ebb632e842b2d63940db8e2a7",
+   1
+  ],
+  [
+   "W3b.topic",
+   "28669b6e1b233842117178987bbee41e97b23ae1c807975eb17e1ea478a8a210",
+   2
+  ],
+  [
+   "W3.judge",
+   "7a29705af2ec5bf73c991b701f8b32a1e5643ffefa53323d368d96434554172e",
+   1
+  ],
+  [
+   "W3b.topic",
+   "ca929fe1d95841f13641e043571dec3ee8cec56a712ead0f64d51dd96b0066b2",
+   4
+  ],
+  [
+   "W3.judge",
+   "9abd4e30e8eda7ae4a17dc896017c4cc1719f199f1f5fb2989cdfcde1e566e27",
+   1
+  ],
+  [
+   "W3.judge",
+   "4b655895dcfa82225f803fcdce65aa11023d2875c58b50968e42e5de9b4a8846",
+   0
+  ],
+  [
+   "W3.judge",
+   "4487186d9d3c0a876a079d64dcf92874c49d622ec8fcb7157662ce432d6deded",
+   0
+  ],
+  [
+   "W3b.topic",
+   "6b283f0cec08e97149c47090335932cd61989d29b9c5f08ca29fafebf5e197ea",
+   1
+  ],
+  [
+   "W3b.topic",
+   "9375c67463e1bb478bb953251206c69d43de72d785f0a7106571fec3453d95ac",
+   8
+  ],
+  [
+   "W3b.topic",
+   "e152bec065702271cbf39ff4a84eadb9051baf5b1bd4e2141a697946deaf1a8d",
+   8
+  ],
+  [
+   "W3b.topic",
+   "c08452b4289160e9ac49cf17cddbe9114e04315453e2c5d7048ae51fe1025179",
+   2
+  ],
+  [
+   "W3.judge",
+   "e82fcbedce15d4ffc3449c473e5d1a057ff437132b89f696b07fef6e04cf6b13",
+   1
+  ],
+  [
+   "W3b.topic",
+   "aded2edca0d04db66a8a42ebb6c08daa968b43213c3d693bb27337a228d64922",
+   1
+  ],
+  [
+   "W3.judge",
+   "209ea8b03232da88e816fd4155f3193756a73ac2f37e8ca4b134ddbccee6a5f6",
+   1
+  ],
+  [
+   "W3.judge",
+   "801cc786a0c82af04ba5840b0a848a50359ac99520011238e6a84d568ab1c967",
+   2
+  ],
+  [
+   "W3.judge",
+   "4f6278bcb48689eaa70110776b35a4fbf3b301834a1a98d7bea863176f38bf41",
+   2
+  ],
+  [
+   "R5.round1",
+   "a94f7beb38a2c0977a6a754392bb7ddc5c14925f668ed0fcecf06576881b433e",
+   4
+  ],
+  [
+   "R5.round1",
+   "7e384ac3f48cf92eef765f6f65efa9e7db92156d262173198d23f8c74e874e60",
+   0
+  ],
+  [
+   "R5.round1",
+   "7e9d34882307d812fb43ecd01e624b162936601a69507b4fa11a4d543acf280e",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "25dd79190041dc0c0aac8c09e70bb88036253bfec9ef7a2c2a3e6c4853dc87d2",
+   4
+  ],
+  [
+   "R5.pick_word",
+   "432fa6fb9fa97fe3447a79ecb2b8517252d07494865d89f117a422381939a343",
+   7
+  ],
+  [
+   "R5.round1",
+   "b70094263d641754c1f4c29d1e65eec6f5e2de644b1571e0e550afd5037cc62a",
+   1
+  ],
+  [
+   "R5.round1",
+   "eb04a5fdf5bdbdc7933ab6be55acfe60c367af7344ea4852b9eee5223bdab557",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "b0209acc4a1e1b2431d78bf84828fa87c6bfdc7253efc300497e55b4adda3a31",
+   5
+  ],
+  [
+   "R5.round1",
+   "d4aab4dc0c14d98c3a81ae0e3625a3d2fc2e483cb273a4e95cd63bc780550c8a",
+   4
+  ],
+  [
+   "R5.round1",
+   "54320a06dc7db28a8d6a49b76028d29b111c4a0b1c0c83276682f8c41382c0c0",
+   4
+  ],
+  [
+   "R5.round1",
+   "939510821a8e9391d79dea1d9e76e7c5817de770a5f32579ccc15833d9391171",
+   1
+  ],
+  [
+   "R5.round1",
+   "d4c4e7061e6aaaa053f755db3c8e7f83253cdd727a6e1851a54786a819e2734e",
+   0
+  ],
+  [
+   "R5.round1",
+   "e81dc0947d8c915157b39aa4b5d348873a053a7cf357fd01af5fe541fdd877f2",
+   3
+  ],
+  [
+   "R5.round1",
+   "cbdab27c4e4976bfa0b0d07a6f6ef38480883d48b90b87f7eb714d88485d98f3",
+   2
+  ],
+  [
+   "R5.round1",
+   "07c6def1b4e040b27b44aa0087f1977f1d5ee8675967e0b00e9591b8e215a5a1",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "0203784378508407d7efe40140cc2adce7bb42c17f7bf7bde9528651d00c5c90",
+   1
+  ],
+  [
+   "R5.pick_word",
+   "051642b41c9c339fde7a09543b620f3f99bf0ec4f3a91e450d2e68e53a46263c",
+   6
+  ],
+  [
+   "R5.round1",
+   "d6cf923ba5b65bca67d92524f5b4d2e8e3bbd797d9dc34d4c01c3ee49e720a56",
+   4
+  ],
+  [
+   "R5.round1",
+   "3d555e82a657b1cd21f99756b54282c104f9e8754b53cf2348074412ea75f68e",
+   4
+  ],
+  [
+   "R5.round1",
+   "750729c1cbaf1a932a2883189b6ff0157b2bfdcf969592c4f06a46d3b9eb7d23",
+   1
+  ],
+  [
+   "R5.round1",
+   "bfd37eb919048ddd0017968b20179d6b2069d09b6becf0af766d1e4998514986",
+   0
+  ],
+  [
+   "R5.round1",
+   "8ff1c270a89a866080cb64e89fa590f9748edfb26788f122e118f77416a0d5fd",
+   3
+  ],
+  [
+   "R5.round1",
+   "14b706f5d84910b66ff5652af6d2b7dd095bf0f3e13535a01e7ca7fcf4163671",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "dae27a2f17d3b55ac66a3e2d29af7d24a617193d4afdea58d9e0bad0bbebf602",
+   2
+  ],
+  [
+   "R5.pick_word",
+   "f2e3dbef9ca0dc66d81ccae8f54ff34aae0b40d335e3192d18a3986f3d8a24f6",
+   1
+  ],
+  [
+   "R5.round2",
+   "c7d7fcf67d0cbfd561eebb86e3ae6d12613ff01ce4e0b3b7cd59c178875d404f",
+   2
+  ],
+  [
+   "R5.round1",
+   "985a97dac463cb03460c80e636aa92c4a4e2b89bb42ae00bbf511a4910fa3dd0",
+   4
+  ],
+  [
+   "R5.round1",
+   "e592620c5c386606762138c7946ad3af1dd9edde5cc43f8034f726b820add4a3",
+   1
+  ],
+  [
+   "R5.round1",
+   "e8f20dd29952ba1e219f8461e7533cca01372d28282973945cd81824e3f28090",
+   1
+  ],
+  [
+   "R5.round1",
+   "97b5eea2baac8204143579ce19f9e0747e023bb38f18ffad41599e2f5e7a0004",
+   3
+  ],
+  [
+   "R5.round1",
+   "f205e305657b09a2661a54be95dc36b9b5122f21b768f6fcea07d820310f38af",
+   3
+  ],
+  [
+   "R5.round1",
+   "791f67e5a5e518733467609dff057bbb3b203de8659fd710fb510fa3ebb72b24",
+   1
+  ],
+  [
+   "R5.round1",
+   "049a0e2c7b3af90a060efcf88ed9ce008427e478a97e1203613165262884f934",
+   2
+  ],
+  [
+   "R5.round1",
+   "f35f7ff517634effeb9499fbebcb861ca7152bbae3a0d7ad9c6be59f1e2214a2",
+   3
+  ],
+  [
+   "R5.round1",
+   "06251d8a957ace4f61bbebf62ea90649b92e45608c88acdb90c9d77b53785346",
+   0
+  ],
+  [
+   "R5.round1",
+   "cbad8a208ea00a11fe02e89c105e0e45b488ca4f7794526d490516684e254b03",
+   4
+  ],
+  [
+   "R5.round1",
+   "5602150d7477675ddfb1f80df1445fb07b8b9fe9e85b2dde0f1358084b247684",
+   1
+  ],
+  [
+   "R5.round1",
+   "1b83f1414a375c112a8a47783d8159200daeee2eb2c107cfc790fcbc1abb7636",
+   3
+  ],
+  [
+   "R5.round1",
+   "8019f9453d1a187ef2e0735c2296f635d6d9bac283e86b1c8f5f91a1adbd76b2",
+   2
+  ],
+  [
+   "R5.round1",
+   "fe1f13168734793076821f06108892b227fdc70ca906e27796444e047358104b",
+   4
+  ],
+  [
+   "R5.round1",
+   "65e367ae551d5104a2e00438e9558da34b1bb443d5f6f97a9d161ba28fe9afbb",
+   1
+  ],
+  [
+   "R5.round1",
+   "b57c56466899a883ca316d5fe889fda1c170fe62c053df619b39ededb922f15f",
+   4
+  ],
+  [
+   "R5.round1",
+   "8f0b4b3619f1633abaeba1fd97343033df5da922727c9eb3699e3eacb6c6fc0c",
+   1
+  ],
+  [
+   "R5.round1",
+   "a7a033bbd5ceab7f24cfe2f37c1467e6a2a3fbb53a7944c155a663538fb39c6a",
+   0
+  ],
+  [
+   "R5.round1",
+   "243e58e73c72a9f9cc91892da27045ef4d9080d5d2b2087a9e5dbb917a904861",
+   0
+  ],
+  [
+   "R5.round1",
+   "3c5320814a9c6562a0f2d93e4911efc9f7f5040f9d9c85cd5b34d078de51fc36",
+   1
+  ],
+  [
+   "R5.round1",
+   "8b1bbc03b4e8418ee03c717d91bc02b4d7684d660a6a2d6423614efa2d136bbd",
+   2
+  ],
+  [
+   "R5.round1",
+   "43350a93936b022d2c4bd8251ead9d17ba5ddf164c04943426ec1267d8dee8b1",
+   3
+  ],
+  [
+   "R5.round1",
+   "8a04c22fc03dde44acf2ecbb98c01de2cba49e3c7da564c19029cb3efed6a020",
+   2
+  ],
+  [
+   "R5.round1",
+   "c348dd854f29512b45a88cf0a76c4607633eecc9093c5dcbf717a0e736cb6d30",
+   0
+  ],
+  [
+   "R5.round1",
+   "74b19400abb04f35d23d6163bef0c45c78e359037b05489516fac40a2fdf8897",
+   4
+  ],
+  [
+   "R5.round1",
+   "57843a2d7c7de3109378a7c0dddb7ed407075143d32c4e8d419ae28185385d28",
+   0
+  ],
+  [
+   "R5.round1",
+   "4a29618def4246ff4eb0acda10326d4a5144450d93b4fa443ed0f540d677edde",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "8eec3703f59e16f0d0207e210315ac2fafe10b4c2bc411ccccd94dbfa6e5e0c2",
+   1
+  ],
+  [
+   "R5.pick_word",
+   "323e70c301c4509521a6353afcde54f858bd3a0c1cd27f6521a40cda9afa5401",
+   0
+  ],
+  [
+   "R5.round2",
+   "f458ca30831b300c059c1c4d360d9b2c86e18ea7cc27b768a8975a14f3d103e5",
+   0
+  ],
+  [
+   "R5.round1",
+   "86956d70fbd8aa67d385bc7445ed82a6a4210f4ca5647f4d8a741fa2e187a768",
+   4
+  ],
+  [
+   "R5.round1",
+   "604a14695de1555508586ecedb04c2fde1a95e7ed651444ebb69c961c1bba441",
+   2
+  ],
+  [
+   "R5.round1",
+   "c9a9b1b11b5c25aff2b4ad2a6b40877058dad34877cb172bf1c16f2870acf822",
+   3
+  ],
+  [
+   "R5.round1",
+   "1d4dab09b54747c5f6769f54c551c11100fa70ea3d11638169d256852893e844",
+   4
+  ],
+  [
+   "R5.round1",
+   "e2b370e653df267e462352b8d578d25ced10ff64a3b4e5fc49dbf96d05ee45bf",
+   0
+  ],
+  [
+   "R5.round1",
+   "e13f7aae6f96a839fcaa192df9db8f32ddef90c3a78a9a681f5f878614d7790b",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "d831cd160b1ed84097399a224708a97255c74866a152c965e30d90feffcc9bb9",
+   2
+  ],
+  [
+   "R5.pick_word",
+   "90a69adde4a971b16b6d6c2d0087ee0e547406052050cc1520a371e2393be1de",
+   0
+  ],
+  [
+   "R5.round2",
+   "2887f37111ca425d2a33dca8649a1d69b60756e40fb2c27ff298fee850025077",
+   1
+  ],
+  [
+   "R5.round1",
+   "de9e81356f287f994ec4a6f672090ed42f9026e6e5a301ace5212e42aa93fa9b",
+   0
+  ],
+  [
+   "R5.round1",
+   "3816284268da327524c9716c30dcff4b11839d59a76f227e7d19a6e7180b32ae",
+   0
+  ],
+  [
+   "R5.round1",
+   "62f391cdc64f95197c6894af1539ce3214e81562dba39569a0a5f6d390cb4aa9",
+   0
+  ],
+  [
+   "R5.round1",
+   "87a57691b14d7b2157dc3812d484a3689dad7dbae812368e1a8b94e372c3e61d",
+   1
+  ],
+  [
+   "R5.round1",
+   "9939b5896b811e6b23297b53a4038328bb0504de318a27d08b06a917bd1e58c4",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "bbb97ec4508eb0ccaea97711544fee83b5940ce3142d07310e6f2f85ac0f0ad6",
+   5
+  ],
+  [
+   "R5.round1",
+   "7eeedcbebdd71c75cea6a09af04ce8fe5a0b1fe5a4495fef42309934f394b294",
+   4
+  ],
+  [
+   "R5.round1",
+   "d79416dc9246a60f90052ccc28f707fef31d1e43f0b1df5bcb4cb39aa2f04ff0",
+   2
+  ],
+  [
+   "R5.round1",
+   "82d2f9821b93183f800cc103513f304a2c0c76245437702ec371002ded96d390",
+   0
+  ],
+  [
+   "R5.round1",
+   "bd32012a231204530f699c2c95ace5f734da87a45a5b6c41c90a5f96c2d4c9d0",
+   5
+  ],
+  [
+   "R5.pick_record",
+   "3d3317d4c0a704853ffd0a6a6368452e9fdf0dee67313f02be8e3be6512c6c11",
+   2
+  ],
+  [
+   "R5.pick_word",
+   "bc981b291d46cc4f9ed665a787d69f7dda5fe7a91824977b694798de85c38c7d",
+   1
+  ],
+  [
+   "R5.round1",
+   "58c1e8b2a5f610620f85dc14aa8621ccb68c9ffec99a9e2577b865dbd525ea72",
+   2
+  ],
+  [
+   "R5.round1",
+   "84c201e71888759651c98d61665ab19827f1db727a2013599a1f2d84f7c19c36",
+   0
+  ],
+  [
+   "R5.round1",
+   "9804990a5a256ee248de52ef0919dbd7c89bfd749437190c9362c32f9f5274f7",
+   1
+  ],
+  [
+   "R5.round1",
+   "c226938f560eb45b79ab47a04ce3946eacd1a510365a0c5a6ca7cedca62033b6",
+   4
+  ],
+  [
+   "R5.round1",
+   "ee9dc76fa202f22cd447ae9393f012fba5c31a4820031cf9f7e1452e55a4ded7",
+   4
+  ],
+  [
+   "R5.round1",
+   "a898246ad8627cca207fd7cd7e53e93e226b70c3001ffbca9dde9cf36825aa04",
+   0
+  ],
+  [
+   "R5.round1",
+   "342f80dcae161cf16a230213bfffc7c0e4f63f2d54c29ee428a225255ff7d824",
+   1
+  ],
+  [
+   "R5.round1",
+   "d591a3dee3a5f645d8280581419fb7b575462824e2e12f0f1a4ddad230303f10",
+   3
+  ]
+ ]
+}

@@ -1,0 +1,66 @@
+== clef-flash
+   write t=0.6: correct 6/10 wrong 2 ['F15', 'F25'] uncached 56 of 274
+   write t=0.7: correct 6/10 wrong 1 ['F15'] uncached 62 of 280
+   write t=0.8: correct 4/10 wrong 1 ['F15'] uncached 67 of 285
+   write t=0.9: correct 1/10 wrong 1 ['F15'] uncached 89 of 307
+   wrong F07 'I | knows | what a cup is | negative' by F16 'I bought Brooks Ghost': no longer true p=[0.1104, 0.4487, 0.4409] (still true, no longer true, cannot tell)
+   wrong F15 'knee | hurt_after | longest run | positive' by F29 'knee condition fine this time': no longer true p=[0.042, 0.9042, 0.0539] (still true, no longer true, cannot tell)
+   wrong F25 'I | diet | not strictly vegetarian | negative' by F27 'I will include fish': no longer true p=[0.2368, 0.624, 0.1392] (still true, no longer true, cannot tell)
+   read p_yes>=0.4: unknown right 7/7 false unknown 16/60 skipped 0
+   read p_yes>=0.5: unknown right 7/7 false unknown 16/60 skipped 0
+   read p_yes>=0.6: unknown right 7/7 false unknown 17/60 skipped 0
+   read p_yes>=0.7: unknown right 7/7 false unknown 19/60 skipped 0
+   read p_yes>=0.8: unknown right 7/7 false unknown 25/60 skipped 0
+   read p_yes>=0.9: unknown right 7/7 false unknown 37/60 skipped 0
+   R4 R2b: 29 questions, median 1870.4 ms
+   R4 gate at rank 1: 37 questions, median 138.1 ms
+   R4 gate at rank 2: 1 questions, median 288.2 ms
+   R4 gate at rank 3: 1 questions, median 408.3 ms
+== clef
+   write t=0.6: correct 7/10 wrong 1 ['F25'] uncached 48 of 266
+   write t=0.7: correct 5/10 wrong 1 ['F25'] uncached 62 of 280
+   write t=0.8: correct 4/10 wrong 1 ['F25'] uncached 74 of 292
+   write t=0.9: correct 3/10 wrong 0 [] uncached 89 of 307
+   wrong F21 'I | quit | hospital | positive' by F24 'I eats fish': no longer true p=[0.2301, 0.4721, 0.2978] (still true, no longer true, cannot tell)
+   wrong F22 'I | starts_at | pediatric clinic | positive' by F24 'I eats fish': no longer true p=[0.1842, 0.4183, 0.3976] (still true, no longer true, cannot tell)
+   wrong F25 'I | diet | not strictly vegetarian | negative' by F27 'I will include fish': no longer true p=[0.0683, 0.8191, 0.1126] (still true, no longer true, cannot tell)
+   wrong F26 'I | eats | meat | negative' by F27 'I will include fish': no longer true p=[0.3081, 0.4002, 0.2917] (still true, no longer true, cannot tell)
+   read p_yes>=0.4: unknown right 7/7 false unknown 17/60 skipped 0
+   read p_yes>=0.5: unknown right 7/7 false unknown 17/60 skipped 0
+   read p_yes>=0.6: unknown right 7/7 false unknown 19/60 skipped 0
+   read p_yes>=0.7: unknown right 7/7 false unknown 19/60 skipped 0
+   read p_yes>=0.8: unknown right 7/7 false unknown 20/60 skipped 0
+   read p_yes>=0.9: unknown right 7/7 false unknown 22/60 skipped 0
+   R4 R2b: 30 questions, median 6107.6 ms
+   R4 gate at rank 1: 35 questions, median 369.4 ms
+   R4 gate at rank 2: 2 questions, median 875.1 ms
+   R4 gate at rank 3: 1 questions, median 1228.7 ms
+== qwen3.5-9b
+   write t=0.6: correct 4/10 wrong 13 ['F03', 'F06', 'F07', 'F15', 'F16', 'F21', 'F23', 'F24', 'F25', 'F26', 'F28', 'F37', 'F39'] uncached 37 of 165
+   write t=0.7: correct 4/10 wrong 12 ['F03', 'F06', 'F07', 'F15', 'F16', 'F21', 'F24', 'F25', 'F26', 'F28', 'F37', 'F39'] uncached 37 of 183
+   write t=0.8: correct 2/10 wrong 8 ['F07', 'F16', 'F21', 'F24', 'F25', 'F26', 'F28', 'F39'] uncached 46 of 257
+   write t=0.9: correct 2/10 wrong 4 ['F07', 'F21', 'F24', 'F26'] uncached 46 of 277
+   read p_yes>=0.4: unknown right 7/7 false unknown 5/60 skipped 29
+   read p_yes>=0.5: unknown right 7/7 false unknown 5/60 skipped 29
+   read p_yes>=0.6: unknown right 7/7 false unknown 5/60 skipped 29
+   read p_yes>=0.7: unknown right 7/7 false unknown 7/60 skipped 29
+   read p_yes>=0.8: unknown right 7/7 false unknown 11/60 skipped 29
+   read p_yes>=0.9: unknown right 7/7 false unknown 17/60 skipped 29
+   R4 R2b: 21 questions, median 1586.1 ms
+   R4 gate at rank 1: 46 questions, median 133.9 ms
+   R4 gate at rank 3: 1 questions, median 413.0 ms
+== random
+   write t=0.6: correct 0/10 wrong 0 [] uncached 320 of 320
+   write t=0.7: correct 0/10 wrong 0 [] uncached 320 of 320
+   write t=0.8: correct 0/10 wrong 0 [] uncached 320 of 320
+   write t=0.9: correct 0/10 wrong 0 [] uncached 320 of 320
+   read p_yes>=0.4: unknown right 0/7 false unknown 0/60 skipped 67
+   read p_yes>=0.5: unknown right 0/7 false unknown 0/60 skipped 67
+   read p_yes>=0.6: unknown right 0/7 false unknown 0/60 skipped 67
+   read p_yes>=0.7: unknown right 0/7 false unknown 0/60 skipped 67
+   read p_yes>=0.8: unknown right 0/7 false unknown 0/60 skipped 67
+   read p_yes>=0.9: unknown right 0/7 false unknown 0/60 skipped 67
+   R4 R2b: 26 questions, median 0.0 ms
+   R4 gate at rank 1: 22 questions, median 0.0 ms
+   R4 gate at rank 2: 15 questions, median 0.0 ms
+   R4 gate at rank 3: 5 questions, median 0.0 ms

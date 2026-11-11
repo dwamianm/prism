@@ -1,0 +1,200 @@
+2026-11-11 00:46:48 [info     ] write_queue.started
+2026-11-11 00:46:51 [info     ] write_queue.started
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=bbd8eebb-0d6e-4b96-a8d5-f5de29fe4cc9 role=user session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=953b556a-3f6e-4b63-882e-28e9acbb622c role=assistant session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=ae9657ff-70e3-41b9-90ef-eb9828cc786a role=user session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=a232d752-4ce5-4a45-afeb-67ef21db34e5 role=assistant session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=25fe759f-18ea-4f27-aa75-2d86acdd9df8 role=user session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.phase1_complete      event_id=61ad15aa-e8f8-491a-8c90-31c4310127c9 role=user session_id=s1 user_id=sam
+2026-11-11 00:46:51 [info     ] ingestion.extraction_batch_saved batch_id=280f0275-4556-5aae-9a22-149891da1015 event_id=bbd8eebb-0d6e-4b96-a8d5-f5de29fe4cc9 turns=6
+2026-11-11 00:46:51 [info     ] Created new entity             entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:51 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:51 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=08f5ee98-8616-4ead-b0b4-96c0d006ade8
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=0cfb21c8-af9c-48bf-96d4-3b0ef8b52023
+2026-11-11 00:46:52 [info     ] ingestion.phase2_complete      event_id=bbd8eebb-0d6e-4b96-a8d5-f5de29fe4cc9
+2026-11-11 00:46:52 [info     ] Created new entity             entity_id=90c58571-3bbc-4ec1-844f-bae1d45b8e17 entity_type=concept name='lentil curry' user_id=sam
+2026-11-11 00:46:52 [info     ] Created new entity             entity_id=db2b857f-379e-4b3c-a54d-0f381d0b473d entity_type=concept name='mushroom risotto' user_id=sam
+2026-11-11 00:46:52 [info     ] ingestion.phase2_complete      event_id=953b556a-3f6e-4b63-882e-28e9acbb622c
+2026-11-11 00:46:52 [info     ] Created new entity             entity_id=7d883e28-02f9-4d84-ba0b-9b3baee658be entity_type=person name=Priya user_id=sam
+2026-11-11 00:46:52 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:52 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=2469c039-ce84-44ea-944d-e80c71779e09
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=7542de91-4d14-48d6-ad29-fe3991a2d534
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=6e9293e7-fd27-4b8e-a89e-006b83ed869e
+2026-11-11 00:46:52 [info     ] ingestion.phase2_complete      event_id=ae9657ff-70e3-41b9-90ef-eb9828cc786a
+2026-11-11 00:46:52 [info     ] Created new entity             entity_id=208ae75b-5840-4f39-a0bd-86760e29c945 entity_type=concept name='rice noodles with tofu' user_id=sam
+2026-11-11 00:46:52 [info     ] ingestion.phase2_complete      event_id=a232d752-4ce5-4a45-afeb-67ef21db34e5
+2026-11-11 00:46:52 [info     ] Created new entity             entity_id=5f100a07-ea94-4545-8842-458e386fc6bd entity_type=concept name='metric units' user_id=sam
+2026-11-11 00:46:52 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:52 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=09dc1427-3111-42f8-903b-b24b26de5da1
+2026-11-11 00:46:52 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=21bfab56-1755-430a-ac29-87b78efc3934
+2026-11-11 00:46:53 [info     ] ingestion.phase2_complete      event_id=25fe759f-18ea-4f27-aa75-2d86acdd9df8
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=16935e88-7622-4ae9-86be-0ffc99422078 entity_type=organization name="St. Mary's hospital" user_id=sam
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=a2ef399f-cbf7-4048-a9b0-ea586e265f5d entity_type=concept name=nurse user_id=sam
+2026-11-11 00:46:53 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:53 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=d6936972-809a-43b3-9da3-edea4ea30f20
+2026-11-11 00:46:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=d4227990-9e1a-4e5a-8808-f1a640acd65d
+2026-11-11 00:46:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=709fc83c-c72c-43a8-9307-381102cc5302
+2026-11-11 00:46:53 [info     ] ingestion.phase2_complete      event_id=61ad15aa-e8f8-491a-8c90-31c4310127c9
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=8feb5fbd-d339-43b6-aeb7-2caa14270dd6 role=user session_id=s2 user_id=sam
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=857e583f-a978-4063-a2d3-884ed52f3fca role=assistant session_id=s2 user_id=sam
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=bbe5c1c1-3ca2-44a2-bf4c-d39f2e400572 role=user session_id=s2 user_id=sam
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=a2df3272-6ce9-446f-8af4-22c304145991 role=user session_id=s2 user_id=sam
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=0f3ce3d4-3f06-4105-91a8-a7d4f308f1c4 role=assistant session_id=s2 user_id=sam
+2026-11-11 00:46:53 [info     ] ingestion.phase1_complete      event_id=76089674-905e-4c59-a22e-443da956cfe2 role=user session_id=s2 user_id=sam
+2026-11-11 00:46:53 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:53 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:53 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:53 [warning  ] extraction_claim_discarded     path=facts[2] reason='might/may/could claims require hypothetical or conditional epistemic_type'
+2026-11-11 00:46:53 [info     ] ingestion.extraction_batch_saved batch_id=e73ad6b1-713b-5c72-906e-9fe1a546e7b4 event_id=8feb5fbd-d339-43b6-aeb7-2caa14270dd6 turns=6
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=d1505984-f90b-4d59-a0b2-9eeeb92b514d entity_type=event name='half marathon' user_id=sam
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=def04db8-ba0d-4a47-b904-aa080d4eeee8 entity_type=concept name='November 22' user_id=sam
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=8ecba504-942e-4950-a892-dba64d95ab23 entity_type=location name=Lisbon user_id=sam
+2026-11-11 00:46:53 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:53 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:53 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=82beecd6-7113-4bb2-b61f-9248fa2395c7
+2026-11-11 00:46:53 [info     ] ingestion.phase2_complete      event_id=8feb5fbd-d339-43b6-aeb7-2caa14270dd6
+2026-11-11 00:46:53 [info     ] ingestion.phase2_complete      event_id=857e583f-a978-4063-a2d3-884ed52f3fca
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=d80997e1-06ae-4132-8d0a-043a5c0e4b77 entity_type=concept name='longest run' user_id=sam
+2026-11-11 00:46:53 [info     ] Created new entity             entity_id=f783d692-453c-4550-b7c0-2f256d2976c9 entity_type=concept name=knee user_id=sam
+2026-11-11 00:46:53 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:54 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=c25aec13-fac7-4e05-9d68-715be57aac75
+2026-11-11 00:46:54 [info     ] ingestion.phase2_complete      event_id=bbe5c1c1-3ca2-44a2-bf4c-d39f2e400572
+2026-11-11 00:46:54 [info     ] Created new entity             entity_id=0ccd01e4-f220-40d7-b704-de25ca50d8d0 entity_type=product name='Brooks Ghost' user_id=sam
+2026-11-11 00:46:54 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:54 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:54 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=e6955d36-54f8-41c2-aad5-313312fc8847
+2026-11-11 00:46:54 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=abe7b829-5f2d-49ef-87d2-5a2da28d896f
+2026-11-11 00:46:54 [info     ] ingestion.phase2_complete      event_id=a2df3272-6ce9-446f-8af4-22c304145991
+2026-11-11 00:46:54 [info     ] ingestion.phase2_complete      event_id=0f3ce3d4-3f06-4105-91a8-a7d4f308f1c4
+2026-11-11 00:46:54 [info     ] Created new entity             entity_id=de1921fe-fe7e-4f3f-a03a-27ca1377f7e9 entity_type=concept name=dog user_id=sam
+2026-11-11 00:46:54 [info     ] Created new entity             entity_id=d67c13ef-fdc7-4751-9ccc-950277c446d4 entity_type=concept name=greyhound user_id=sam
+2026-11-11 00:46:54 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:54 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:54 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.35 epistemic_type=hypothetical op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=86928fab-12fb-4603-9929-dbad393e7b58
+2026-11-11 00:46:54 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.35 epistemic_type=hypothetical op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=43ec9c2a-ca76-41f2-9cd1-e85f3053355f
+2026-11-11 00:46:55 [info     ] ingestion.phase2_complete      event_id=76089674-905e-4c59-a22e-443da956cfe2
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=dccc42bb-4353-4f19-a629-1da47b4a0c73 role=user session_id=s3 user_id=sam
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=5c4e69de-f9f9-446f-8136-75280b74eaaf role=user session_id=s3 user_id=sam
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=c3b69615-9433-4f97-a424-a6cc49667cb8 role=assistant session_id=s3 user_id=sam
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=e42e2980-92e2-4a54-8664-06e97c393626 role=user session_id=s3 user_id=sam
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=f769318c-c982-49b2-8fce-63208478f40c role=user session_id=s3 user_id=sam
+2026-11-11 00:46:55 [info     ] ingestion.phase1_complete      event_id=e25c0356-dfbb-428e-8ce8-9dda02f97a4b role=user session_id=s3 user_id=sam
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[0] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[1] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[2] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[3] reason='subject and object must occur in evidence_quote'
+2026-11-11 00:46:55 [warning  ] extraction_claim_discarded     path=facts[0] reason='facts[0].object is missing: use a listed entity name and specify its entity_type if ambiguous'
+2026-11-11 00:46:55 [info     ] ingestion.extraction_batch_saved batch_id=4c597269-7445-52cc-9a43-051b7f515844 event_id=dccc42bb-4353-4f19-a629-1da47b4a0c73 turns=6
+2026-11-11 00:46:55 [info     ] Created new entity             entity_id=b6e5f9b1-e440-4342-9711-d712889e83e6 entity_type=organization name=hospital user_id=sam
+2026-11-11 00:46:55 [info     ] Created new entity             entity_id=ccbabfc1-0749-432b-9701-631d9c6f885b entity_type=organization name='pediatric clinic' user_id=sam
+2026-11-11 00:46:55 [info     ] Created new entity             entity_id=76037c67-2a0d-4841-9e90-ed8670a4c9ab entity_type=event name='November 2' user_id=sam
+2026-11-11 00:46:55 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:55 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:55 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=bd351150-4f08-4403-87d4-5855b97e79b2
+2026-11-11 00:46:55 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=215b0186-39db-40ca-888b-a2ca3961d448
+2026-11-11 00:46:55 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=ef27324f-10aa-411d-9176-cc20dc1600bd
+2026-11-11 00:46:55 [info     ] ingestion.phase2_complete      event_id=dccc42bb-4353-4f19-a629-1da47b4a0c73
+2026-11-11 00:46:55 [info     ] Created new entity             entity_id=93726f2d-d7c8-4985-8274-2165a75ebd6a entity_type=concept name=fish user_id=sam
+2026-11-11 00:46:55 [info     ] Created new entity             entity_id=4ef5e557-9b48-4a09-ae16-b2fbd8d06e10 entity_type=concept name=meat user_id=sam
+2026-11-11 00:46:55 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:55 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:55 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=0bba00b4-2059-4fb1-a51d-df996d3db5a2
+2026-11-11 00:46:55 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=0ee21e52-aba8-46f2-96af-f7df85930341
+2026-11-11 00:46:56 [info     ] ingestion.phase2_complete      event_id=5c4e69de-f9f9-446f-8136-75280b74eaaf
+2026-11-11 00:46:56 [debug    ] Reusing existing entity        entity_id=93726f2d-d7c8-4985-8274-2165a75ebd6a entity_type=concept name=fish user_id=sam
+2026-11-11 00:46:56 [info     ] Created new entity             entity_id=7548b475-8ade-448c-9faf-4a86dcbcfeb6 entity_type=personal_reference name=I user_id=sam
+2026-11-11 00:46:56 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.7 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=91b3d70a-ac3a-4959-aead-456c6bea3b26
+2026-11-11 00:46:56 [info     ] ingestion.phase2_complete      event_id=c3b69615-9433-4f97-a424-a6cc49667cb8
+2026-11-11 00:46:56 [info     ] Created new entity             entity_id=5b1a4137-b681-40a8-b93c-9af7345498fd entity_type=concept name='16 km' user_id=sam
+2026-11-11 00:46:56 [info     ] Created new entity             entity_id=ed29b04c-b82c-4e6a-92d9-602989aec15a entity_type=event name=Sunday user_id=sam
+2026-11-11 00:46:56 [debug    ] Reusing existing entity        entity_id=f783d692-453c-4550-b7c0-2f256d2976c9 entity_type=concept name=knee user_id=sam
+2026-11-11 00:46:56 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:57 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=be153bd6-1479-476d-9037-01c4795178d3
+2026-11-11 00:46:57 [info     ] ingestion.phase2_complete      event_id=e42e2980-92e2-4a54-8664-06e97c393626
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=7d883e28-02f9-4d84-ba0b-9b3baee658be entity_type=person name=Priya user_id=sam
+2026-11-11 00:46:57 [info     ] Created new entity             entity_id=0521f4a3-6bb9-481e-871c-d8b0de712f47 entity_type=location name=Toronto user_id=sam
+2026-11-11 00:46:57 [info     ] Created new entity             entity_id=2c825e99-9403-403d-9973-96da4ec482a6 entity_type=event name='Friday dinners' user_id=sam
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:57 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=2613b0e5-09fd-401f-9304-28317b27e5b5
+2026-11-11 00:46:57 [info     ] ingestion.phase2_complete      event_id=f769318c-c982-49b2-8fce-63208478f40c
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=de1921fe-fe7e-4f3f-a03a-27ca1377f7e9 entity_type=concept name=dog user_id=sam
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=d67c13ef-fdc7-4751-9ccc-950277c446d4 entity_type=concept name=greyhound user_id=sam
+2026-11-11 00:46:57 [info     ] Created new entity             entity_id=146801b3-358d-4f5a-8e69-7f1a7bdbac12 entity_type=concept name=beagle user_id=sam
+2026-11-11 00:46:57 [info     ] Created new entity             entity_id=241fffea-b135-4774-9911-996ffd422be3 entity_type=concept name=Miso user_id=sam
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase2_complete      event_id=e25c0356-dfbb-428e-8ce8-9dda02f97a4b
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=30d2e4ee-cbd9-4d58-b5bc-523bda567d79 role=user session_id=s4 user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=8be0ba40-b2dc-4f9b-9813-d7db8e5836e6 role=user session_id=s4 user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=01f12710-ba78-4e30-a760-e03d7f27dc74 role=user session_id=s4 user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=67004465-fe3c-4589-8dfc-31be90711687 role=user session_id=s4 user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=c02a788e-3ce4-48ec-8c9d-582d211455c9 role=assistant session_id=s4 user_id=sam
+2026-11-11 00:46:57 [info     ] ingestion.phase1_complete      event_id=0eba023a-df9c-4a7e-be71-76e7e575f797 role=user session_id=s4 user_id=sam
+2026-11-11 00:46:57 [warning  ] extraction_claim_discarded     path=facts[0] reason='facts[0].subject is missing: use a listed entity name and specify its entity_type if ambiguous'
+2026-11-11 00:46:57 [info     ] ingestion.extraction_batch_saved batch_id=8cdfefb2-6675-5e52-93d3-246ea7a665cc event_id=30d2e4ee-cbd9-4d58-b5bc-523bda567d79 turns=6
+2026-11-11 00:46:57 [info     ] Created new entity             entity_id=edb1e735-5cc3-4c15-b395-d8f632935d49 entity_type=concept name='new job' user_id=sam
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:57 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:58 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=74067764-72a8-4d00-b410-bb5b7d03069f
+2026-11-11 00:46:58 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=15ce206d-91ab-4e38-bb37-badf20909668
+2026-11-11 00:46:58 [info     ] ingestion.phase2_complete      event_id=30d2e4ee-cbd9-4d58-b5bc-523bda567d79
+2026-11-11 00:46:58 [info     ] Created new entity             entity_id=b4a060f8-3d35-416b-8b9c-bb4a1772a967 entity_type=product name='running gels' user_id=sam
+2026-11-11 00:46:58 [info     ] Created new entity             entity_id=adabe489-63db-4921-ab0f-e2312297f093 entity_type=product name='race belt' user_id=sam
+2026-11-11 00:46:58 [info     ] Created new entity             entity_id=25d01251-0b86-4c9a-b3f4-d2b597c0007b entity_type=product name=socks user_id=sam
+2026-11-11 00:46:58 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:58 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:58 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=87758284-2d9b-467b-931d-631b2b70ff6c
+2026-11-11 00:46:58 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=928a5a71-bbf9-4832-97d8-c963ab3ffacd
+2026-11-11 00:46:58 [info     ] ingestion.phase2_complete      event_id=8be0ba40-b2dc-4f9b-9813-d7db8e5836e6
+2026-11-11 00:46:58 [debug    ] Reusing existing entity        entity_id=d80997e1-06ae-4132-8d0a-043a5c0e4b77 entity_type=concept name='Longest run' user_id=sam
+2026-11-11 00:46:58 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:58 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=3739ad7b-4da8-48f8-b005-d8b28fc8cb12
+2026-11-11 00:46:58 [info     ] ingestion.phase2_complete      event_id=01f12710-ba78-4e30-a760-e03d7f27dc74
+2026-11-11 00:46:58 [info     ] Created new entity             entity_id=1511a539-e088-40de-95ee-9ef60958de19 entity_type=person name=Alex user_id=sam
+2026-11-11 00:46:58 [info     ] Created new entity             entity_id=6d99b2a5-18ca-4c40-b313-649cc52a922e entity_type=concept name=peanuts user_id=sam
+2026-11-11 00:46:59 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:59 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.8 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=cf54046c-a5f2-42db-b580-74c8840c61d9
+2026-11-11 00:46:59 [info     ] ingestion.phase2_complete      event_id=67004465-fe3c-4589-8dfc-31be90711687
+2026-11-11 00:46:59 [debug    ] Reusing existing entity        entity_id=6d99b2a5-18ca-4c40-b313-649cc52a922e entity_type=concept name=peanuts user_id=sam
+2026-11-11 00:46:59 [info     ] Created new entity             entity_id=912ef7d6-6da8-4b76-b527-d4f57244148e entity_type=personal_reference name=I user_id=sam
+2026-11-11 00:46:59 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.6 epistemic_type=asserted op_type=EPISTEMIC_TYPE_ASSIGNED source_type=system_inferred target_id=9ec4bc98-f7ee-40ac-8cad-6c3fb5b0c076
+2026-11-11 00:46:59 [info     ] ingestion.phase2_complete      event_id=c02a788e-3ce4-48ec-8c9d-582d211455c9
+2026-11-11 00:46:59 [info     ] Created new entity             entity_id=c187d317-e102-44f4-a139-2950d1e64a69 entity_type=person name=Miso user_id=sam
+2026-11-11 00:46:59 [info     ] Created new entity             entity_id=7ce0f404-d18c-4858-b778-f7f57fcb0b43 entity_type=product name='old running shoes' user_id=sam
+2026-11-11 00:46:59 [debug    ] Reusing existing entity        entity_id=3559444f-2460-4a85-8ac2-9491a05cd5c0 entity_type=person name=Sam user_id=sam
+2026-11-11 00:46:59 [info     ] epistemic_type_assigned        assignment_method=creation confidence_from_matrix=0.9 epistemic_type=observed op_type=EPISTEMIC_TYPE_ASSIGNED source_type=user_stated target_id=1367c589-1e0e-46d1-af13-92d3c4b4d3a6
+2026-11-11 00:46:59 [info     ] ingestion.phase2_complete      event_id=0eba023a-df9c-4a7e-be71-76e7e575f797
+2026-11-11 00:47:00 [info     ] write_queue.started
+2026-11-11 00:47:04 [info     ] write_queue.started
+2026-11-11 00:47:07 [info     ] write_queue.started
+2026-11-11 00:47:08 [info     ] write_queue.started
+2026-11-11 00:47:09 [info     ] write_queue.started
+2026-11-11 00:47:12 [info     ] write_queue.started
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:20 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:20 [info     ] write_queue.stopped
+2026-11-11 00:47:21 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:21 [info     ] write_queue.stopped
+2026-11-11 00:47:21 [info     ] ingestion.pipeline_shutdown
+2026-11-11 00:47:21 [info     ] write_queue.stopped
+W3: retired 4/10 wrongly 3 ['F06', 'F22', 'F24'] | calls/fact 0.35 max 3 | ms/fact 0 | PASS False
+W3b: retired 5/10 wrongly 8 ['F05', 'F06', 'F07', 'F22', 'F23', 'F24', 'F25', 'F28'] | calls/fact 0.98 max 3 | ms/fact 0 | PASS False
+R5: store r1 1/13 top3 4 | ingest r1 3 top3 6 | hops r1 0 both5 0 | churn r1 1/18 | flood r1 2 | unknown 0/7 false 5 | calls 1 | ms 0 | PASS False
+   false unknowns: ['chat_store:household-restrictions', 'chat_store:sister', 'chat_store:alex', 'churn-10min-12moves-tv-remote', 'churn-10min-12moves-water-bottle']
+   stopped round 1 (answer chosen): 60 questions, median 0.0 ms
+   stopped round 2 (answer chosen): 3 questions, median 35.4 ms
+   stopped unknown (no record or word picked): 5 questions, median 0.0 ms
+wall: write 0s, read 33s, model calls 131, cache hits 11
