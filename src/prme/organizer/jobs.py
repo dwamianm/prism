@@ -81,6 +81,27 @@ def _stalled_attempt_count(
     return node_id, 1
 
 
+def _failing_pair_position(
+    examined: list["MemoryNode"], failures: list[tuple[str, str]],
+) -> int | None:
+    """The earliest page position of a pair whose merge or resolution raised.
+
+    A pair holds two node ids; either may be the node the page examined, since
+    the other can come from the vector index or a name lookup
+    (dwamianm/prism#546). The returned position is the lowest page position
+    among the ids the page examined, so the caller bounds its retry and skip on
+    the failing pair instead of the page head.
+    """
+    positions = {str(node.id): position for position, node in enumerate(examined)}
+    found: int | None = None
+    for pair in failures:
+        for node_id in pair:
+            position = positions.get(node_id)
+            if position is not None and (found is None or position < found):
+                found = position
+    return found
+
+
 async def _run_incremental(
     job_name: str,
     handler,
@@ -638,7 +659,8 @@ async def _deduplicate_incremental(
     neighbor search or merge failed does not move the cursor, so the pair is
     tried again. After ``_MAX_STALLED_ATTEMPTS`` failed runs at the same node,
     the node is recorded as skipped in the details and a warning log, and the
-    run moves past it (dwamianm/prism#545).
+    run moves past it (dwamianm/prism#545). A failed merge is bounded on the
+    failing pair's own page node, not the page head (dwamianm/prism#546).
     """
     from prme.organizer.deduplication import find_duplicates_in_page, merge_duplicates
     from prme.privacy.journals import generation_search
@@ -711,10 +733,10 @@ async def _deduplicate_incremental(
                     user_id=user_id,
                 )
                 duplicates_found += len(duplicates)
-                merge_failures = [0]
+                merge_failures: list[tuple[str, str]] = []
                 merged_count += await merge_duplicates(
                     engine, duplicates, **({"user_id": user_id} if user_id else {}),
-                    failure_count=merge_failures,
+                    failures=merge_failures,
                 )
                 # Only a page whose search and merges all finished may move the
                 # cursor. A page whose neighbor search ran out of budget or
@@ -724,9 +746,9 @@ async def _deduplicate_incremental(
                 if search_failed:
                     failed = True
                     errors += 1
-                if merge_failures[0]:
+                if merge_failures:
                     failed = True
-                    errors += merge_failures[0]
+                    errors += len(merge_failures)
                 # A failed page is retried, so it is not also a budget stop.
                 if not failed and completed < len(examined):
                     stopped = True
@@ -747,9 +769,21 @@ async def _deduplicate_incremental(
 
             if failed:
                 # Blame the first node the next run would have retried: the
-                # first one the search did not finish, or the page head when
-                # the search did finish and a merge failed.
-                head = examined[completed] if completed < len(examined) else examined[0]
+                # first one the search did not finish, or the page node of the
+                # first failing pair when the search did finish
+                # (dwamianm/prism#546). The pairs before it were applied and
+                # re-examining them is idempotent, so a skip advances the
+                # cursor past them and only over the failing pair's node.
+                pair_position = (
+                    None if search_failed or completed < len(examined)
+                    else _failing_pair_position(examined, merge_failures)
+                )
+                if pair_position is not None:
+                    head = examined[pair_position]
+                    covered = pair_position
+                else:
+                    head = examined[completed] if completed < len(examined) else examined[0]
+                    covered = completed
                 node_id, attempts = _stalled_attempt_count(window, head)
                 if attempts >= _MAX_STALLED_ATTEMPTS:
                     logger.warning(
@@ -757,7 +791,7 @@ async def _deduplicate_incremental(
                         node_id, attempts,
                     )
                     skipped.append({"node_id": node_id, "attempts": attempts})
-                    processed += completed
+                    processed += covered
                     position = head.updated_at or head.created_at
                     last_cursor = (position, node_id)
                     updated_after, after_id = position, node_id
@@ -885,7 +919,9 @@ async def _alias_resolve_incremental(
     run. A lookup, search or resolution that keeps failing at one entity is
     bounded the same way as deduplicate's: after ``_MAX_STALLED_ATTEMPTS``
     failed runs at that entity it is recorded as skipped and the run moves
-    past it (dwamianm/prism#545). The run-level ``seen_pairs`` set is shared
+    past it (dwamianm/prism#545). A failed resolution is bounded on the
+    failing pair's own page entity, not the page head (dwamianm/prism#546).
+    The run-level ``seen_pairs`` set is shared
     across pages, unlike deduplicate's per-page set, because the two alias
     phases can rediscover a pair that an earlier page already resolved.
     """
@@ -954,7 +990,7 @@ async def _alias_resolve_incremental(
             remaining_ms = max(
                 1.0, scan_budget_ms - (time.monotonic() - start) * 1000.0,
             )
-            resolve_failures = [0]
+            resolve_failures: list[tuple[str, str]] = []
             completed = 0
             try:
                 aliases, completed, lookup_failed = await find_aliases_in_page(
@@ -971,7 +1007,7 @@ async def _alias_resolve_incremental(
                     engine,
                     aliases,
                     **({"user_id": user_id} if user_id else {}),
-                    failure_count=resolve_failures,
+                    failures=resolve_failures,
                 )
                 # Only the examined prefix may move the cursor. A page whose
                 # name lookup, neighbor search or resolution stopped or failed
@@ -980,9 +1016,9 @@ async def _alias_resolve_incremental(
                 if lookup_failed:
                     failed = True
                     errors += 1
-                if resolve_failures[0]:
+                if resolve_failures:
                     failed = True
-                    errors += resolve_failures[0]
+                    errors += len(resolve_failures)
                 # A failed page is retried, so it is not also a budget stop.
                 if not failed and completed < len(examined):
                     stopped = True
@@ -1004,8 +1040,20 @@ async def _alias_resolve_incremental(
             if failed:
                 # Blame the first entity the next run would have retried: the
                 # first one the lookup or search did not finish, or the page
-                # head when it finished and a resolution failed.
-                head = examined[completed] if completed < len(examined) else examined[0]
+                # node of the first failing pair when it finished
+                # (dwamianm/prism#546). The pairs before it were resolved and
+                # re-examining them is idempotent, so a skip advances the
+                # cursor past them and only over the failing pair's node.
+                pair_position = (
+                    None if lookup_failed or completed < len(examined)
+                    else _failing_pair_position(examined, resolve_failures)
+                )
+                if pair_position is not None:
+                    head = examined[pair_position]
+                    covered = pair_position
+                else:
+                    head = examined[completed] if completed < len(examined) else examined[0]
+                    covered = completed
                 node_id, attempts = _stalled_attempt_count(window, head)
                 if attempts >= _MAX_STALLED_ATTEMPTS:
                     logger.warning(
@@ -1013,7 +1061,7 @@ async def _alias_resolve_incremental(
                         node_id, attempts,
                     )
                     skipped.append({"node_id": node_id, "attempts": attempts})
-                    processed += completed
+                    processed += covered
                     position = head.updated_at or head.created_at
                     last_cursor = (position, node_id)
                     updated_after, after_id = position, node_id
