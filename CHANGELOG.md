@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Address-first memory, behind one switch that is off by default: `memory_mode` (`PRME_MEMORY_MODE`), `classic`
+  unless set (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first` turns on typed extraction
+  (`enable_typed_extraction`), relation routing (`enable_relation_routing`) and the settings below. A setting the
+  configuration gives itself is kept, and each can be used alone.
+  - `enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`): the claims a routed question reaches are read as a ledger,
+    and the claim that holds now comes first. Each claim gets a state (current, planned, earlier, ended or negated)
+    from its typed status, its polarity, its stated time and the later claims at the same address. A question no
+    word routes can find its address in a catalog of the claims on the entities it names. The reader format shows
+    the state as a tag and the receipt records the ledger. See [the belief ledger](docs/RELATIONS.md#the-belief-ledger).
+  - `enable_extraction_corrections` (`PRME_ENABLE_EXTRACTION_CORRECTIONS`), as it exists: each batched extraction
+    request is shown the earlier claims nearest its turns, so a fact may name the one it corrects. `address_first`
+    turns it on when extraction is batched, and leaves it off otherwise.
+  - `packing.session_context_direct_first` (`PRME_PACKING__SESSION_CONTEXT_DIRECT_FIRST`): session neighbors are
+    capped below the N-th best direct match; `address_first` sets 10.
+  - `packing.clock_window_filter` (`PRME_PACKING__CLOCK_WINDOW_FILTER`): a clock window the question states
+    ("between 15:00 and 16:00 on November 3") becomes its event-time filter.
+  - `packing.collapse_identical_text` (`PRME_PACKING__COLLAPSE_IDENTICAL_TEXT`): records with identical text are shown
+    once, with how many there are and the time they span.
+  - `packing.second_round` (`PRME_PACKING__SECOND_ROUND`): one more word search for what the best result names,
+    whose best two matches are placed below the third result.
+  - `scoring.rrf_recency_order` (`PRME_SCORING__RRF_RECENCY_ORDER`): under rank fusion, recency on a current-state
+    question is read on the question's own time scale, so memories minutes apart are ordered as clearly as
+    memories months apart.
+
+  Every one of these options is off by default. With the defaults, the contract scorecard below gives the same
+  result on each of its checks as on 0.17.0a6. Nothing stored is rewritten: typed extraction and corrections apply
+  to what `ingest()` stores after they are turned on, and the other options act when a question is asked. As with
+  typed extraction alone, memories derived without it read as stale for `reingest()`, which re-derives them only
+  when called. Relation routing gains the concept `pet` (`owns`) and a rule that reads a typed role on the claim's
+  subject when the quote puts it there, so `ROUTING_VERSION` is 2.
+
+  Evidence so far. On the offline evidence gate of 2026-11-10 (at fb050a50, each option alone against the
+  defaults), `session_context_direct_first`, `clock_window_filter` and `collapse_identical_text` changed no measure;
+  `rrf_recency_order` moved LoCoMo all evidence packed by +0.1 points (2 wins, 0 losses); `second_round` moved LoCoMo
+  projected accuracy by -0.2 points (95% interval -0.4 to +0.1) and left LongMemEval-S unchanged. The belief ledger,
+  typed extraction and corrections are not visible to that gate, whose packs hold no extracted claims, and have only
+  the contract scorecard behind them so far. On the contract chats, a recording with corrections on retired 4 of
+  the 7 claims each chat corrects, and no true claim.
+- Stated facts: `MemoryEngine.ingest(content, assertions=[...])`, the same per message in `ingest_batch()`, and
+  `MemoryClient.ingest()`. A caller that knows a fact states it (subject, relation of the vocabulary, object, types,
+  and optional status, polarity and role, or `has` with a predicate for a literal value), and ingestion writes the
+  claim typed extraction would make, with no model call. Assertions are checked before anything is admitted and a
+  bad one raises `ValueError` naming it; the content must mention every subject and object, and is rendered from the
+  assertions when omitted. `reingest()` re-derives such a source from its own metadata under settings of its own.
+  The write rate is 4.6 facts a second at 400 observations, the cost of the materialization path every extracted
+  claim takes; it is not yet fit for a sensor stream. Model-derived records are unchanged and `DERIVATION_VERSION`
+  stays 2. See [stated facts](docs/RELATIONS.md#stated-facts-assertions).
+- `tests/contract` and `tests/contract_holdout`: a scorecard of memory mechanisms with known answers (the newest
+  place of a moved object, rare events in a flood, time windows, two hops, unknown objects, determinism, and a chat
+  through `store()` and through `ingest()` replaying a recorded extraction, with which claims its corrections
+  retire), with no model call and no network. `uv run pytest tests/contract -q`; `--memory-mode address_first` runs
+  it under the switch, and `--stated` adds the moves written as stated facts.
+
 ## [0.17.0a6] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

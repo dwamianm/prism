@@ -1,0 +1,1638 @@
+{
+ "note": "What the extraction model returned for this chat through ingest_batch() with the product defaults and memory_mode='address_first'. Replayed by test_chat_ingest.py; recorded by tests/contract/fixtures/record_chat_extraction.py.",
+ "recorded": {
+  "at": "2026-11-11T06:45:25+00:00",
+  "memory_mode": "address_first",
+  "enable_extraction_corrections": true,
+  "provider": "ollama",
+  "model": "deepseek-v4.1-flash:cloud",
+  "ollama_version": "0.40.16",
+  "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "commit": "fb050a50170681ec12da53633f3ab1ad04de969c",
+  "src_has_uncommitted_changes": true,
+  "claims_derived": 28,
+  "claims_with_a_relation": 24,
+  "retired": [
+   "I dietary_restriction vegetarian",
+   "I works_at St. Mary's hospital",
+   "I works_schedule mostly night shifts",
+   "longest run distance 9 km"
+  ],
+  "retired_outside_the_key": []
+ },
+ "calls": [
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 2,
+     "role": "assistant",
+     "content": "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "speaker": null
+    },
+    {
+     "index": 3,
+     "role": "user",
+     "content": "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 4,
+     "role": "assistant",
+     "content": "Then for Friday I recommend rice noodles with tofu.",
+     "speaker": null
+    },
+    {
+     "index": 5,
+     "role": "user",
+     "content": "Please always give me quantities in metric units. I never know what a cup is.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "speaker": "Sam"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Speaker planning meals for the week",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "dietary_restriction",
+        "object": "vegetarian",
+        "polarity": "positive",
+        "evidence_quote": "I'm vegetarian, by the way.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "planning",
+        "object": "meals for the week",
+        "polarity": "positive",
+        "evidence_quote": "Hi, I'm planning meals for the week.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "involved_in",
+        "role": "planning",
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "lentil curry",
+        "entity_type": "concept",
+        "description": "Meal suggested for Monday",
+        "scope": "personal"
+       },
+       {
+        "name": "mushroom risotto",
+        "entity_type": "concept",
+        "description": "Meal suggested for Wednesday",
+        "scope": "personal"
+       }
+      ],
+      "facts": [],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "Priya",
+        "entity_type": "person",
+        "description": "Speaker's sister, visiting Friday",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Priya",
+        "predicate": "kin_of",
+        "object": "I",
+        "polarity": "positive",
+        "evidence_quote": "My sister Priya is visiting on Friday and she can't eat gluten.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "kin_of",
+        "role": "sister",
+        "status": "current"
+       },
+       {
+        "subject": "Priya",
+        "predicate": "visiting",
+        "object": "I",
+        "polarity": "positive",
+        "evidence_quote": "My sister Priya is visiting on Friday and she can't eat gluten.",
+        "confidence": 0.9,
+        "temporal_ref": "on Friday",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "visits",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "Priya",
+        "predicate": "dietary_restriction",
+        "object": "gluten",
+        "polarity": "negative",
+        "evidence_quote": "My sister Priya is visiting on Friday and she can't eat gluten.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "rice noodles with tofu",
+        "entity_type": "concept",
+        "description": "Meal recommended for Friday",
+        "scope": "personal"
+       }
+      ],
+      "facts": [],
+      "relationships": []
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "metric units",
+        "entity_type": "concept",
+        "description": "Preferred unit system for quantities",
+        "scope": "personal"
+       },
+       {
+        "name": "cup",
+        "entity_type": "concept",
+        "description": "Unit the speaker does not understand",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "prefers",
+        "object": "metric units",
+        "polarity": "positive",
+        "evidence_quote": "Please always give me quantities in metric units.",
+        "confidence": 0.95,
+        "fact_type": "preference",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "does_not_understand",
+        "object": "cup",
+        "polarity": "negative",
+        "evidence_quote": "I never know what a cup is.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": null,
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "St. Mary's hospital",
+        "entity_type": "organization",
+        "description": "Hospital where the speaker works",
+        "scope": "personal"
+       },
+       {
+        "name": "nurse",
+        "entity_type": "concept",
+        "description": "Speaker's occupation",
+        "scope": "personal"
+       },
+       {
+        "name": "night shifts",
+        "entity_type": "concept",
+        "description": "Speaker's typical work schedule",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "works_at",
+        "object": "St. Mary's hospital",
+        "polarity": "positive",
+        "evidence_quote": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "works_at",
+        "role": "nurse",
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "works_schedule",
+        "object": "mostly night shifts",
+        "polarity": "positive",
+        "evidence_quote": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "dinner_time",
+        "object": "about 6 am",
+        "polarity": "positive",
+        "evidence_quote": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+        "confidence": 0.85,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "I planning meals for the week",
+     "text": "Hi, I'm planning meals for the week."
+    },
+    {
+     "label": "m2",
+     "claim": "I works_at St. Mary's hospital",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    },
+    {
+     "label": "m3",
+     "claim": "I prefers metric units",
+     "text": "Please always give me quantities in metric units."
+    },
+    {
+     "label": "m4",
+     "claim": "I works_schedule mostly night shifts",
+     "text": "Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    },
+    {
+     "label": "m5",
+     "claim": "I dinner_time about 6 am",
+     "text": "Sam dinner time about 6 am."
+    },
+    {
+     "label": "m6",
+     "claim": "I dietary_restriction vegetarian",
+     "text": "I'm vegetarian, by the way."
+    },
+    {
+     "label": "m7",
+     "claim": "Priya visiting I",
+     "text": "Priya visiting Sam."
+    },
+    {
+     "label": "m8",
+     "claim": "I not does_not_understand cup",
+     "text": "I never know what a cup is."
+    },
+    {
+     "label": "m9",
+     "claim": "Priya not dietary_restriction gluten",
+     "text": "It is not true that Priya dietary restriction gluten."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 2,
+     "role": "assistant",
+     "content": "Nice. I suggest a 12-week plan with three runs a week and one long run on Sundays.",
+     "speaker": null
+    },
+    {
+     "index": 3,
+     "role": "user",
+     "content": "My longest run so far is 9 km. My knee hurt a bit after it.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "content": "Good pick. Plan to replace them after about 700 km.",
+     "speaker": null
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+     "speaker": "Sam"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "half marathon",
+        "entity_type": "event",
+        "description": "Race Sam is training for",
+        "scope": "personal"
+       },
+       {
+        "name": "Lisbon",
+        "entity_type": "location",
+        "description": "City where the race takes place",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "training_for",
+        "object": "half marathon",
+        "polarity": "positive",
+        "evidence_quote": "I've started training for a half marathon.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "involved_in",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "half marathon",
+        "predicate": "date",
+        "object": "November 22",
+        "polarity": "positive",
+        "evidence_quote": "The race is on November 22 in Lisbon.",
+        "confidence": 0.95,
+        "temporal_ref": "November 22",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "half marathon",
+        "predicate": "located_in",
+        "object": "Lisbon",
+        "polarity": "positive",
+        "evidence_quote": "The race is on November 22 in Lisbon.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "located_in",
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "half marathon",
+        "source_entity_type": "event",
+        "target_entity": "Lisbon",
+        "target_entity_type": "location",
+        "relationship_type": "located_in",
+        "polarity": "positive",
+        "evidence_quote": "The race is on November 22 in Lisbon.",
+        "epistemic_type": "observed",
+        "condition": null,
+        "confidence": 0.95
+       }
+      ]
+     },
+     {
+      "turn": 2,
+      "entities": [],
+      "facts": [],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "longest run",
+        "entity_type": "concept",
+        "description": "Sam's longest run so far",
+        "scope": "personal"
+       },
+       {
+        "name": "knee",
+        "entity_type": "concept",
+        "description": "Sam's knee that hurt after the run",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "longest run",
+        "predicate": "distance",
+        "object": "9 km",
+        "quantity": {
+         "value": 9,
+         "unit": "km",
+         "source_text": "9 km"
+        },
+        "polarity": "positive",
+        "evidence_quote": "My longest run so far is 9 km.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "knee",
+        "predicate": "hurt_after",
+        "object": "longest run",
+        "polarity": "positive",
+        "evidence_quote": "My knee hurt a bit after it.",
+        "confidence": 0.85,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "past"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "Brooks Ghost",
+        "entity_type": "product",
+        "description": "New running shoes Sam bought",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "bought",
+        "object": "Brooks Ghost",
+        "polarity": "positive",
+        "evidence_quote": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+        "confidence": 0.95,
+        "temporal_ref": "yesterday",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "Brooks Ghost",
+        "predicate": "cost",
+        "object": "140 euros",
+        "quantity": {
+         "value": 140,
+         "unit": "euros",
+         "source_text": "140 euros"
+        },
+        "polarity": "positive",
+        "evidence_quote": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+        "confidence": 0.95,
+        "temporal_ref": "yesterday",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "I",
+        "target_entity": "Brooks Ghost",
+        "target_entity_type": "product",
+        "relationship_type": "owns",
+        "polarity": "positive",
+        "evidence_quote": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+        "epistemic_type": "observed",
+        "condition": null,
+        "confidence": 0.95
+       }
+      ]
+     },
+     {
+      "turn": 5,
+      "entities": [],
+      "facts": [],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "dog",
+        "entity_type": "concept",
+        "description": "Pet Sam is thinking about getting",
+        "scope": "personal"
+       },
+       {
+        "name": "greyhound",
+        "entity_type": "concept",
+        "description": "Possible dog breed Sam is considering",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "thinking_about_getting",
+        "object": "dog",
+        "polarity": "positive",
+        "evidence_quote": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "hypothetical",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "I",
+        "predicate": "considering_breed",
+        "object": "greyhound",
+        "polarity": "positive",
+        "evidence_quote": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+        "confidence": 0.85,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "hypothetical",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "I",
+        "predicate": "decided",
+        "object": "getting a dog",
+        "polarity": "negative",
+        "evidence_quote": "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "decided",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "I works_schedule mostly night shifts",
+     "text": "Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    },
+    {
+     "label": "m2",
+     "claim": "I works_at St. Mary's hospital",
+     "text": "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    },
+    {
+     "label": "m3",
+     "claim": "I planning meals for the week",
+     "text": "Hi, I'm planning meals for the week."
+    },
+    {
+     "label": "m4",
+     "claim": "I training_for half marathon",
+     "text": "I've started training for a half marathon."
+    },
+    {
+     "label": "m5",
+     "claim": "Priya kin_of I",
+     "text": "My sister Priya is visiting on Friday and she can't eat gluten."
+    },
+    {
+     "label": "m6",
+     "claim": "I dietary_restriction vegetarian",
+     "text": "I'm vegetarian, by the way."
+    },
+    {
+     "label": "m7",
+     "claim": "Priya not dietary_restriction gluten",
+     "text": "It is not true that Priya dietary restriction gluten."
+    },
+    {
+     "label": "m8",
+     "claim": "I prefers metric units",
+     "text": "Please always give me quantities in metric units."
+    },
+    {
+     "label": "m9",
+     "claim": "I dinner_time about 6 am",
+     "text": "Sam dinner time about 6 am."
+    },
+    {
+     "label": "m10",
+     "claim": "longest run distance 9 km",
+     "text": "My longest run so far is 9 km."
+    },
+    {
+     "label": "m11",
+     "claim": "I bought Brooks Ghost",
+     "text": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros."
+    },
+    {
+     "label": "m12",
+     "claim": "Priya visiting I",
+     "text": "Priya visiting Sam."
+    },
+    {
+     "label": "m13",
+     "claim": "Brooks Ghost cost 140 euros",
+     "text": "Brooks Ghost cost 140 euros."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "content": "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "content": "Understood, I'll include fish in your plans from now on.",
+     "speaker": null
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "Did 16 km on Sunday. Knee was fine this time.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 5,
+     "role": "user",
+     "content": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "speaker": "Sam"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "hospital",
+        "entity_type": "organization",
+        "description": "The hospital Sam quit",
+        "scope": "personal"
+       },
+       {
+        "name": "pediatric clinic",
+        "entity_type": "organization",
+        "description": "Clinic where Sam starts on November 2",
+        "scope": "personal"
+       },
+       {
+        "name": "November 2",
+        "entity_type": "event",
+        "description": "Start date at the pediatric clinic",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "quit",
+        "object": "hospital",
+        "object_entity_type": "organization",
+        "polarity": "positive",
+        "evidence_quote": "Big news: I quit the hospital.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": "m2",
+        "relation": "works_at",
+        "role": null,
+        "status": "past"
+       },
+       {
+        "subject": "I",
+        "predicate": "starts_at",
+        "object": "pediatric clinic",
+        "object_entity_type": "organization",
+        "polarity": "positive",
+        "evidence_quote": "I start at a pediatric clinic on November 2, day shifts only.",
+        "confidence": 0.9,
+        "temporal_ref": "November 2",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "works_at",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "I",
+        "predicate": "works_schedule",
+        "object": "day shifts only",
+        "polarity": "positive",
+        "evidence_quote": "I start at a pediatric clinic on November 2, day shifts only.",
+        "confidence": 0.85,
+        "temporal_ref": "November 2",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "mostly night shifts",
+        "replaces_memory": "m1",
+        "relation": "has",
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "fish",
+        "entity_type": "concept",
+        "description": "Food Sam has started eating again",
+        "scope": "personal"
+       },
+       {
+        "name": "meat",
+        "entity_type": "concept",
+        "description": "Food Sam still avoids",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "eats",
+        "object": "fish",
+        "object_entity_type": "concept",
+        "polarity": "positive",
+        "evidence_quote": "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "dietary_restriction",
+        "object": "strictly vegetarian",
+        "polarity": "negative",
+        "evidence_quote": "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "vegetarian",
+        "replaces_memory": "m6",
+        "relation": "has",
+        "role": null,
+        "status": "past"
+       },
+       {
+        "subject": "I",
+        "predicate": "eats",
+        "object": "meat",
+        "object_entity_type": "concept",
+        "polarity": "negative",
+        "evidence_quote": "Still no meat.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "fish",
+        "entity_type": "concept",
+        "description": "Food the assistant will include in plans",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "will_include",
+        "object": "fish in your plans from now on",
+        "object_entity_type": "concept",
+        "polarity": "positive",
+        "evidence_quote": "Understood, I'll include fish in your plans from now on.",
+        "confidence": 0.85,
+        "temporal_ref": "from now on",
+        "fact_type": "decision",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "16 km",
+        "entity_type": "concept",
+        "description": "Distance run on Sunday",
+        "scope": "personal"
+       },
+       {
+        "name": "knee",
+        "entity_type": "concept",
+        "description": "Sam's knee, fine this time",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "ran_distance",
+        "object": "16 km",
+        "object_entity_type": "concept",
+        "quantity": {
+         "value": 16,
+         "unit": "km",
+         "source_text": "16 km"
+        },
+        "polarity": "positive",
+        "evidence_quote": "Did 16 km on Sunday.",
+        "confidence": 0.9,
+        "temporal_ref": "Sunday",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "knee",
+        "predicate": "condition",
+        "object": "fine this time",
+        "polarity": "positive",
+        "evidence_quote": "Knee was fine this time.",
+        "confidence": 0.85,
+        "temporal_ref": "this time",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "Priya",
+        "entity_type": "person",
+        "description": "Sam's sister, moved to Toronto",
+        "scope": "personal"
+       },
+       {
+        "name": "Toronto",
+        "entity_type": "location",
+        "description": "City Priya moved to",
+        "scope": "personal"
+       },
+       {
+        "name": "Friday dinners",
+        "entity_type": "event",
+        "description": "Weekly dinners with Priya that have ended",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Priya",
+        "predicate": "moved_to",
+        "object": "Toronto",
+        "object_entity_type": "location",
+        "polarity": "positive",
+        "evidence_quote": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+        "confidence": 0.95,
+        "temporal_ref": "last week",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "lives_in",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Priya",
+        "predicate": "attends",
+        "object": "Friday dinners with her",
+        "object_entity_type": "event",
+        "polarity": "negative",
+        "evidence_quote": "Priya moved to Toronto last week, so no more Friday dinners with her.",
+        "confidence": 0.85,
+        "temporal_ref": "last week",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "involved_in",
+        "role": null,
+        "status": "past"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "Miso",
+        "entity_type": "concept",
+        "description": "Adopted beagle dog",
+        "scope": "personal"
+       },
+       {
+        "name": "beagle",
+        "entity_type": "concept",
+        "description": "Breed of the adopted dog",
+        "scope": "personal"
+       },
+       {
+        "name": "greyhound",
+        "entity_type": "concept",
+        "description": "Breed the dog is not",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "we",
+        "predicate": "adopted",
+        "object": "a beagle called Miso",
+        "object_entity_type": "concept",
+        "polarity": "positive",
+        "evidence_quote": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "Miso",
+        "predicate": "breed",
+        "object": "beagle",
+        "object_entity_type": "concept",
+        "polarity": "positive",
+        "evidence_quote": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Miso",
+        "predicate": "breed",
+        "object": "greyhound",
+        "object_entity_type": "concept",
+        "polarity": "negative",
+        "evidence_quote": "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "I quit hospital",
+     "text": "Big news: I quit the hospital."
+    },
+    {
+     "label": "m2",
+     "claim": "I planning meals for the week",
+     "text": "Hi, I'm planning meals for the week."
+    },
+    {
+     "label": "m3",
+     "claim": "I dinner_time about 6 am",
+     "text": "Sam dinner time about 6 am."
+    },
+    {
+     "label": "m4",
+     "claim": "longest run distance 9 km",
+     "text": "My longest run so far is 9 km."
+    },
+    {
+     "label": "m5",
+     "claim": "I training_for half marathon",
+     "text": "I've started training for a half marathon."
+    },
+    {
+     "label": "m6",
+     "claim": "I bought Brooks Ghost",
+     "text": "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros."
+    },
+    {
+     "label": "m7",
+     "claim": "I prefers metric units",
+     "text": "Please always give me quantities in metric units."
+    },
+    {
+     "label": "m8",
+     "claim": "Brooks Ghost cost 140 euros",
+     "text": "Brooks Ghost cost 140 euros."
+    },
+    {
+     "label": "m9",
+     "claim": "knee condition fine this time",
+     "text": "Knee was fine this time."
+    },
+    {
+     "label": "m10",
+     "claim": "Priya kin_of I",
+     "text": "My sister Priya is visiting on Friday and she can't eat gluten."
+    },
+    {
+     "label": "m11",
+     "claim": "I eats fish",
+     "text": "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+    },
+    {
+     "label": "m12",
+     "claim": "Priya not dietary_restriction gluten",
+     "text": "It is not true that Priya dietary restriction gluten."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "The new job is great. I get home at 5:30 pm now.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "content": "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 3,
+     "role": "user",
+     "content": "Longest run is now 19 km.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "speaker": "Sam"
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "content": "Noted. I'll keep peanuts out of every recipe.",
+     "speaker": null
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "Miso chewed through my old running shoes, ha.",
+     "speaker": "Sam"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "new job",
+        "entity_type": "concept",
+        "description": "Sam's new job, described as great",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "new job",
+        "predicate": "is",
+        "object": "great",
+        "polarity": "positive",
+        "evidence_quote": "The new job is great.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "gets_home_at",
+        "object": "5:30 pm",
+        "polarity": "positive",
+        "evidence_quote": "I get home at 5:30 pm now.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "update",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "running gels",
+        "entity_type": "product",
+        "description": "Running gels Sam spent money on",
+        "scope": "personal"
+       },
+       {
+        "name": "race belt",
+        "entity_type": "product",
+        "description": "Race belt Sam spent money on",
+        "scope": "personal"
+       },
+       {
+        "name": "socks",
+        "entity_type": "product",
+        "description": "Socks Sam spent money on",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "spent",
+        "object": "60 euros on running gels",
+        "quantity": {
+         "value": 60,
+         "unit": "euros",
+         "source_text": "60 euros"
+        },
+        "polarity": "positive",
+        "evidence_quote": "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": null,
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "I",
+        "predicate": "spent",
+        "object": "85 euros on a race belt and socks",
+        "quantity": {
+         "value": 85,
+         "unit": "euros",
+         "source_text": "85 euros"
+        },
+        "polarity": "positive",
+        "evidence_quote": "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": null,
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "Longest run",
+        "entity_type": "concept",
+        "description": "Sam's longest run distance",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Longest run",
+        "predicate": "is",
+        "object": "19 km",
+        "quantity": {
+         "value": 19,
+         "unit": "km",
+         "source_text": "19 km"
+        },
+        "polarity": "positive",
+        "evidence_quote": "Longest run is now 19 km.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "update",
+        "replaces_memory": "m4",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "Alex",
+        "entity_type": "person",
+        "description": "Sam's partner",
+        "scope": "personal"
+       },
+       {
+        "name": "peanuts",
+        "entity_type": "concept",
+        "description": "Food Alex is allergic to",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Alex",
+        "predicate": "partner_of",
+        "object": "I",
+        "polarity": "positive",
+        "evidence_quote": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "partner_of",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Alex",
+        "predicate": "allergic_to",
+        "object": "peanuts",
+        "polarity": "positive",
+        "evidence_quote": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+        "confidence": 0.95,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": "allergic_to",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "Alex",
+        "target_entity": "I",
+        "relationship_type": "partner_of",
+        "polarity": "positive",
+        "evidence_quote": "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+        "epistemic_type": "observed",
+        "confidence": 0.95
+       }
+      ]
+     },
+     {
+      "turn": 5,
+      "entities": [],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "will_keep_out_of_recipes",
+        "object": "peanuts",
+        "polarity": "positive",
+        "evidence_quote": "Noted. I'll keep peanuts out of every recipe.",
+        "confidence": 0.9,
+        "fact_type": "decision",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": null,
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "Miso",
+        "entity_type": "person",
+        "description": "Likely a pet that chewed Sam's shoes",
+        "scope": "personal"
+       },
+       {
+        "name": "old running shoes",
+        "entity_type": "product",
+        "description": "Sam's old running shoes chewed by Miso",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Miso",
+        "predicate": "chewed_through",
+        "object": "old running shoes",
+        "polarity": "positive",
+        "evidence_quote": "Miso chewed through my old running shoes, ha.",
+        "confidence": 0.9,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "temporal_intent": "assertion",
+        "relation": null,
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  }
+ ]
+}

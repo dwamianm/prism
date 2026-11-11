@@ -325,6 +325,41 @@ and less regular text as they are used.
 Step 6 is independent of the rest and is the cheapest improvement available today. Step 0 decides whether the
 thesis stands.
 
+## 7a. What was tried and removed
+
+Two options were built, measured and taken out again, because an option that did not earn its place does not
+ship. One defect found on the way is in shared code and was left for a decision.
+
+**Function words left out of the word search** (`packing.lexical_content_words`, finding A). The question's
+function words (the graph seed list, and words of one or two letters) were left out of the lexical search, so a
+record that shares only "what" or "is" with the question is no longer a word match. On the offline evidence gate of
+2026-11-10, alone against the defaults, LongMemEval-S all evidence packed fell 3.6 points (95% interval -5.7 to
+-1.3) and two LoCoMo questions lost all their candidates, because a word match also gives a record its second
+path, which packing's tiers and balanced order read. On the contract scorecard it lost the flood's leak question,
+whose answer only the word "is" connected. It might help a store of short records, but only after a packing change.
+
+**Corrections chosen from the graph** (`extraction_correction_source="entity"`). Instead of the claims nearest
+each turn's text, a batched request was shown the claims linked to the entities the turn names (the graph seed
+rule, and the speaker's entity for a first-person turn), newest first, with the same caps. Two live recordings per
+source of the contract chat (`deepseek-v4.1-flash:cloud`), against a key of 7 claims the chat corrects:
+
+| | similar A | similar B | entity A | entity B |
+|---|---|---|---|---|
+| retired correctly (of 7) | 4 | 3 | 2 | 2 |
+| retired wrongly | none | none | "knee hurt after the run" | "knee hurt a bit" |
+
+On the hidden chat, `similar` retired 5 and 5 of 7 and `entity` 1 and 3, none wrongly. The diagnosis: a
+first-person turn names the owner, and the owner's five newest claims are not the ones a correction is about. "I'm
+vegetarian", six weeks old, never reached the request that said "not strictly vegetarian anymore", while a recent,
+unrelated claim did ("my knee hurt a bit after it"), and the model retired it on "Knee was fine this time". The
+corrections that address-first turns on show the claims nearest each turn's text, as before.
+
+**An open defect in default-on code.** `is_current_state_question` (`prme/retrieval/query_analysis.py`) reads
+"first" in "first aid kit" as a history word, so "Where is the first aid kit now?" is not a current-state question
+and `packing.current_state_observations`, on by default, does not fire for it in a store with camera observations.
+The belief ledger's own history check now takes the names its claims use out of the question first; the shared
+function was left as it is, for a decision.
+
 ## 8. Why I would want this memory
 
 When I am handed context, what I need is short: what is true now, since when, how it is known, and an honest

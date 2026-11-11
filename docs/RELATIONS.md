@@ -56,7 +56,16 @@ predicate is not normalized: typed extraction (`enable_typed_extraction`, `PRME_
 relation, role and status the extractor stated, and the graph oracle writes the same fields on the link. A relation
 outside the vocabulary, and `has` (a literal attribute), are read through the normalizer instead. The extractor's
 status is stored for the graph, but the claim's lifecycle, not that label, decides whether a routed question may read
-it; the graph oracle's own `superseded` status on a link still retires that claim.
+it; the graph oracle's own `superseded` status on a link still retires that claim. With the belief ledger (below) the
+status also decides where a claim is placed.
+
+**The role's end on a typed claim.** A typed role qualifies one end of the claim: the prompt asks for the role of the
+relation's far end, so by default the role is on the object (`Sam kin_of Priya`, role sister: Priya is the sister).
+When the open predicate normalizes to the same relation and role, its words decide instead (`is_sister_of` puts the
+sister at the subject). Otherwise the claim's quote decides when it puts the role beside the subject's name and not
+beside the object's: "My sister Priya is visiting" with `Priya kin_of I` and the role sister puts the role on Priya,
+the subject, which is how a model often writes it. A quote with the role beside both names, or beside neither,
+leaves the role on the object.
 `python -m benchmarks.diagnostics.relation_coverage <build or pack>` reports how many of a pack's claims map, by
 relation, and the unmapped predicates by count.
 
@@ -73,6 +82,7 @@ A concept word stands for the relations of one step. The built-in ones:
 | home | `lives_in` |
 | job | `works_at` |
 | allergies | `allergic_to` |
+| pet | `owns` |
 
 `retrieve(concepts=...)` adds or replaces concepts for one request: a word maps to a list of `"relation"` or
 `"relation:role"` items, such as `{"beneficiaries": ["partner_of", "kin_of:child"]}`. An unknown relation, an
@@ -128,6 +138,110 @@ off, receipts included, and a configured `rrf_route_weight` is recorded only on 
 fails is logged and leaves the ranking as with the option off; the response metadata and the receipt's parameters
 record it as `backend_failures.ROUTE`.
 
+The routing version recorded in receipts (`ROUTING_VERSION`) is 2: version 2 added the pet concept and the rule for
+the role's end of a typed claim, either of which can change a route or its candidates.
+
+## The belief ledger
+
+`enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`), off by default, reads the claims a routed question reaches as a
+small ledger and says which one holds at the question's time (`src/prme/retrieval/beliefs.py`; finding 2.2 B of
+`memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md`). Routing finds the claims at an address, an entity and a
+relation such as Sam and `works_at`, but rank fusion counts them as one more list, so "I work as a nurse at St.
+Mary's hospital" can rank above "I start at a pediatric clinic on November 2". The option turns relation routing on,
+and `memory_mode="address_first"` (`PRME_MEMORY_MODE`) turns on both.
+
+**Addresses.** The claims of the route's last step are grouped by the entity they were read on, their relation and,
+except at a relation that holds one value, their role: Priya the sister and Priya the mother are two addresses, and a
+nurse and a pediatric nurse at `works_at` are one. A relation holds one value when a newer value replaces the older
+one: `works_at`, `lives_in`, `partner_of`, `located_in` and a literal attribute (`has:` with its predicate's words).
+Every other relation holds a set (pets, allergies, relatives, preferences), where a new value adds to the old ones.
+
+**States.** A claim first records its own state: `negated` for negative polarity; `ended` for the status past or
+superseded, or a validity end that has passed; `planned` for the status planned with a date still ahead; otherwise
+`current` (current, done, a plan whose date has come, and an untyped claim). Then, inside an address, in time order:
+
+- a claim that is `ended` or `negated` closes every earlier `current` claim that names the same value (one object
+  phrase's words contain the other's, so "the greyhound" and "a greyhound" are one value), and at a relation that
+  holds one value an `ended` claim closes every earlier claim, since "I quit" need not name the place;
+- at a relation that holds one value, the newest claim that still holds is `current` and the older ones `earlier`.
+
+For a question about now the ledger lists `current` (newest first), `planned` (soonest first), `earlier`, `ended` and
+`negated` (newest first). A question that is not about now (`is_current_state_question`) and asks for history
+("when", "before", "use to", "every", "how long") reads it in time order. The names the ledger's claims use are
+taken out of the question before either check, so "Where is the first aid kit now?" asks about now: "first" there
+names the kit. Ties break on the node id.
+
+**Placement.** The ledger's claims lead the results in that order: the i-th of n takes the top result's score times
+`1 + (n - i) x 0.001`, with the top result's score provenance and a `belief` adjustment that names it, so the receipt
+replays the score. Each carries the `BELIEF` path, which packing reserves, and its `belief_state`, which the reader
+format shows as a tag. A claim the search did not find is added.
+
+**The catalog.** A question no word routes ("What is Sam up to these days?") can still be about an address. Its
+catalog is the claims on the entities it names (and the owner's, for a first-person question), read with the walk's
+statement; a seed must be the claim's subject or object, not a text mention. The claim of the catalog that the
+question matches best by meaning names the address, when that claim is among the 10 best semantic matches of the
+whole pool (`CATALOG_SEMANTIC_RANK`); otherwise the question is left to the text ranking. Every claim of the catalog
+at that address is read as one ledger, and the claims are kept together where the best ranked of them stood rather
+than leading, so a claim that holds now is never below one that ended, and an address the question was not about
+gains no rank. A count or list question is not looked up this way.
+
+**Receipts and what stays the same.** A retrieval that placed a claim records `execution.features.belief_state`:
+the ledger version (`BELIEF_VERSION`, 1), the source (`route` or `catalog`) and each claim with its state, relation
+and role. Nothing is written and no model is called; the ledger is computed from the stored claims each time, so a
+correction, a re-ingest or a rebuild changes the next answer and no stored memory is rewritten. A retrieval that
+places no claim, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts
+included. A catalog walk that fails is logged, leaves the ranking as it was, and is recorded as
+`backend_failures.BELIEF`.
+
+## Stated facts (`assertions=`)
+
+A structured source, such as a robot's perception stack or a form, states its facts instead of asking a model to
+find them (`src/prme/ingestion/assertions.py`):
+
+```python
+await engine.ingest(
+    "The red mug is on the kitchen counter.", user_id="robot-1", role="system",
+    assertions=[{"subject": "red mug", "subject_type": "product", "relation": "located_in",
+                 "object": "kitchen counter", "object_type": "location", "status": "current"}],
+)
+```
+
+Each assertion becomes the claim typed extraction would make from a sentence saying it: the subject and object
+entities, a fact node with its relation, role and status (written whatever `enable_typed_extraction` says), the
+`HAS_FACT` and `MENTIONS` links, the grounding record and the derivation plan, so the walk and the belief ledger
+read it with no special case. No model is called. The source never joins a model batch, and pronoun repair,
+corrections and resolved claim text do not apply to it. `ingest_batch()` takes an `"assertions"` key per message,
+and `MemoryClient.ingest()` takes the same argument.
+
+**Validation.** Every assertion is checked before anything is admitted, and a failure raises `ValueError` naming
+the assertion (`assertions[1]: ...`; in a batch, `messages[2]: assertions[0]: ...`, and no message of the batch is
+admitted):
+
+- `subject`, `subject_type`, `relation` and `object` are required; no other key is accepted.
+- `relation` is a relation of the vocabulary above. A literal value uses `has`, with the attribute's name as
+  `predicate` and no `object_type`; any other relation needs an `object_type`, and takes no `predicate`.
+- `subject_type` and `object_type` are one of person, organization, location, product, concept and event.
+- `status`, when given, is one of planned, current, done, past and superseded; `polarity` is positive (the
+  default) or negative; `role` is a short lower-case word or phrase.
+- A leading article (a, an, the) is dropped from the subject and object names, so "the red mug" and "red mug" are
+  one entity.
+- The content must mention the subject and the object, with or without the article. When the content is omitted
+  (None or blank), a plain sentence per assertion is stored instead ("Red mug is located in kitchen counter.").
+- Assertions are refused under a privacy policy, and the metadata key `prme_assertions_v1`, where they are kept, is
+  reserved.
+
+**Re-derivation.** The validated assertions are kept in the event's metadata, so the log alone rebuilds them.
+`reingest()` derives such a source again from them, never through a model, under settings of its own that leave out
+the extraction provider, model and request, so a change of extraction model leaves it current.
+
+**Repeats.** With `enable_claim_merge` (on by default) an exactly repeated assertion merges into one current claim
+that cites every observation. Each repeat still writes an event, a raw note and a superseded copy of the claim.
+
+**Write rate.** 4.6 stated facts a second at 400 observations through `ingest_batch()` with the product defaults, on
+a laptop on 2026-11-10, about 200 ms each. That time is the materialization path every extracted claim takes (a
+lexical index staging per source, two entity lookups that scan the owner's entities, the graph commit, the
+embeddings), not the assertions. It is not yet fit for a sensor stream.
+
 ## Limits
 
 - The derived cues include ordinary words ("call", "like", "take", "part"), so a question can be routed by a word
@@ -141,3 +255,10 @@ record it as `backend_failures.ROUTE`.
   family claim can fall outside the window and the walk reaches nothing.
 - Under rank fusion `min_score` is a floor on semantic similarity, so a candidate only the walk found (semantic
   similarity 0) is removed by any positive `min_score`, as a graph-only candidate is.
+- The ledger compares values by their words: two object phrases name the same value when one's words contain the
+  other's, so "the hospital" and "St. Mary's hospital" are one value, and two different hospitals written as "the
+  hospital" are too.
+- Which relations hold one value is a fixed list. A person with two jobs at once gets one `current` employer and one
+  `earlier`.
+- A state is only as good as the extracted status and polarity: a claim typed `current` that the source meant as
+  past stays `current` until a later claim closes it.
