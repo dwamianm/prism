@@ -67,48 +67,36 @@
     {
      "subject": "Maya Okafor",
      "subject_type": "person",
-     "relation": "involved_in",
-     "object": "trip to Jamaica",
-     "object_type": "event",
-     "role": "planner",
-     "status": "planned",
-     "level": "O1"
-    },
-    {
-     "subject": "Theo",
-     "subject_type": "person",
-     "relation": "involved_in",
-     "object": "trip to Jamaica",
-     "object_type": "event",
-     "role": "companion",
-     "status": "planned",
-     "level": "O1"
-    },
-    {
-     "subject": "Nico",
-     "subject_type": "person",
-     "relation": "involved_in",
-     "object": "trip to Jamaica",
-     "object_type": "event",
-     "role": "companion",
-     "status": "planned",
-     "level": "O1"
-    },
-    {
-     "subject": "trip to Jamaica",
-     "subject_type": "event",
-     "relation": "located_in",
+     "relation": "visits",
      "object": "Jamaica",
      "object_type": "location",
      "status": "planned",
      "level": "O1"
     },
     {
-     "subject": "trip to Jamaica",
-     "subject_type": "event",
+     "subject": "Theo",
+     "subject_type": "person",
+     "relation": "visits",
+     "object": "Jamaica",
+     "object_type": "location",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Nico",
+     "subject_type": "person",
+     "relation": "visits",
+     "object": "Jamaica",
+     "object_type": "location",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
      "relation": "has",
-     "object": "December",
      "predicate": "trip_month",
+     "object": "December",
      "status": "planned",
      "level": "O1"
     }
@@ -215,7 +203,7 @@
      "subject": "Maya Okafor",
      "subject_type": "person",
      "relation": "involved_in",
-     "object": "marriage",
+     "object": "getting married",
      "object_type": "event",
      "status": "planned",
      "level": "O1"

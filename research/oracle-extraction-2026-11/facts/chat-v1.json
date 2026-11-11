@@ -205,16 +205,8 @@
      "object_type": "event",
      "role": "signed up",
      "status": "planned",
-     "level": "O1"
-    },
-    {
-     "subject": "Cherry Creek Half Marathon",
-     "subject_type": "event",
-     "relation": "has",
-     "object": "May 17",
-     "predicate": "race_date",
-     "status": "planned",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-05-17"
     },
     {
      "subject": "Dana",
@@ -233,7 +225,8 @@
      "object_type": "event",
      "role": "running partner",
      "status": "planned",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-05-17"
     }
    ]
   },
@@ -370,7 +363,8 @@
      "object_type": "person",
      "role": "mother",
      "status": "current",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-03-12"
     }
    ]
   },
@@ -431,7 +425,8 @@
      "object_type": "concept",
      "role": "candidate",
      "status": "done",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-03-16"
     },
     {
      "subject": "Dana",
@@ -441,7 +436,8 @@
      "object_type": "concept",
      "role": "candidate",
      "status": "done",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-03-16"
     }
    ]
   },
@@ -512,7 +508,8 @@
      "object_type": "organization",
      "role": "analytics manager",
      "status": "planned",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-05-04"
     }
    ]
   },
@@ -533,7 +530,8 @@
      "object_type": "organization",
      "role": "data analyst",
      "status": "past",
-     "level": "O2"
+     "level": "O2",
+     "time": "2026-04-13"
     }
    ]
   },
@@ -554,7 +552,8 @@
      "object_type": "event",
      "role": "runner",
      "status": "done",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-04-11"
     },
     {
      "subject": "Melanie",
@@ -564,16 +563,18 @@
      "object_type": "event",
      "role": "running partner",
      "status": "done",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-04-11"
     },
     {
      "subject": "Dana",
      "subject_type": "person",
      "relation": "has",
-     "object": "10 miles",
+     "object": "10 mile",
      "predicate": "long_run_distance",
      "status": "current",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-04-11"
     },
     {
      "subject": "Dana",
@@ -582,7 +583,8 @@
      "object": "5 miles",
      "predicate": "long_run_distance",
      "status": "past",
-     "level": "O2"
+     "level": "O2",
+     "time": "2026-04-11"
     }
    ]
   },
@@ -613,7 +615,8 @@
      "object_type": "event",
      "role": "runner",
      "status": "done",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-05-17"
     },
     {
      "subject": "Dana",
@@ -622,7 +625,8 @@
      "object": "1:58:30",
      "predicate": "race_result",
      "status": "current",
-     "level": "O1"
+     "level": "O1",
+     "time": "2026-05-17"
     }
    ]
   },

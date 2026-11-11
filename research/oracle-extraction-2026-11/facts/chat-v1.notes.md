@@ -1,5 +1,9 @@
 # chat-v1: cases the form could not express
 
+Round 2 (2026-11-11): the assertion form now has an optional `time` field, so a date certain to the day is no
+longer in a value and a fact may be about someone the turn does not name in certain cases. See
+CHANGES-round2.md for what changed in this file; the notes below are round 1's, kept as written.
+
 58 assertions on 54 turns, 25 of them with facts, including two household inferences in turn 1.
 
 1. **"Our" dog and "I live with".** "our golden retriever, Biscuit" speaks for Dana and Sam, so ownership is

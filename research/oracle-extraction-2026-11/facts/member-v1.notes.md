@@ -1,5 +1,9 @@
 # member-v1: cases the form could not express
 
+Round 2 (2026-11-11): the assertion form now has an optional `time` field, so a date certain to the day is no
+longer in a value and a fact may be about someone the turn does not name in certain cases. See
+CHANGES-round2.md for what changed in this file; the notes below are round 1's, kept as written.
+
 24 assertions on 30 turns, 12 of them with facts. No closures (O2): nothing in this conversation makes an earlier
 fact untrue.
 

@@ -1,5 +1,9 @@
 # defects-v1: cases the form could not express
 
+Round 2 (2026-11-11): the assertion form now has an optional `time` field, so a date certain to the day is no
+longer in a value and a fact may be about someone the turn does not name in certain cases. See
+CHANGES-round2.md for what changed in this file; the notes below are round 1's, kept as written.
+
 Written for what each turn states, not for any question. 31 assertions on 14 turns, 8 of them with facts.
 
 1. **Comparison in `prefers`.** "I prefer trains to flights" names a liked thing and a less liked thing. The form
