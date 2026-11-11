@@ -425,18 +425,21 @@ def _no_network():
 def embedding_provider():
     """The default local embedding model, loaded once and shared by every pack of the session.
 
-    It is loaded offline from the FastEmbed cache. Only when the model is not cached yet (a fresh CI runner) is
-    the one-time download allowed, as for every other test that uses the default model; after that, every pack
-    is built and asked with the network refused.
+    It is loaded here with the network allowed, before any test's ``no_network`` guard (a session fixture is set
+    up before a function one): a cached model makes no request, and a runner without the cache downloads it
+    once, as for every other test that uses the default model. After that every pack is built and asked with
+    the network refused. The load must not run under the guard: ``huggingface_hub`` reads ``HF_HUB_OFFLINE``
+    when it is first imported, so a first import under the guard leaves the process offline for good and the
+    download can never happen (the newest-dependencies CI job, 2026-11-11).
     """
+    try:
+        import huggingface_hub  # noqa: F401  (imported before any guard sets HF_HUB_OFFLINE)
+    except ImportError:
+        pass
     directory = tempfile.mkdtemp(prefix="prme-contract-")
     try:
         provider = create_embedding_provider(product_config(directory).embedding)
-        try:
-            with no_network():
-                asyncio.run(provider.embed(["warm up"]))
-        except Exception:
-            asyncio.run(provider.embed(["warm up"]))
+        asyncio.run(provider.embed(["warm up"]))
         yield provider
     finally:
         shutil.rmtree(directory, ignore_errors=True)
