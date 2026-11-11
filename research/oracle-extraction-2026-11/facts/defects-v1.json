@@ -1,0 +1,57 @@
+{
+ "turns": [
+  {"session": "s1-trip", "index": 0, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "partner_of", "object": "Jordan", "object_type": "person", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "involved_in", "object": "trip to Japan", "object_type": "event", "role": "planner", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "involved_in", "object": "trip to Japan", "object_type": "event", "role": "planner", "status": "planned", "level": "O1"},
+   {"subject": "trip to Japan", "subject_type": "event", "relation": "located_in", "object": "Japan", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "trip to Japan", "subject_type": "event", "relation": "has", "predicate": "trip_timing", "object": "late March next year", "status": "current", "level": "O1"}
+  ]},
+  {"session": "s1-trip", "index": 1, "assertions": [
+   {"subject": "trip to Japan", "subject_type": "event", "relation": "has", "predicate": "trip_season", "object": "cherry blossom season", "status": "current", "level": "O1"}
+  ]},
+  {"session": "s1-trip", "index": 2, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Tokyo", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Kyoto", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Kanazawa", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Osaka", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "decided", "object": "Tokyo", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "decided", "object": "Kyoto", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "decided", "object": "Kanazawa", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "decided", "object": "Osaka", "object_type": "location", "status": "planned", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Hiroshima", "object_type": "location", "polarity": "negative", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "decided", "object": "Hiroshima", "object_type": "location", "polarity": "negative", "status": "planned", "level": "O1"}
+  ]},
+  {"session": "s1-trip", "index": 3, "assertions": []},
+  {"session": "s1-trip", "index": 4, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "prefers", "object": "trains", "object_type": "product", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "prefers", "object": "JR Pass", "object_type": "product", "status": "planned", "level": "O1"},
+   {"subject": "Jordan", "subject_type": "person", "relation": "allergic_to", "object": "shellfish", "object_type": "product", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "prefers", "object": "allergy card for restaurants", "object_type": "product", "status": "planned", "level": "O1"}
+  ]},
+  {"session": "s1-trip", "index": 5, "assertions": []},
+  {"session": "s2-learning", "index": 0, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "uses", "object": "Rust", "object_type": "product", "role": "learning", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "uses", "object": "Rust for Rustaceans", "object_type": "product", "role": "reading", "status": "current", "level": "O1"}
+  ]},
+  {"session": "s2-learning", "index": 1, "assertions": []},
+  {"session": "s2-learning", "index": 2, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "uses", "object": "Go", "object_type": "product", "role": "writing", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "uses", "object": "TypeScript", "object_type": "product", "role": "writing", "status": "current", "level": "O1"}
+  ]},
+  {"session": "s2-learning", "index": 3, "assertions": []},
+  {"session": "s3-work", "index": 0, "assertions": [
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "Postgres partitioning", "object_type": "concept", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "TimescaleDB", "object_type": "product", "polarity": "negative", "status": "current", "level": "O1"},
+   {"subject": "Postgres partitioning", "subject_type": "concept", "relation": "part_of", "object": "shipment table", "object_type": "concept", "status": "current", "level": "O1"},
+   {"subject": "Alex Rivera", "subject_type": "person", "relation": "decided", "object": "self-hosting", "object_type": "concept", "polarity": "negative", "status": "current", "level": "O1"}
+  ]},
+  {"session": "s3-work", "index": 1, "assertions": []},
+  {"session": "s3-work", "index": 2, "assertions": [
+   {"subject": "Dana", "subject_type": "person", "relation": "manager_of", "object": "Alex Rivera", "object_type": "person", "role": "manager", "status": "current", "level": "O1"},
+   {"subject": "Dana", "subject_type": "person", "relation": "prefers", "object": "runbook reviewed by Sam before Friday", "object_type": "concept", "status": "planned", "level": "O1"},
+   {"subject": "Sam", "subject_type": "person", "relation": "involved_in", "object": "runbook", "object_type": "concept", "role": "reviewer", "status": "planned", "level": "O1"}
+  ]},
+  {"session": "s3-work", "index": 3, "assertions": []}
+ ]
+}

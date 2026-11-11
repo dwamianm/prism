@@ -1,0 +1,387 @@
+{
+ "turns": [
+  {
+   "session": "s1-dependents",
+   "index": 0,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 2,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "partner_of",
+     "object": "Theo",
+     "object_type": "person",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "kin_of",
+     "object": "Nico",
+     "object_type": "person",
+     "role": "child",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-dependents",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 6,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 8,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "trip to Jamaica",
+     "object_type": "event",
+     "role": "planner",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Theo",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "trip to Jamaica",
+     "object_type": "event",
+     "role": "companion",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Nico",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "trip to Jamaica",
+     "object_type": "event",
+     "role": "companion",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "trip to Jamaica",
+     "subject_type": "event",
+     "relation": "located_in",
+     "object": "Jamaica",
+     "object_type": "location",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "trip to Jamaica",
+     "subject_type": "event",
+     "relation": "has",
+     "object": "December",
+     "predicate": "trip_month",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-dependents",
+   "index": 9,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "travel vaccines",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-dependents",
+   "index": 10,
+   "assertions": []
+  },
+  {
+   "session": "s1-dependents",
+   "index": 11,
+   "assertions": []
+  },
+  {
+   "session": "s2-benefits",
+   "index": 0,
+   "assertions": []
+  },
+  {
+   "session": "s2-benefits",
+   "index": 1,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "$1,500",
+     "predicate": "deductible",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "$3,000",
+     "predicate": "family_deductible",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "pregnant",
+     "predicate": "health_state",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 3,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "Prenatal visits are covered in full in network",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "30 days",
+     "predicate": "enrollment_window",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "marriage",
+     "object_type": "event",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s2-benefits",
+   "index": 6,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "breast cancer",
+     "predicate": "diagnosis",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 7,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "oncology visits",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "chemotherapy",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "radiation",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "$6,000",
+     "predicate": "out_of_pocket_maximum",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "some infusions",
+     "predicate": "prior_authorization",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 8,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "open enrollment",
+     "object_type": "event",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-benefits",
+   "index": 9,
+   "assertions": []
+  },
+  {
+   "session": "s2-benefits",
+   "index": 10,
+   "assertions": []
+  },
+  {
+   "session": "s2-benefits",
+   "index": 11,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "dental",
+     "predicate": "coverage",
+     "status": "current",
+     "polarity": "negative",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-return",
+   "index": 0,
+   "assertions": []
+  },
+  {
+   "session": "s3-return",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s3-return",
+   "index": 2,
+   "assertions": []
+  },
+  {
+   "session": "s3-return",
+   "index": 3,
+   "assertions": [
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "preventive cleanings",
+     "predicate": "coverage",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Maya Okafor",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "twice a year",
+     "predicate": "cleaning_frequency",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-return",
+   "index": 4,
+   "assertions": []
+  },
+  {
+   "session": "s3-return",
+   "index": 5,
+   "assertions": []
+  }
+ ]
+}

@@ -1,0 +1,842 @@
+{
+ "turns": [
+  {
+   "session": "s1-intro",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "partner_of",
+     "object": "Sam",
+     "object_type": "person",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "lives_in",
+     "object": "Denver",
+     "object_type": "location",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "lives_in",
+     "object": "Denver",
+     "object_type": "location",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "owns",
+     "object": "Biscuit",
+     "object_type": "concept",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Biscuit",
+     "subject_type": "concept",
+     "relation": "has",
+     "object": "golden retriever",
+     "predicate": "breed",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "owns",
+     "object": "Biscuit",
+     "object_type": "concept",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-intro",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s1-intro",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "works_at",
+     "object": "Northwind",
+     "object_type": "organization",
+     "role": "data analyst",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Priya",
+     "subject_type": "person",
+     "relation": "manager_of",
+     "object": "Dana",
+     "object_type": "person",
+     "role": "manager",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Priya",
+     "subject_type": "person",
+     "relation": "prefers",
+     "object": "weekly dashboards",
+     "object_type": "concept",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-intro",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s1-intro",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "uses",
+     "object": "Tableau",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Northwind",
+     "subject_type": "organization",
+     "relation": "uses",
+     "object": "Tableau",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "prefers",
+     "object": "Python",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-intro",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s1-intro",
+   "index": 6,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "vegetarian",
+     "predicate": "diet",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-intro",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s1-intro",
+   "index": 8,
+   "assertions": [
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "works_at",
+     "object": "Denver Health",
+     "object_type": "organization",
+     "role": "nurse",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "night shifts",
+     "predicate": "shift_pattern",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s1-intro",
+   "index": 9,
+   "assertions": []
+  },
+  {
+   "session": "s2-running",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "Cherry Creek Half Marathon",
+     "object_type": "event",
+     "role": "signed up",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Cherry Creek Half Marathon",
+     "subject_type": "event",
+     "relation": "has",
+     "object": "May 17",
+     "predicate": "race_date",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "friend_of",
+     "object": "Melanie",
+     "object_type": "person",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "Cherry Creek Half Marathon",
+     "object_type": "event",
+     "role": "running partner",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-running",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s2-running",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "ten half marathons",
+     "predicate": "race_count",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "training plan",
+     "object_type": "concept",
+     "role": "planner",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "three runs a week",
+     "predicate": "run_frequency",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "three runs a week",
+     "predicate": "run_frequency",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-running",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s2-running",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "5 miles",
+     "predicate": "long_run_distance",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "prefers",
+     "object": "green tea",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "prefers",
+     "object": "coffee",
+     "object_type": "product",
+     "status": "past",
+     "level": "O2"
+    }
+   ]
+  },
+  {
+   "session": "s2-running",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s2-running",
+   "index": 6,
+   "assertions": [
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "allergic_to",
+     "object": "peanuts",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s2-running",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "kin_of",
+     "object": "Rachel",
+     "object_type": "person",
+     "role": "sister",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Rachel",
+     "subject_type": "person",
+     "relation": "kin_of",
+     "object": "Ivy",
+     "object_type": "person",
+     "role": "mother",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 1,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "kin_of",
+     "object": "Ivy",
+     "object_type": "person",
+     "role": "aunt",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Rachel",
+     "subject_type": "person",
+     "relation": "lives_in",
+     "object": "Portland",
+     "object_type": "location",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "visits",
+     "object": "Portland",
+     "object_type": "location",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "analytics manager role",
+     "object_type": "concept",
+     "role": "candidate",
+     "status": "done",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "first interview",
+     "object_type": "concept",
+     "role": "candidate",
+     "status": "done",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 6,
+   "assertions": [
+    {
+     "subject": "Brightpath",
+     "subject_type": "organization",
+     "relation": "uses",
+     "object": "Python",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 8,
+   "assertions": [
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "owns",
+     "object": "running shoes",
+     "object_type": "product",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Biscuit",
+     "subject_type": "concept",
+     "relation": "involved_in",
+     "object": "Sam's running shoes",
+     "object_type": "product",
+     "role": "ate",
+     "status": "done",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s3-family-and-jobs",
+   "index": 9,
+   "assertions": []
+  },
+  {
+   "session": "s4-offer",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "works_at",
+     "object": "Brightpath",
+     "object_type": "organization",
+     "role": "analytics manager",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s4-offer",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s4-offer",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "works_at",
+     "object": "Northwind",
+     "object_type": "organization",
+     "role": "data analyst",
+     "status": "past",
+     "level": "O2"
+    }
+   ]
+  },
+  {
+   "session": "s4-offer",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s4-offer",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "10 mile long run",
+     "object_type": "event",
+     "role": "runner",
+     "status": "done",
+     "level": "O1"
+    },
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "10 mile long run",
+     "object_type": "event",
+     "role": "running partner",
+     "status": "done",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "10 miles",
+     "predicate": "long_run_distance",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "5 miles",
+     "predicate": "long_run_distance",
+     "status": "past",
+     "level": "O2"
+    }
+   ]
+  },
+  {
+   "session": "s4-offer",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s4-offer",
+   "index": 6,
+   "assertions": []
+  },
+  {
+   "session": "s4-offer",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "Cherry Creek Half Marathon",
+     "object_type": "event",
+     "role": "runner",
+     "status": "done",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "1:58:30",
+     "predicate": "race_result",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s5-race",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "1:41",
+     "predicate": "race_result",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Melanie",
+     "subject_type": "person",
+     "relation": "partner_of",
+     "object": "Tom",
+     "object_type": "person",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s5-race",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "works_at",
+     "object": "Brightpath",
+     "object_type": "organization",
+     "role": "analytics manager",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s5-race",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 6,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "pescatarian",
+     "predicate": "diet",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "vegetarian",
+     "predicate": "diet",
+     "status": "past",
+     "level": "O2"
+    }
+   ]
+  },
+  {
+   "session": "s5-race",
+   "index": 7,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 8,
+   "assertions": []
+  },
+  {
+   "session": "s5-race",
+   "index": 9,
+   "assertions": []
+  },
+  {
+   "session": "s6-trip",
+   "index": 0,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "Portland trip",
+     "object_type": "event",
+     "role": "planner",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Biscuit",
+     "subject_type": "concept",
+     "relation": "involved_in",
+     "object": "Portland trip",
+     "object_type": "event",
+     "role": "companion",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Sam",
+     "subject_type": "person",
+     "relation": "involved_in",
+     "object": "Portland trip",
+     "object_type": "event",
+     "status": "planned",
+     "polarity": "negative",
+     "level": "O1"
+    },
+    {
+     "subject": "Portland trip",
+     "subject_type": "event",
+     "relation": "has",
+     "object": "July",
+     "predicate": "trip_month",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s6-trip",
+   "index": 1,
+   "assertions": []
+  },
+  {
+   "session": "s6-trip",
+   "index": 2,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "has",
+     "object": "18 hours",
+     "predicate": "drive_time",
+     "status": "planned",
+     "level": "O1"
+    },
+    {
+     "subject": "Biscuit",
+     "subject_type": "concept",
+     "relation": "has",
+     "object": "3 year old",
+     "predicate": "age",
+     "status": "current",
+     "level": "O1"
+    },
+    {
+     "subject": "Biscuit",
+     "subject_type": "concept",
+     "relation": "has",
+     "object": "golden",
+     "predicate": "breed",
+     "status": "current",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s6-trip",
+   "index": 3,
+   "assertions": []
+  },
+  {
+   "session": "s6-trip",
+   "index": 4,
+   "assertions": [
+    {
+     "subject": "Dana",
+     "subject_type": "person",
+     "relation": "visits",
+     "object": "Boise",
+     "object_type": "location",
+     "status": "planned",
+     "level": "O1"
+    }
+   ]
+  },
+  {
+   "session": "s6-trip",
+   "index": 5,
+   "assertions": []
+  },
+  {
+   "session": "s6-trip",
+   "index": 6,
+   "assertions": []
+  },
+  {
+   "session": "s6-trip",
+   "index": 7,
+   "assertions": []
+  }
+ ]
+}
