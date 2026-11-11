@@ -124,6 +124,11 @@ older-effective updates remain historical facts without retiring later state.
 Retries load the saved plan before calling either provider. An existing receipt
 skips staging and publication, including after archival. Existing unjournaled
 derived nodes are rejected as requiring explicit migration rather than duplicated.
+That rejection reads the nodes which name the source event in `evidence_refs`, so
+an organizer aggregate which copies its sources' evidence, a `summarize` or
+`consolidate` SUMMARY node, is not one of them: it is provenance over the source,
+not a derivation of it, and a source whose extraction was still queued when the
+aggregate was made publishes normally (dwamianm/prism#556).
 
 Public-ingestion fault tests cover post-plan/index writes, every graph write
 kind, post-commit failure, cancellation and concurrent attempts on both backends.
