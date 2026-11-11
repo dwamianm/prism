@@ -139,3 +139,100 @@ programming language does Dana prefer?").
 Of the options alone, relation routing, `session_context_direct_first`, the clock window filter, identical text
 collapse and `rrf_recency_order` pass the defect, chat and member probes; the belief ledger and the second round do
 not. Typed extraction and corrections were not measured alone. A loss is a result to report: nothing was changed.
+
+## 2026-11-11, later: the ledger in place, the second round out of the mode (one repair, not kept)
+
+The diagnosis tested: the ledger fails because `place_beliefs(..., lead=True)` lifts every claim at a routed address
+above the whole text ranking. The repair put the claims where the best ranked of them already stood
+(`place_beliefs` without `lead`, `BELIEF_VERSION` 2) and took `packing.second_round` out of `memory_mode`. Everything
+below is retrieval on saved packs and caches: no live model call. The repair did not meet its condition (the
+top-25 loss had to go), so nothing was committed and the tree was restored; the attempt is kept as a patch,
+`data/mid-tier-v1/reports/task7-attempt.patch` (ignored), with a one-line harness change it needed:
+`benchmarks/mid_tier.py` refuses every top-level setting with `--reuse-build`, and `enable_relation_routing` and
+`enable_belief_state` act only at read time, so the patch adds them to `REUSABLE_SETTINGS`.
+
+The mode's retrieval options, set one by one (the harness refuses `memory_mode` with `--reuse-build`, since the
+mode also acts when memories are stored; the saved packs already hold its typed claims and corrections):
+
+```sh
+--set enable_relation_routing=true --set enable_belief_state=true --set packing.session_context_direct_first=10 \
+--set packing.clock_window_filter=true --set packing.collapse_identical_text=true --set scoring.rrf_recency_order=true
+```
+
+**Mid tier, the address-first build gated with the repair** (`--reuse-build address-first`, label `address-first-v2`),
+against the same baseline:
+
+| Measure | Baseline | Candidate | Change (points) | 95% questions | 95% conversations | Wins / losses / ties | Clear of zero |
+|---|---:|---:|---:|---:|---:|---:|---|
+| all evidence packed | 83.6% | 84.2% | +0.7 | -0.3 to +1.5 | -0.1 to +1.4 | 27 / 17 / 1492 | no |
+| evidence recall | 89.2% | 89.9% | +0.7 | +0.1 to +1.3 | +0.1 to +1.2 | 47 / 27 / 1462 | yes |
+| evidence in top 25 | 70.4% | 67.2% | -3.2 | -4.2 to -2.2 | -4.2 to -2.0 | 18 / 81 / 1437 | yes (a loss) |
+| all evidence returned | 98.0% | 98.0% | -0.1 | -0.4 to +0.3 | -0.4 to +0.3 | 3 / 4 / 1529 | no |
+| projected accuracy | 77.4% | 77.9% | +0.5 | -0.0 to +1.1 | +0.0 to +1.0 | 27 / 17 / 1496 | no |
+
+No question lost all its candidates; LongMemEval-S did not move.
+
+**The same retrieval options on the baseline's packs** (`--reuse-build main-0.17.0a6`, label `main-ret-v2`): this
+separates the retrieval half of the mode from its extraction half (typed extraction and corrections).
+
+| Measure | Baseline | Candidate | Change (points) | 95% questions | 95% conversations | Wins / losses / ties | Clear of zero |
+|---|---:|---:|---:|---:|---:|---:|---|
+| all evidence packed | 83.6% | 84.4% | +0.8 | +0.4 to +1.2 | +0.3 to +1.4 | 12 / 0 / 1524 | yes |
+| evidence recall | 89.2% | 89.7% | +0.5 | +0.2 to +0.8 | +0.2 to +0.9 | 15 / 2 / 1519 | yes |
+| evidence in top 25 | 70.4% | 69.7% | -0.7 | -1.1 to -0.3 | -1.0 to -0.3 | 0 / 15 / 1521 | yes (a loss) |
+| all evidence returned | 98.0% | 98.0% | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 | no |
+| projected accuracy | 77.4% | 77.9% | +0.5 | +0.3 to +0.8 | +0.2 to +0.9 | 12 / 0 / 1528 | yes |
+
+So most of the top-25 loss comes with the address-first packs (the extraction half): -0.7 points on the defaults'
+packs against -3.2 on the address-first packs, under the same retrieval settings.
+
+**Probes, on cached extraction** (0 calls; off as before):
+
+| Variant | Defects top 3 / top 5 | Chat top 3 / top 5 | Member top 3 / top 5 | Owner claims (defects / chat / member) |
+|---|---:|---:|---:|---:|
+| off | 7 / 7 | 14 / 15 | 10 / 11 | 12 / 35 / 7 |
+| belief alone, repaired | 7 / 7 | 15 / 16 | 11 / 12 | 12 / 35 / 7 |
+| the mode's retrieval options, repaired | 7 / 7 | 15 / 16 | 11 / 12 | 12 / 35 / 7 |
+| the whole mode, repaired, on the cached address-first extraction | 4 / 7 | 12 / 14 | 10 / 12 | 12 / 33 / 7 |
+
+With the repair the ledger alone passes the three probes, and so does the retrieval half. The whole mode still fails
+the defect probes (4 of 7) and the chat probe (12 against 14), which points at its extraction half.
+
+**Contract scorecard under address_first, against the committed tree.** Taking the second round out of the mode
+turns the 8 two-hop ids (S5) from XPASS to XFAIL and `flood-rare-stranger` from XFAIL to XPASS. The ledger in place
+turns one ingest-chat id from XPASS to XFAIL, `chat-first-sister-lives`. tests/contract totals under address_first:
+60 passed, 25 xpassed, 39 xfailed, 0 failed (committed tree: 60, 33, 31, 0).
+
+## 2026-11-11, later still: the mode as its read-time half (kept)
+
+The lead's decision after the section above: apply that patch (the ledger in place, `BELIEF_VERSION` 2, the second
+round out of the mode, the harness change), and take typed extraction and corrections out of `memory_mode` too.
+`address_first` now turns on relation routing, the belief ledger, `session_context_direct_first=10`, the clock
+window filter, identical text collapse and, under rank fusion, `rrf_recency_order`, and nothing else. All of them act
+when a question is asked: the mode changes nothing at write time, makes no model call and rewrites no stored
+memory. Typed extraction, corrections and the second round stay separate options, each off.
+
+Its mid tier evidence is the `main-ret-v2` table above: the same six settings on the defaults' packs, which is
+exactly what the mode now does to a store built with the defaults. Evidence in the top 25 is -0.7 points with both
+intervals below zero (0 questions gained, 15 lost), a small loss that fails the alpha rule's mid tier criterion on
+its own, so the mode stays off by default.
+
+**Probes, the final mode** (`--set 'memory_mode="address_first"'`, label `t8-mode`; the extraction request is the
+off side's, so the builds replayed its cache with 0 calls; logs in `data/mid-tier-v1/reports/probes/task8/`):
+
+| Variant | Defects top 3 / top 5 | Chat top 3 / top 5 | Member top 3 / top 5 | Owner claims (defects / chat / member) |
+|---|---:|---:|---:|---:|
+| off (`af-off-1111`) | 7 / 7 | 14 / 15 | 10 / 11 | 12 / 35 / 7 |
+| `memory_mode="address_first"` | 7 / 7 | 15 / 16 | 11 / 12 | 12 / 35 / 7 |
+
+This equals the "belief alone, repaired" row above. No other chat measure is worse; repeated records in contexts
+are 18 of 1,620 lines off and 18 of 1,632 with the mode.
+
+**Contract scorecard.** Classic, with `--stated`: 73 passed, 87 xfailed, as before (strict). Under
+`--memory-mode address_first` with `--stated`: 73 passed, 44 xpassed, 43 xfailed, 0 failed. The recording the
+ingest() chat replays was made with typed extraction and corrections on; under the narrowed mode the replay asks for
+neither, so against the section above four ingest ids went from XPASS to XFAIL: `chat-answer-sister`,
+`retired-longest-run-9km`, `retired-night-shifts` and `retired-nurse-st-marys`. They were not chased.
+`chat-stale-pet` passes, and was taken off `XFAIL_INGEST_ADDRESS_FIRST`, which is now empty: it was listed while
+the ledger led the results. The ingest() chat gave the same per-id result on four runs. The hidden set, totals
+only: classic 82 passed, 80 xfailed; address_first 82 passed, 38 xpassed, 42 xfailed, 0 failed.

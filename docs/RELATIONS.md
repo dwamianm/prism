@@ -148,7 +148,14 @@ small ledger and says which one holds at the question's time (`src/prme/retrieva
 `memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md`). Routing finds the claims at an address, an entity and a
 relation such as Sam and `works_at`, but rank fusion counts them as one more list, so "I work as a nurse at St.
 Mary's hospital" can rank above "I start at a pediatric clinic on November 2". The option turns relation routing on,
-and `memory_mode="address_first"` (`PRME_MEMORY_MODE`) turns on both.
+and `memory_mode="address_first"` (`PRME_MEMORY_MODE`) turns on both, with four other read-time settings
+(`documentation/configuration.md`). The mode acts only when a question is asked: it does not turn on typed extraction
+or corrections, makes no model call and rewrites no stored memory. Without typed extraction a claim has no typed
+status, so the ledger reads it as `current` until a later claim at its address closes it or takes its place (below);
+stated facts (`ingest(assertions=...)`) and claims stored with `enable_typed_extraction` carry a status. Typed
+extraction and corrections were part of the mode until 2026-11-11 and were taken out after the fast probes and the
+mid tier showed losses with them
+(`benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`).
 
 **Addresses.** The claims of the route's last step are grouped by the entity they were read on, their relation and,
 except at a relation that holds one value, their role: Priya the sister and Priya the mother are two addresses, and a
@@ -175,22 +182,26 @@ names the kit. Claims stated at one time are ordered by their text, and by node 
 too, so a rebuild of the same log gives the same ledger: a node id is new on every build, and the claims of one turn
 have no recorded order, so the end one of them states does not close another.
 
-**Placement.** The ledger's claims lead the results in that order: the i-th of n takes the top result's score times
-`1 + (n - i) x 0.001`, with the top result's score provenance and a `belief` adjustment that names it, so the receipt
-replays the score. Each carries the `BELIEF` path, which packing reserves, and its `belief_state`, which the reader
-format shows as a tag. A claim the search did not find is added.
+**Placement.** The ledger's claims are kept together where the best ranked of them already stands, in ledger
+order: the i-th of n takes that claim's score times `1 + (n - i) x 0.001`, with its score provenance and a `belief`
+adjustment that names it, so the receipt replays the score. The group gains no rank: the text ranking and the route
+list decide how high an address's claims stand, so a list question whose answer is another record ("Which cities
+will they visit?") keeps that record where it was, and the ledger only decides the order within the group. Each claim
+carries the `BELIEF` path, which packing reserves, and its `belief_state`, which the reader format shows as a tag. A
+claim of the ledger the search did not find is added beside the others. Until `BELIEF_VERSION` 2 the claims of a
+routed question led the results, which cost LoCoMo evidence in the top 25 on the mid tier.
 
 **The catalog.** A question no word routes ("What is Sam up to these days?") can still be about an address. Its
 catalog is the claims on the entities it names (and the owner's, for a first-person question), read with the walk's
 statement; a seed must be the claim's subject or object, not a text mention. The claim of the catalog that the
 question matches best by meaning names the address, when that claim is among the 10 best semantic matches of the
 whole pool (`CATALOG_SEMANTIC_RANK`); otherwise the question is left to the text ranking. Every claim of the catalog
-at that address is read as one ledger, and the claims are kept together where the best ranked of them stood rather
-than leading, so a claim that holds now is never below one that ended, and an address the question was not about
-gains no rank. A count or list question is not looked up this way.
+at that address is read as one ledger, and the claims are kept together where the best ranked of them stood, as for
+a routed question, so a claim that holds now is never below one that ended, and an address the question was not
+about gains no rank. A count or list question is not looked up this way.
 
 **Receipts and what stays the same.** A retrieval that placed a claim records `execution.features.belief_state`:
-the ledger version (`BELIEF_VERSION`, 1), the source (`route` or `catalog`) and each claim with its state, relation
+the ledger version (`BELIEF_VERSION`, 2), the source (`route` or `catalog`) and each claim with its state, relation
 and role. Nothing is written and no model is called; the ledger is computed from the stored claims each time, so a
 correction, a re-ingest or a rebuild changes the next answer and no stored memory is rewritten. A retrieval that
 places no claim, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts

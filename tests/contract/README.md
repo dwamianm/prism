@@ -62,7 +62,7 @@ Every listed failure is a strict xfail, so neither a fix nor a regression can go
 | `test_chat_ingest.py` | the same chat through `ingest_batch()`, one call per session, its extraction replayed from `fixtures/chat_extraction.json` | a question | the store() chat's checks under the same ids; "first": the new job and the sister's new city are `results[0]`; "ledger": no claim the ledger marks ended ranks above one it marks current |
 | `test_chat_ingest.py` (corrections) | the same chat, and the claims later turns correct (`ChatWorld.retire`, the key) | a key item (`retired-<tag>`); one id for the rest (`no-true-claim-retired`) | every claim of the key item ended retired; no claim outside the key ended retired, other than a copy merged into a repeat of itself |
 
-### Results on 2026-11-11 (src/ at fb050a50 with the uncommitted assertions, corrections and history fix)
+### Results on 2026-11-11 (memory_mode as the read-time half: no typed extraction, no corrections)
 
 | Group | Ids | Classic: passed / xfailed | address_first: passed / xpassed / xfailed / failed | Thesis finding |
 |---|---|---|---|---|
@@ -70,34 +70,38 @@ Every listed failure is a strict xfail, so neither a fix nor a regression can go
 | S1 state churn, 3 days apart | 18 | 13 / 5 | 13 / 4 / 1 / 0 | B |
 | S1 churn stated (`--stated`), 10 minutes apart | 18 | 3 / 15 | 3 / 15 / 0 / 0 | B |
 | S1 churn stated (`--stated`), 3 days apart | 18 | 9 / 9 | 9 / 9 / 0 / 0 | B |
-| S2 flood, rare event in top 5 | 8 | 6 / 2 | 6 / 0 / 2 / 0 | D |
+| S2 flood, rare event in top 5 | 8 | 6 / 2 | 6 / 1 / 1 / 0 | D |
 | S2 flood, routine share of context | 1 | 0 / 1 | 0 / 0 / 1 / 0 | D |
 | S4 time window | 2 | 1 / 1 | 1 / 1 / 0 / 0 | 4.2 (no 2.2 letter) |
-| S5 two hops | 8 | 0 / 8 | 0 / 8 / 0 / 0 | E |
+| S5 two hops | 8 | 0 / 8 | 0 / 0 / 8 / 0 | E |
 | S6 unknown | 6 | 0 / 6 | 0 / 0 / 6 / 0 | D |
 | S8 determinism | 3 | 3 / 0 | 3 / 0 / 0 / 0 | |
 | Chat `store()`, answers in top 3 | 13 | 6 / 7 | 6 / 1 / 6 / 0 | A, B, E |
 | Chat `store()`, no stale above the answer | 4 | 2 / 2 | 2 / 0 / 2 / 0 | B |
 | Chat `store()`, unanswerable | 1 | 0 / 1 | 0 / 0 / 1 / 0 | D |
-| Chat `ingest()`, answers in top 3 | 13 | 6 / 7 | 6 / 1 / 6 / 0 | A, B, C, E |
-| Chat `ingest()`, no stale above the answer | 4 | 3 / 1 | 2 / 1 / 1 / 0 | B |
+| Chat `ingest()`, answers in top 3 | 13 | 6 / 7 | 6 / 0 / 7 / 0 | A, B, C, E |
+| Chat `ingest()`, no stale above the answer | 4 | 3 / 1 | 3 / 0 / 1 / 0 | B |
 | Chat `ingest()`, unanswerable | 1 | 0 / 1 | 0 / 0 / 1 / 0 | D |
-| Chat `ingest()`, answer first | 2 | 1 / 1 | 1 / 1 / 0 / 0 | B, E |
+| Chat `ingest()`, answer first | 2 | 1 / 1 | 1 / 0 / 1 / 0 | B, E |
 | Chat `ingest()`, ended never above current | 14 | 14 / 0 | 14 / 0 / 0 / 0 | |
-| Chat `ingest()`, corrected claim retired | 7 | 1 / 6 | 1 / 3 / 3 / 0 | B |
+| Chat `ingest()`, corrected claim retired | 7 | 1 / 6 | 1 / 0 / 6 / 0 | B |
 | Chat `ingest()`, no true claim retired | 1 | 1 / 0 | 1 / 0 / 0 / 0 | |
-| **Total** | **160** | **73 / 87** | **72 / 57 / 31 / 0** | |
+| **Total** | **160** | **73 / 87** | **73 / 44 / 43 / 0** | |
 
 The classic results were the same in every run, and the same on 0.17.0a6 (29a0460d), before address-first memory
 existed. In the classic mode one key claim is retired with corrections off ("I'm vegetarian"), by the predicate
 supersedence that `ingest()` already runs.
 
-One ingest() chat id is a known failure under address_first only (`XFAIL_INGEST_ADDRESS_FIRST`), waiting for a
-design decision:
-
-- `chat-stale-pet`: claim text split across two records. The ledger leads with the claim "We adopted a dog after
-  all!", the beagle is named in the next sentence, which is another record, and "thinking about getting a dog" can
-  rank above it. It failed with an earlier recording and passes with the present one.
+The address_first column is the mode as it stands: the read-time half, with the ledger kept where its claims
+already stand and no second round. The ingest() chat replays a recording made with typed extraction and corrections
+on, and neither mode turns them on now, so under address_first the typed fields are not read and the correction
+labels retire nothing. Against the mode as first written (typed extraction, corrections and the second round in it,
+the ledger leading; 72 / 57 / 31 / 0), the two hops (S5, 8 ids) and `chat-first-sister-lives` went from XPASS to
+XFAIL and `flood-rare-stranger` from XFAIL to XPASS when the second round left and the ledger stopped leading, and
+`chat-answer-sister`, `retired-longest-run-9km`, `retired-night-shifts` and `retired-nurse-st-marys` went from XPASS
+to XFAIL when typed extraction and corrections left. No id fails under address_first only
+(`XFAIL_INGEST_ADDRESS_FIRST` is empty): `chat-stale-pet`, listed while the ledger led the results, passes, and the
+ingest() chat gave the same result on four runs.
 
 `chat-first-work-now` was not deterministic under address_first until 2026-11-11: two claims of one turn share a
 stated time, and the ledger broke the tie, and decided which of them an end closes, on node ids, which are new on
@@ -113,13 +117,13 @@ before it; the id passed on 5 of 5 fresh builds.
   the ingest() chat, whose ids repeat the store() chat's, and `XFAIL_INGEST_ADDRESS_FIRST` for ingest() chat ids
   that fail only under address_first. Collection fails if any names an id that no case has.
 - `fixtures/chat_extraction.json`: what `deepseek-v4.1-flash:cloud` returned through the local Ollama server
-  (0.40.15, model digest e04da138) for the chat's four `ingest_batch()` calls, with the product defaults and
-  `memory_mode="address_first"`, so the typed fields are in it and corrections were on; each call keeps the earlier
-  claims its request showed. `fixtures/record_chat_extraction.py` made it, has the command and prints which claims
+  (0.40.15, model digest e04da138) for the chat's four `ingest_batch()` calls, with the product defaults,
+  `memory_mode="address_first"`, and typed extraction and corrections on (the mode turned both on then; the script
+  now sets them outright), so the typed fields are in it; each call keeps the earlier claims its request showed. `fixtures/record_chat_extraction.py` made it, has the command and prints which claims
   ended retired against the key (`ChatWorld.retire`). The replay (`ExtractionReplay` in `harness.py`) answers the
   provider's calls from it and fails the pack on any call it cannot answer, and on a request that shows other
-  earlier claims than the recorded one (the labels in the answer would then retire the wrong claims). In the
-  classic mode the typed fields and the correction labels are not asked for. A new recording is a new sample, so
+  earlier claims than the recorded one (the labels in the answer would then retire the wrong claims). Neither
+  mode turns on typed extraction or corrections, so the typed fields and the correction labels are not asked for. A new recording is a new sample, so
   `XFAIL_INGEST` must then be decided again.
 - `harness.py`: packs, fixtures and parametrization, shared with the hidden set. Its docstring says how the
   product defaults are kept (`tests/conftest.py` turns several off for other tests) and how the network is

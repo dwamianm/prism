@@ -1392,32 +1392,34 @@ class PRMEConfig(_ProjectSettings):
     memory_mode: Literal["classic", "address_first"] = Field(
         default="classic",
         description=(
-            "[HYPOTHESIS] One switch for address-first memory "
-            "(memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). 'classic' "
-            "(the default) changes nothing. 'address_first' turns on, unless "
-            "the configuration sets them itself: enable_typed_extraction "
-            "(ingest() records each claim's relation and status), "
+            "[HYPOTHESIS] One switch for the read-time half of address-first "
+            "memory (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). "
+            "'classic' (the default) changes nothing. 'address_first' turns "
+            "on, unless the configuration sets them itself: "
             "enable_relation_routing and enable_belief_state (a question "
             "about a relation is answered from the claims at its address, "
-            "the one that holds now first), "
+            "the one that holds now first within them), "
             "packing.session_context_direct_first=10 (session neighbors stay "
             "below the ten best direct matches), packing.clock_window_filter "
             "(a clock window in the question filters by event time), "
             "packing.collapse_identical_text (records with identical text "
-            "are shown once, with their count), packing.second_round (one "
-            "more word search for what the best result points at) and, under rank fusion, "
+            "are shown once, with their count) and, under rank fusion, "
             "scoring.rrf_recency_order (recency on the question's own time "
-            "scale). Each has its own description and can be set alone. "
-            "Stored memories are not rewritten; typed extraction applies to "
-            "what is ingested after the switch."
+            "scale). Each has its own description and can be set alone. All "
+            "act when a question is asked: the mode changes nothing at write "
+            "time, makes no model call and rewrites no stored memory. "
+            "enable_typed_extraction, enable_extraction_corrections and "
+            "packing.second_round are separate options, off by default; they "
+            "were part of the mode and lost answers on the probes and evidence "
+            "on the mid tier of 2026-11-11."
         ),
     )
     enable_belief_state: bool = Field(
         default=False,
         description=(
             "[HYPOTHESIS] When True, the claims a routed question reaches are "
-            "read as a ledger and lead the results, the one that holds now "
-            "first (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). "
+            "read as a ledger and kept together in ledger order, the one that "
+            "holds now first (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). "
             "Relation routing finds the claims at an address (Sam, works_at) "
             "and rank fusion then counts them as one more vote, so an old "
             "claim whose words match the question can rank above the claim "
@@ -1426,10 +1428,12 @@ class PRMEConfig(_ProjectSettings):
             "claims at the same address: current, planned, earlier (a newer "
             "value took its place at a single-valued relation: works_at, "
             "lives_in, partner_of, located_in), ended (a later claim says it "
-            "stopped) or negated. For a question about now the claims are "
-            "placed first in that order, newest first within a state; a "
-            "question that asks for history (when, before, used to) gets "
-            "them in time order. The reader format shows the state as a tag, "
+            "stopped) or negated. For a question about now the claims stand "
+            "together where the best ranked of them stands, in that order, "
+            "newest first within a state; a question that asks for history "
+            "(when, before, used to) gets them in time order. The group gains "
+            "no rank: the text ranking and the route list decide how high it "
+            "stands. The reader format shows the state as a tag, "
             "and the receipt records the ledger. Turns relation routing on. "
             "Nothing is written and no model is called: the ledger is "
             "computed from the stored claims at read time. A question no "
@@ -1790,23 +1794,20 @@ class PRMEConfig(_ProjectSettings):
     def _apply_memory_mode(self) -> PRMEConfig:
         if self.memory_mode != "address_first":
             return self
-        for name in ("enable_typed_extraction", "enable_relation_routing", "enable_belief_state"):
+        # The read-time half only: nothing it turns on acts when memories are stored or calls a model.
+        for name in ("enable_relation_routing", "enable_belief_state"):
             if name not in self.model_fields_set:
                 setattr(self, name, True)
         packing = {
             name: value
             for name, value in (("session_context_direct_first", 10),
-                                ("clock_window_filter", True), ("collapse_identical_text", True),
-                                ("second_round", True))
+                                ("clock_window_filter", True), ("collapse_identical_text", True))
             if name not in self.packing.model_fields_set
         }
         if packing:
             self.packing = self.packing.model_copy(update=packing)
         if self.scoring.fusion == "rrf" and "rrf_recency_order" not in self.scoring.model_fields_set:
             self.scoring = self.scoring.model_copy(update={"rrf_recency_order": True})
-        # Corrections need batched extraction; with batching off they stay off, and nothing is raised.
-        if "enable_extraction_corrections" not in self.model_fields_set and self.extraction_batch_target_tokens > 0:
-            self.enable_extraction_corrections = True
         return self
 
     @model_validator(mode="after")

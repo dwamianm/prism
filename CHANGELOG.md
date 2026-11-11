@@ -9,44 +9,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Address-first memory, behind one switch that is off by default: `memory_mode` (`PRME_MEMORY_MODE`), `classic`
-  unless set (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first` turns on typed extraction
-  (`enable_typed_extraction`), relation routing (`enable_relation_routing`) and the settings below. A setting the
-  configuration gives itself is kept, and each can be used alone.
-  - `enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`): the claims a routed question reaches are read as a ledger,
-    and the claim that holds now comes first. Each claim gets a state (current, planned, earlier, ended or negated)
-    from its typed status, its polarity, its stated time and the later claims at the same address. A question no
-    word routes can find its address in a catalog of the claims on the entities it names. The reader format shows
-    the state as a tag and the receipt records the ledger. See [the belief ledger](docs/RELATIONS.md#the-belief-ledger).
-  - `enable_extraction_corrections` (`PRME_ENABLE_EXTRACTION_CORRECTIONS`), as it exists: each batched extraction
-    request is shown the earlier claims nearest its turns, so a fact may name the one it corrects. `address_first`
-    turns it on when extraction is batched, and leaves it off otherwise.
+- Address-first memory, read-time half, behind one switch that is off by default: `memory_mode`
+  (`PRME_MEMORY_MODE`), `classic` unless set (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first`
+  turns on relation routing (`enable_relation_routing`) and the settings below, and nothing else. Each acts only when
+  a question is asked: the mode changes nothing at write time, makes no model call, and rewrites no stored memory,
+  so the same pack can be read with it on or off, and turning it on reads no memory as stale for `reingest()`. A
+  setting the configuration gives itself is kept, and each can be used alone.
+  - `enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`): the claims a routed question reaches are read as a ledger.
+    Each claim gets a state (current, planned, earlier, ended or negated) from its typed status, its polarity, its
+    stated time and the later claims at the same address, and for a question about now the claim that holds now
+    comes first among them. The claims stay together where the best ranked of them already stands and gain no rank
+    (`BELIEF_VERSION` 2). A question no word routes can find its address in a catalog of the claims on the entities
+    it names. The reader format shows the state as a tag and the receipt records the ledger. See
+    [the belief ledger](docs/RELATIONS.md#the-belief-ledger).
   - `packing.session_context_direct_first` (`PRME_PACKING__SESSION_CONTEXT_DIRECT_FIRST`): session neighbors are
     capped below the N-th best direct match; `address_first` sets 10.
   - `packing.clock_window_filter` (`PRME_PACKING__CLOCK_WINDOW_FILTER`): a clock window the question states
     ("between 15:00 and 16:00 on November 3") becomes its event-time filter.
   - `packing.collapse_identical_text` (`PRME_PACKING__COLLAPSE_IDENTICAL_TEXT`): records with identical text are shown
     once, with how many there are and the time they span.
-  - `packing.second_round` (`PRME_PACKING__SECOND_ROUND`): one more word search for what the best result names,
-    whose best two matches are placed below the third result.
   - `scoring.rrf_recency_order` (`PRME_SCORING__RRF_RECENCY_ORDER`): under rank fusion, recency on a current-state
     question is read on the question's own time scale, so memories minutes apart are ordered as clearly as
     memories months apart.
 
   Every one of these options is off by default. With the defaults, the contract scorecard below gives the same
-  result on each of its checks as on 0.17.0a6. Nothing stored is rewritten: typed extraction and corrections apply
-  to what `ingest()` stores after they are turned on, and the other options act when a question is asked. As with
-  typed extraction alone, memories derived without it read as stale for `reingest()`, which re-derives them only
-  when called. Relation routing gains the concept `pet` (`owns`) and a rule that reads a typed role on the claim's
-  subject when the quote puts it there, so `ROUTING_VERSION` is 2.
+  result on each of its checks as on 0.17.0a6. Relation routing gains the concept `pet` (`owns`) and a rule that
+  reads a typed role on the claim's subject when the quote puts it there, so `ROUTING_VERSION` is 2.
 
-  Evidence so far. On the offline evidence gate of 2026-11-10 (at fb050a50, each option alone against the
-  defaults), `session_context_direct_first`, `clock_window_filter` and `collapse_identical_text` changed no measure;
-  `rrf_recency_order` moved LoCoMo all evidence packed by +0.1 points (2 wins, 0 losses); `second_round` moved LoCoMo
-  projected accuracy by -0.2 points (95% interval -0.4 to +0.1) and left LongMemEval-S unchanged. The belief ledger,
-  typed extraction and corrections are not visible to that gate, whose packs hold no extracted claims, and have only
-  the contract scorecard behind them so far. On the contract chats, a recording with corrections on retired 4 of
-  the 7 claims each chat corrects, and no true claim.
+  Evidence (2026-11-11, benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md). On the fast probes over
+  cached extraction (no model call), off against the mode, the answers in the top 3 and the top 5 were 7 and 7
+  against 7 and 7 of 7 on `defects-v1`, 14 and 15 against 15 and 16 of 18 on `chat-v1`, and 10 and 11 against 11
+  and 12 of 12 on `member-v1`; the user claims on the named owner did not change (12, 35 and 7). On the mid tier,
+  the mode's settings on the defaults' own packs against the defaults (LoCoMo, 1,536 questions with evidence;
+  intervals over questions, then over conversations): all evidence packed +0.8 points (+0.4 to +1.2; +0.3 to +1.4;
+  12 gained, 0 lost), evidence recall +0.5 (+0.2 to +0.8; +0.2 to +0.9), projected accuracy +0.5 (+0.3 to +0.8;
+  +0.2 to +0.9), all evidence returned unchanged, and evidence in the top 25 -0.7 points (-1.1 to -0.3; -1.0 to
+  -0.3; 0 gained, 15 lost). That last row is a small loss with both intervals entirely below zero: under the alpha
+  rule it alone fails a default flip, so the mode stays off. LongMemEval-S (12 questions) did not move, and no
+  question lost all its candidates. On the offline evidence gate of 2026-11-10 (at fb050a50, each option alone
+  against the defaults), `session_context_direct_first`, `clock_window_filter` and `collapse_identical_text`
+  changed no measure, and `rrf_recency_order` moved LoCoMo all evidence packed by +0.1 points (2 wins, 0 losses).
+
+  What was taken out, and why. The mode first also turned on typed extraction (`enable_typed_extraction`),
+  corrections (`enable_extraction_corrections`) and the second round (`packing.second_round`). With them, on
+  2026-11-11, it put 4 and 5 of 7 defect answers in the top 3 on two live builds (7 with the mode off) and 10 and 11
+  of 18 chat answers (14 off), and on the mid tier, built through `ingest()` with the mode (1,180 extraction calls),
+  it lost 3.1 points of LoCoMo evidence in the top 25 (95% interval -4.2 to -1.9 over questions, -4.5 to -1.6 over
+  conversations). The ledger then led the results; placed where its claims already stand, the same packs still
+  lost 3.2 points there (-4.2 to -2.2; -4.2 to -2.0), and the whole mode on the cached address-first extraction
+  still put 4 of 7 defect answers in the top 3 and 12 of 18 chat answers, while the read-time settings alone on the
+  defaults' packs lost 0.7 and passed the three probes. Most of the loss therefore comes with what typed extraction
+  and corrections store. The second round alone moved 4 chat answers down one place each. All three stay as
+  separate options, off by default, and nothing they stored before is rewritten.
+- `packing.second_round` (`PRME_PACKING__SECOND_ROUND`), an option of its own and not part of `address_first`: one
+  more word search for what the best result names, whose best two matches are placed below the third result. On the
+  offline evidence gate of 2026-11-10 it moved LoCoMo projected accuracy by -0.2 points (95% interval -0.4 to +0.1)
+  and left LongMemEval-S unchanged; alone, it lost answers on the chat and member probes on 2026-11-11.
 - Stated facts: `MemoryEngine.ingest(content, assertions=[...])`, the same per message in `ingest_batch()`, and
   `MemoryClient.ingest()`. A caller that knows a fact states it (subject, relation of the vocabulary, object, types,
   and optional status, polarity and role, or `has` with a predicate for a literal value), and ingestion writes the

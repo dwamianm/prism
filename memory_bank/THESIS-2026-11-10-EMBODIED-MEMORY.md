@@ -351,8 +351,10 @@ source of the contract chat (`deepseek-v4.1-flash:cloud`), against a key of 7 cl
 On the hidden chat, `similar` retired 5 and 5 of 7 and `entity` 1 and 3, none wrongly. The diagnosis: a
 first-person turn names the owner, and the owner's five newest claims are not the ones a correction is about. "I'm
 vegetarian", six weeks old, never reached the request that said "not strictly vegetarian anymore", while a recent,
-unrelated claim did ("my knee hurt a bit after it"), and the model retired it on "Knee was fine this time". The
-corrections that address-first turns on show the claims nearest each turn's text, as before.
+unrelated claim did ("my knee hurt a bit after it"), and the model retired it on "Knee was fine this time". Corrections,
+when turned on, show the claims nearest each turn's text, as before; since 2026-11-11 they are an option of their
+own and not part of `memory_mode="address_first"`, which is the read-time half only
+(`benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`).
 
 **An open defect in default-on code.** `is_current_state_question` (`prme/retrieval/query_analysis.py`) reads
 "first" in "first aid kit" as a history word, so "Where is the first aid kit now?" is not a current-state question

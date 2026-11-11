@@ -100,10 +100,7 @@ XFAIL_INGEST: dict[str, str] = {
 }
 
 # Known failures under memory_mode="address_first" only (they pass in the classic mode), applied with
-# --memory-mode address_first. Each needs a design decision; see README.md.
-XFAIL_INGEST_ADDRESS_FIRST: dict[str, str] = {
-    # Failed with the earlier recording (corrections showing the claims on the turn's entities) and passes with
-    # the present one; the cause stays in the data, so it is kept as known.
-    "chat-stale-pet": "claim text split across two records: the ledger leads with 'We adopted a dog after all!' and "
-                      "the beagle is named in the next sentence, another record, so the considered dog can rank above",
-}
+# --memory-mode address_first. Each needs a design decision; see README.md. Decided again on 2026-11-11 for the
+# mode's read-time half (no typed extraction, no corrections, the ledger in place): none, in four runs.
+# "chat-stale-pet" was listed while the ledger led the results; it passes now and guards against going back.
+XFAIL_INGEST_ADDRESS_FIRST: dict[str, str] = {}

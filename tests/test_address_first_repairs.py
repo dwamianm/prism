@@ -1,9 +1,10 @@
-"""Three read-time repairs memory_mode="address_first" turns on (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md).
+"""Three read-time repairs from the address-first work (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md).
 
 ``packing.clock_window_filter`` reads a clock window a question states as its event-time filter
 (``prme.retrieval.clock_window``); ``packing.collapse_identical_text`` shows records with identical text once
-(``prme.retrieval.repeats``); ``packing.second_round`` searches once more for what the best result points at
-(``prme.retrieval.second_round``). These tests cover each rule with small in-memory fixtures, the scores and
+(``prme.retrieval.repeats``); both are part of memory_mode="address_first". ``packing.second_round`` searches once
+more for what the best result points at (``prme.retrieval.second_round``); it is an option of its own, off, and not
+part of the mode. These tests cover each rule with small in-memory fixtures, the scores and
 receipts they write, and that each option off retrieves exactly as with the option absent. No model call.
 """
 

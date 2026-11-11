@@ -288,38 +288,32 @@ def order(results) -> list[int]:
     return [result.node.id.int for result in results]
 
 
-def test_leading_claims_go_first_in_ledger_order_and_their_scores_replay():
+def test_claims_take_the_place_of_the_best_ranked_of_them_in_ledger_order_and_their_scores_replay():
+    # The ledger orders the address's claims; it does not lift them above the text ranking.
     scored = scored_pool(.9, .7, .5, .3)
-    top = scored[0]
+    best = scored[1]
     before = {result.node.id.int: result.composite_score for result in scored}
-    results, placed = place_beliefs(scored, [belief(3), belief(2, "ended")], nodes_of(1, 2, 3, 4), lead=True)
-    assert placed == 2 and order(results) == [3, 2, 1, 4]
-    for result, coefficient, state in ((results[0], 1 + 2 * BELIEF_SCORE_STEP, "current"),
-                                       (results[1], 1 + BELIEF_SCORE_STEP, "ended")):
+    results, placed = place_beliefs(scored, [belief(3), belief(2, "ended")], nodes_of(1, 2, 3, 4))
+    assert placed == 2 and order(results) == [1, 3, 2, 4]
+    assert results[1].composite_score > results[2].composite_score > scored[2].composite_score
+    for result, coefficient, state in ((results[1], 1 + 2 * BELIEF_SCORE_STEP, "current"),
+                                       (results[2], 1 + BELIEF_SCORE_STEP, "ended")):
         assert BELIEF_PATH in result.paths and result.belief_state == state
         adjustment = result.score_provenance.adjustments[-1]
         assert (adjustment.kind, adjustment.coefficient, adjustment.source_node_id) == ("belief", coefficient,
-                                                                                        top.node.id)
+                                                                                        best.node.id)
         assert result.score_provenance.replay_score() == result.composite_score
-    assert {result.node.id.int: result.composite_score for result in results[2:]} == {1: before[1], 4: before[4]}
-    assert results[2].belief_state is None
+    assert {item.node.id.int: item.composite_score for item in (results[0], results[3])} == {1: before[1],
+                                                                                            4: before[4]}
+    assert results[0].belief_state is None
 
 
-def test_claims_not_leading_take_the_place_of_the_best_ranked_of_them():
-    # The address was found in the catalog: the claims stay where the best of them stood, the current one first.
-    scored = scored_pool(.9, .7, .5, .3)
-    results, placed = place_beliefs(scored, [belief(3), belief(2, "ended")], nodes_of(1, 2, 3, 4), lead=False)
-    assert placed == 2 and order(results) == [1, 3, 2, 4]
-    assert results[1].composite_score > results[2].composite_score > scored[2].composite_score
-    assert all(result.score_provenance.replay_score() == result.composite_score for result in results[1:3])
-
-
-def test_a_claim_that_was_not_retrieved_is_added():
-    scored = scored_pool(.9, .5)
-    results, placed = place_beliefs(scored, [belief(5)], nodes_of(1, 2, 5), lead=True)
-    assert placed == 1 and order(results) == [5, 1, 2]
-    added = results[0]
-    assert added.paths == [BELIEF_PATH] and added.belief_state == "current"
+def test_a_claim_that_was_not_retrieved_is_added_beside_the_others():
+    scored = scored_pool(.9, .5, .3)
+    results, placed = place_beliefs(scored, [belief(2), belief(5, "earlier")], nodes_of(1, 2, 3, 5))
+    assert placed == 2 and order(results) == [1, 2, 5, 3]
+    added = results[2]
+    assert added.paths == [BELIEF_PATH] and added.belief_state == "earlier"
     assert added.score_provenance.replay_score() == added.composite_score
 
 
@@ -328,11 +322,8 @@ def test_nothing_to_place_leaves_the_results_as_they_were():
     assert place_beliefs([], [belief(1)], nodes_of(1)) == ([], 0)
     unchanged, placed = place_beliefs(scored, [], nodes_of(1, 2))
     assert unchanged is scored and placed == 0
-    # Not leading and none of the claims retrieved: nothing to anchor on.
-    unchanged, placed = place_beliefs(scored, [belief(9)], nodes_of(9), lead=False)
-    assert unchanged is scored and placed == 0
-    # A claim with no node and no candidate is skipped.
-    unchanged, placed = place_beliefs(scored, [belief(8)], {}, lead=True)
+    # None of the claims retrieved: nothing to stand beside.
+    unchanged, placed = place_beliefs(scored, [belief(9)], nodes_of(9))
     assert unchanged is scored and placed == 0
 
 
@@ -620,20 +611,27 @@ def settings(**fields) -> PRMEConfig:
 
 def address_first_options(config: PRMEConfig) -> dict:
     return {
-        "enable_typed_extraction": config.enable_typed_extraction,
         "enable_relation_routing": config.enable_relation_routing,
         "enable_belief_state": config.enable_belief_state,
         "session_context_direct_first": config.packing.session_context_direct_first,
+        "clock_window_filter": config.packing.clock_window_filter,
+        "collapse_identical_text": config.packing.collapse_identical_text,
         "rrf_recency_order": config.scoring.rrf_recency_order,
     }
 
 
-ALL_ON = {"enable_typed_extraction": True, "enable_relation_routing": True, "enable_belief_state": True,
-          "session_context_direct_first": 10, "rrf_recency_order": True}
+ALL_ON = {"enable_relation_routing": True, "enable_belief_state": True, "session_context_direct_first": 10,
+          "clock_window_filter": True, "collapse_identical_text": True, "rrf_recency_order": True}
 
 
 def test_address_first_turns_each_option_on():
     assert address_first_options(settings(memory_mode="address_first")) == ALL_ON
+
+
+def test_address_first_turns_on_nothing_that_acts_when_memories_are_stored():
+    # Typed extraction, corrections and the second round lost answers or evidence on 2026-11-11; they stay apart.
+    config = settings(memory_mode="address_first")
+    assert not (config.enable_typed_extraction or config.enable_extraction_corrections or config.packing.second_round)
 
 
 def test_address_first_is_read_from_the_environment(monkeypatch):
@@ -643,7 +641,8 @@ def test_address_first_is_read_from_the_environment(monkeypatch):
 
 @pytest.mark.parametrize("fields, kept", [
     ({"enable_belief_state": False}, {"enable_belief_state": False}),
-    ({"enable_typed_extraction": False}, {"enable_typed_extraction": False}),
+    ({"enable_relation_routing": False}, {"enable_relation_routing": False}),
+    ({"packing": {"collapse_identical_text": False}}, {"collapse_identical_text": False}),
     ({"packing": {"session_context_direct_first": 3}}, {"session_context_direct_first": 3}),
 ])
 def test_an_option_the_configuration_sets_itself_is_kept(fields, kept):
@@ -663,8 +662,8 @@ def test_under_weighted_scoring_address_first_leaves_rrf_recency_order_off():
 def test_classic_changes_nothing():
     assert settings(memory_mode="classic").model_dump(mode="json") == settings().model_dump(mode="json")
     assert address_first_options(settings()) == {
-        "enable_typed_extraction": False, "enable_relation_routing": False, "enable_belief_state": False,
-        "session_context_direct_first": None, "rrf_recency_order": False}
+        "enable_relation_routing": False, "enable_belief_state": False, "session_context_direct_first": None,
+        "clock_window_filter": False, "collapse_identical_text": False, "rrf_recency_order": False}
 
 
 def test_an_unknown_memory_mode_is_refused():

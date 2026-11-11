@@ -1,8 +1,10 @@
 """Record what the extraction model returns for a contract chat, once, so test_chat_ingest.py can replay it.
 
-It runs the chat's four sessions through ``ingest_batch()``, one call per session, with the product defaults and
-``memory_mode="address_first"`` (so the typed fields are asked for, and corrections are on, showing each batched
-request the earlier claims nearest its turns), against the local Ollama server with ``deepseek-v4.1-flash:cloud``,
+It runs the chat's four sessions through ``ingest_batch()``, one call per session, with the product defaults,
+``memory_mode="address_first"`` and two write-time options set outright, typed extraction and corrections (so the
+typed fields are asked for, and each batched request shows the earlier claims nearest its turns). The mode turned
+both on when the fixtures were recorded on 2026-11-11 and no longer does, so they are named here to record the same
+requests again. The run goes against the local Ollama server with ``deepseek-v4.1-flash:cloud``,
 the only model the project's checks use; no paid provider is called. Every call the engine makes to the provider's
 ``extract_batch()`` and ``repair_pronouns()`` is saved with its request (the earlier claims it showed for
 correction included) and the parsed answer, before any check. Afterwards it prints which claims ended retired,
@@ -66,8 +68,8 @@ def source_tree() -> dict:
 async def record(world: scenes.ChatWorld) -> dict:
     calls: list[dict] = []
     directory = tempfile.mkdtemp(prefix="prme-contract-record-")
-    config = product_config(directory, mode="address_first", extraction=RECORDED_EXTRACTION)
-    assert config.enable_extraction_corrections
+    config = product_config(directory, mode="address_first", extraction=RECORDED_EXTRACTION,
+                            enable_typed_extraction=True, enable_extraction_corrections=True)
     engine = await MemoryEngine.create(config)
     try:
         provider = engine._pipeline._extraction_provider
@@ -117,10 +119,10 @@ async def record(world: scenes.ChatWorld) -> dict:
     print(f"  retired outside the key: {retirements.wrong}", file=sys.stderr)
     return {
         "note": ("What the extraction model returned for this chat through ingest_batch() with the product defaults "
-                 "and memory_mode='address_first'. Replayed by test_chat_ingest.py; recorded by "
+                 "and memory_mode='address_first', with typed extraction and corrections on. Replayed by test_chat_ingest.py; recorded by "
                  "tests/contract/fixtures/record_chat_extraction.py."),
         "recorded": {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "memory_mode": "address_first",
-                     "enable_extraction_corrections": True,
+                     "enable_typed_extraction": True, "enable_extraction_corrections": True,
                      **RECORDED_EXTRACTION, **ollama_identity(), **source_tree(),
                      "claims_derived": claims, "claims_with_a_relation": typed,
                      "retired": retirements.retired, "retired_outside_the_key": retirements.wrong},

@@ -2,8 +2,9 @@
 
 The chat's four sessions go through ``ingest_batch()``, one call per session, with the product defaults. The
 extraction provider's answers come from ``fixtures/chat_extraction.json``, recorded once against the local Ollama
-server with ``memory_mode="address_first"`` (``fixtures/record_chat_extraction.py`` has the command), so the typed
-fields are in it. In the classic mode the same answers are replayed and the typed fields are not asked for.
+server with ``memory_mode="address_first"``, typed extraction and corrections on
+(``fixtures/record_chat_extraction.py`` has the command), so the typed fields are in it. Both runs here leave those
+two options off, as the product does, so the same answers are replayed and the typed fields are not asked for.
 
 Known answers: those of ``test_chat_store.py``, under the same case ids, and:
 
@@ -13,8 +14,8 @@ Known answers: those of ``test_chat_store.py``, under the same case ids, and:
 - retired: each claim the chat later corrects (``ChatWorld.retire``, the key) has ended retired, every copy;
 - no true claim retired: no claim outside the key ended retired, other than a copy merged into a repeat of itself.
 
-The recording was made with corrections on (address_first turns them on), so in the classic mode, where they are
-off, the labels it holds are not asked for and retire nothing.
+The recording was made with corrections on, so here, where they are off in both modes, the labels it holds are not
+asked for and retire nothing.
 """
 
 from tests.contract.harness import (

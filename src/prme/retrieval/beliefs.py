@@ -14,9 +14,11 @@ one holds at the question's time:
   later claims at the same address: ``current``, ``planned``, ``earlier``
   (a newer value took its place at a single-valued address), ``ended`` (a
   later claim says it stopped) or ``negated``.
-- :func:`place_beliefs` puts those claims at the head of the results in ledger
-  order, ahead of the text ranking, with a ``belief`` score adjustment that
-  replays, and the ``BELIEF`` path, which packing reserves.
+- :func:`place_beliefs` keeps those claims together where the best ranked of
+  them already stands, in ledger order, with a ``belief`` score adjustment that
+  replays, and the ``BELIEF`` path, which packing reserves. The text ranking
+  and relation routing decide how high an address's claims rank; the ledger
+  decides their order, so a claim that holds now is never below one that ended.
 
 Nothing is written: the ledger is computed from stored claims at read time, so
 a rebuild, a re-ingest or a correction changes the next answer and no stored
@@ -43,8 +45,9 @@ BELIEF_PATH = "BELIEF"
 
 # The version of the ledger rule recorded in receipts. Change it with any
 # change to the states, the single-valued relations, the closing rules or the
-# order that can change where a claim is placed.
-BELIEF_VERSION = 1
+# order that can change where a claim is placed. Version 2: the claims stay where
+# the best ranked of them stands instead of leading the results.
+BELIEF_VERSION = 2
 
 # Relations where a newer value replaces the older one: a person has one
 # employer, one home and one partner at a time unless the claims say
@@ -59,9 +62,9 @@ def is_single_valued(relation: str) -> bool:
     return relation in SINGLE_VALUED or relation.startswith("has:")
 
 
-# Each placed claim takes the top result's score times one plus this fraction
-# per place from the end, so the claims lead the results in ledger order and
-# keep that order through selection and packing.
+# Each placed claim takes the best ranked claim's score times one plus this
+# fraction per place from the end, so the claims stay together in ledger order
+# and keep that order through selection and packing.
 BELIEF_SCORE_STEP = 1e-3
 
 # The order of states for a question about now. A question about history
@@ -211,23 +214,20 @@ def place_beliefs(
     scored: list[RetrievalCandidate],
     beliefs: Sequence[Belief],
     nodes: Mapping[str, MemoryNode],
-    *,
-    lead: bool = True,
 ) -> tuple[list[RetrievalCandidate], int]:
-    """Put the ledger's claims together in the results, in ledger order.
+    """Put the ledger's claims together in the results, in ledger order, where the best ranked of them stands.
 
-    With ``lead`` (a question whose own words named the relation) they go to
-    the head of the results. Without it (an address found in the catalog by
-    the claim the question matches best) they go where the best ranked of
-    them already stands, so a claim that holds now is never below one that
-    ended, and an address the question was not about gains no rank.
+    The claims gain no rank as a group: a list question whose answer is
+    another record ("Which cities will they visit?") keeps that record where
+    the text ranking put it, and a claim that holds now is never below one
+    that ended.
 
-    The i-th of n claims takes the top result's score times
-    ``1 + (n - i) * BELIEF_SCORE_STEP``, with the top result's score
-    provenance and a ``belief`` adjustment that names it, so the receipt
-    replays the score. Each gets the ``BELIEF`` path and its ``belief_state``,
-    which the reader format shows as a tag. A claim that is not among
-    ``scored`` is added.
+    The i-th of n claims takes the best ranked claim's score times
+    ``1 + (n - i) * BELIEF_SCORE_STEP``, with its score provenance and a
+    ``belief`` adjustment that names it, so the receipt replays the score.
+    Each gets the ``BELIEF`` path and its ``belief_state``, which the reader
+    format shows as a tag. A claim of the ledger that is not among ``scored``
+    is added beside the others.
 
     Returns the candidates sorted by score and node id, and how many claims
     were placed (0 leaves ``scored`` as it was).
@@ -235,12 +235,11 @@ def place_beliefs(
     if not scored or not beliefs:
         return scored, 0
     wanted = {belief.node_id for belief in beliefs}
-    anchors = scored if lead else [candidate for candidate in scored if str(candidate.node.id) in wanted]
+    anchors = [candidate for candidate in scored if str(candidate.node.id) in wanted]
     if not anchors:
         return scored, 0
     top = min(anchors, key=lambda candidate: (-candidate.composite_score, str(candidate.node.id)))
-    # The top result's own score, with its route term: the claims must lead every result, and a score that
-    # dropped the term (as context records inherit it) can fall below a result the route did not reach.
+    # The best ranked claim's own score, with its route term, so the group stays where that claim stood.
     inherited, provenance = top.composite_score, top.score_provenance
     relevance = rank_fusion_relevance(top)
     by_id: dict[str, RetrievalCandidate] = {str(candidate.node.id): candidate for candidate in scored}

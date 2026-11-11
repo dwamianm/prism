@@ -157,9 +157,12 @@ def check_product_defaults(config: PRMEConfig, mode: str = "classic") -> None:
     # getattr: the classic mode also runs on a tree from before memory_mode existed, to compare the two.
     assert getattr(config, "memory_mode", "classic") == mode
     if mode == "address_first":
-        # The core of the mode. Which ranking options it also turns on is still being decided, so they are not
-        # pinned here; tests/test_belief_state.py checks the mode's settings.
-        assert config.enable_typed_extraction and config.enable_relation_routing and config.enable_belief_state
+        # The core of the mode; tests/test_belief_state.py checks the rest of its settings. The mode turns on
+        # nothing that acts at write time, so typed extraction and corrections are on only when given outright
+        # (the recording script gives both).
+        assert config.enable_relation_routing and config.enable_belief_state
+        for name in ("enable_typed_extraction", "enable_extraction_corrections"):
+            assert name in config.model_fields_set or not getattr(config, name)
     else:
         assert not (config.enable_typed_extraction or config.enable_relation_routing
                     or getattr(config, "enable_belief_state", False))

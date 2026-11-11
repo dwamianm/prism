@@ -1249,10 +1249,11 @@ class RetrievalPipeline:
                 candidate_counts["CURRENT_STATE"] = added
 
         # --- Stage 5.5f2: The claims that hold now (enable_belief_state) ---
-        # The claims a routed question reached are read as a ledger and lead
-        # the results in ledger order: what holds now first, then what is
-        # planned, then what ended. The receipt records it only when a claim
-        # was placed, so any other retrieval keeps its bytes.
+        # The claims a routed question reached are read as a ledger and kept
+        # together where the best ranked of them stands, in ledger order: what
+        # holds now first, then what is planned, then what ended. The receipt
+        # records it only when a claim was placed, so any other retrieval keeps
+        # its bytes.
         belief_source = "route"
         if (
             self._belief_state and route_walk is None and scored
@@ -1290,9 +1291,7 @@ class RetrievalPipeline:
                 last_step=len(route) - 1 if belief_source == "route" else 0,
                 now=scoring_now, history=_asks_for_history(query, _claim_names(route_walk.nodes.values())),
             )
-            scored, beliefs_placed = place_beliefs(
-                scored, ledger, route_walk.nodes, lead=belief_source == "route",
-            )
+            scored, beliefs_placed = place_beliefs(scored, ledger, route_walk.nodes)
             if beliefs_placed:
                 ranking_policy = "score_id"
                 candidate_counts["BELIEF"] = beliefs_placed
