@@ -14,11 +14,12 @@ one holds at the question's time:
   later claims at the same address: ``current``, ``planned``, ``earlier``
   (a newer value took its place at a single-valued address), ``ended`` (a
   later claim says it stopped) or ``negated``.
-- :func:`place_beliefs` keeps those claims together where the best ranked of
-  them already stands, in ledger order, with a ``belief`` score adjustment that
+- :func:`place_beliefs` reorders those claims among the places they already
+  hold in the results, in ledger order, with a ``belief`` score adjustment that
   replays, and the ``BELIEF`` path, which packing reserves. The text ranking
-  and relation routing decide how high an address's claims rank; the ledger
-  decides their order, so a claim that holds now is never below one that ended.
+  and relation routing decide where an address's claims rank; the ledger
+  decides which claim takes which of those places, so a claim that holds now is
+  never below one that ended. It adds no claim and lifts none.
 
 Nothing is written: the ledger is computed from stored claims at read time, so
 a rebuild, a re-ingest or a correction changes the next answer and no stored
@@ -31,10 +32,11 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+import math
 import re
 from typing import TYPE_CHECKING
 
-from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, rank_fusion_relevance
+from prme.retrieval.models import RetrievalCandidate, ScoreAdjustment, ScoreProvenance, rank_fusion_relevance
 from prme.retrieval.time import as_utc
 
 if TYPE_CHECKING:
@@ -46,8 +48,9 @@ BELIEF_PATH = "BELIEF"
 # The version of the ledger rule recorded in receipts. Change it with any
 # change to the states, the single-valued relations, the closing rules or the
 # order that can change where a claim is placed. Version 2: the claims stay where
-# the best ranked of them stands instead of leading the results.
-BELIEF_VERSION = 2
+# the best ranked of them stands instead of leading the results. Version 2 still
+# lifted the group and added claims; version 3 only reorders.
+BELIEF_VERSION = 3
 
 # Relations where a newer value replaces the older one: a person has one
 # employer, one home and one partner at a time unless the claims say
@@ -61,11 +64,6 @@ def is_single_valued(relation: str) -> bool:
     """Whether a newer value at this relation replaces the older one. An attribute (``has:diet``) has one value."""
     return relation in SINGLE_VALUED or relation.startswith("has:")
 
-
-# Each placed claim takes the best ranked claim's score times one plus this
-# fraction per place from the end, so the claims stay together in ledger order
-# and keep that order through selection and packing.
-BELIEF_SCORE_STEP = 1e-3
 
 # The order of states for a question about now. A question about history
 # reads the ledger in time order instead.
@@ -213,72 +211,124 @@ def read_ledger(
 def place_beliefs(
     scored: list[RetrievalCandidate],
     beliefs: Sequence[Belief],
-    nodes: Mapping[str, MemoryNode],
 ) -> tuple[list[RetrievalCandidate], int]:
-    """Put the ledger's claims together in the results, in ledger order, where the best ranked of them stands.
+    """Reorder the ledger's claims among the places they already hold, in ledger order.
 
-    The claims gain no rank as a group: a list question whose answer is
-    another record ("Which cities will they visit?") keeps that record where
-    the text ranking put it, and a claim that holds now is never below one
-    that ended.
+    Only claims of the ledger that are among ``scored`` take part. A claim the
+    search did not return, or that an earlier stage left out (a folded claim
+    statement, a claim a filter dropped), is not added. With the candidates
+    ranked by score and node id, the places the members hold go to the
+    members in ledger order: the first claim of the ledger takes the best
+    ranked member's place, the second the next member's place, and so on.
+    Every other candidate keeps its score and its rank, so the group gains no
+    rank: the text ranking and the route list decide where an address's claims
+    stand, and the ledger decides which claim stands where.
 
-    The i-th of n claims takes the best ranked claim's score times
-    ``1 + (n - i) * BELIEF_SCORE_STEP``, with its score provenance and a
-    ``belief`` adjustment that names it, so the receipt replays the score.
-    Each gets the ``BELIEF`` path and its ``belief_state``, which the reader
-    format shows as a tag. A claim of the ledger that is not among ``scored``
-    is added beside the others.
+    A member takes the score of the place it takes. When that score would not
+    keep the order (two members with equal scores, or a neighbor with an equal
+    score and a node id on the wrong side), it takes the nearest float that
+    does, so the ledger order holds under the sort by score and node id. A
+    member whose score changes gets a ``belief`` adjustment whose coefficient
+    is its new score over its own replayed score, so the receipt replays the
+    score. Each member gets the ``BELIEF`` path and its ``belief_state``, which
+    the reader format shows as a tag, and a ``context_relevance`` of at least
+    the best ranked member's.
 
     Returns the candidates sorted by score and node id, and how many claims
-    were placed (0 leaves ``scored`` as it was).
+    took part (0 leaves ``scored`` as it was).
     """
     if not scored or not beliefs:
         return scored, 0
-    wanted = {belief.node_id for belief in beliefs}
-    anchors = [candidate for candidate in scored if str(candidate.node.id) in wanted]
-    if not anchors:
+    ranked = sorted(scored, key=_rank_key)
+    position = {str(candidate.node.id): index for index, candidate in enumerate(ranked)}
+    states: dict[str, str] = {}
+    for belief in beliefs:
+        # A claim the walk read under two relations is placed once, at its first place in the ledger. A claim
+        # whose score is not positive cannot be scaled to another place, so it keeps its own.
+        if belief.node_id in position and ranked[position[belief.node_id]].composite_score > 0:
+            states.setdefault(belief.node_id, belief.state)
+    if not states:
         return scored, 0
-    top = min(anchors, key=lambda candidate: (-candidate.composite_score, str(candidate.node.id)))
-    # The best ranked claim's own score, with its route term, so the group stays where that claim stood.
-    inherited, provenance = top.composite_score, top.score_provenance
-    relevance = rank_fusion_relevance(top)
-    by_id: dict[str, RetrievalCandidate] = {str(candidate.node.id): candidate for candidate in scored}
-    placed = 0
-    total = len(beliefs)
-    for place, belief in enumerate(beliefs):
-        node = nodes.get(belief.node_id)
-        current = by_id.get(belief.node_id)
-        if node is None and current is None:
-            continue
-        coefficient = 1.0 + (total - place) * BELIEF_SCORE_STEP
-        adjusted = None
-        score = inherited * coefficient
-        if provenance is not None:
-            adjusted = provenance.model_copy(update={
-                "adjustments": provenance.adjustments + (ScoreAdjustment(
-                    kind="belief", coefficient=coefficient, source_node_id=top.node.id,
-                ),),
-            })
-            score = adjusted.replay_score()
-        if current is None:
-            assert node is not None
-            by_id[belief.node_id] = RetrievalCandidate(
-                node=node, paths=[BELIEF_PATH], path_count=1, composite_score=score,
-                score_provenance=adjusted, context_relevance=relevance, belief_state=belief.state,
-            )
-        else:
-            by_id[belief.node_id] = current.model_copy(update={
-                "paths": current.paths if BELIEF_PATH in current.paths else [*current.paths, BELIEF_PATH],
-                "composite_score": score,
-                "reranker_score": None,
-                "score_trace": None,
-                "score_provenance": adjusted,
-                "context_relevance": max(current.context_relevance, relevance),
-                "belief_state": belief.state,
-            })
-        placed += 1
-    if not placed:
-        return scored, 0
-    results = list(by_id.values())
-    results.sort(key=lambda candidate: (-candidate.composite_score, str(candidate.node.id)))
-    return results, placed
+    members = [ranked[position[node_id]] for node_id in states]
+    places = sorted(position[node_id] for node_id in states)
+    relevance = rank_fusion_relevance(ranked[places[0]])
+    results = list(ranked)
+    for member, place in zip(members, places):
+        results[place] = member
+    for member, place in zip(members, places):
+        above = results[place - 1] if place > 0 else None
+        below = results[place + 1] if place + 1 < len(results) and str(
+            results[place + 1].node.id) not in states else None
+        score, provenance = _assign(member, ranked[place], above, below)
+        changed = score != member.composite_score
+        results[place] = member.model_copy(update={
+            "paths": member.paths if BELIEF_PATH in member.paths else [*member.paths, BELIEF_PATH],
+            "composite_score": score,
+            "context_relevance": max(member.context_relevance, relevance),
+            "belief_state": states[str(member.node.id)],
+            **({"reranker_score": None, "score_trace": None, "score_provenance": provenance} if changed else {}),
+        })
+    results.sort(key=_rank_key)
+    return results, len(members)
+
+
+def _rank_key(candidate: RetrievalCandidate) -> tuple[float, str]:
+    return -candidate.composite_score, str(candidate.node.id)
+
+
+def _assign(
+    member: RetrievalCandidate,
+    place: RetrievalCandidate,
+    above: RetrievalCandidate | None,
+    below: RetrievalCandidate | None,
+) -> tuple[float, ScoreProvenance | None]:
+    """The score ``member`` takes at ``place``'s rank, and the score provenance that replays it.
+
+    ``above`` is the candidate placed just before it (another member, already
+    assigned, or a non-member) and ``below`` the non-member just after it, if
+    any. The score must rank between the two under the sort by score and node
+    id. The place's own score is tried first, then the floats next to it and
+    to the neighbors' scores, nearest first. The product of the member's own
+    score and the coefficient can land a step away from the score asked for,
+    and no coefficient may hit it exactly, so the replayed score is the one
+    returned and checked. If no score fits both neighbors (three equal scores
+    in a row), the member still ranks below ``above``, which keeps the ledger
+    order.
+    """
+    member_id = str(member.node.id)
+
+    def after_above(score: float) -> bool:
+        return above is None or _rank_key(above) < (-score, member_id)
+
+    def before_below(score: float) -> bool:
+        return below is None or (-score, member_id) < _rank_key(below)
+
+    def replayed(score: float) -> tuple[float, ScoreProvenance | None]:
+        provenance = member.score_provenance
+        if score == member.composite_score or provenance is None:
+            return score, provenance
+        adjusted = provenance.model_copy(update={
+            "adjustments": provenance.adjustments + (ScoreAdjustment(
+                kind="belief", coefficient=score / provenance.replay_score(), source_node_id=place.node.id,
+            ),),
+        })
+        return adjusted.replay_score(), adjusted
+
+    wanted = place.composite_score
+    tried = {wanted, math.nextafter(wanted, math.inf), math.nextafter(wanted, -math.inf)}
+    for neighbor in (above, below):
+        if neighbor is not None:
+            value = neighbor.composite_score
+            tried |= {value, math.nextafter(value, math.inf), math.nextafter(value, -math.inf)}
+    for score in sorted(tried, key=lambda value: (abs(value - wanted), -value)):
+        if score > 0:
+            result = replayed(score)
+            if after_above(result[0]) and before_below(result[0]):
+                return result
+    # No score fits both neighbors: keep the ledger order, below the candidate above.
+    score = min(wanted, above.composite_score) if above is not None else wanted
+    while True:
+        result = replayed(score)
+        if after_above(result[0]):
+            return result
+        score = math.nextafter(score, -math.inf)

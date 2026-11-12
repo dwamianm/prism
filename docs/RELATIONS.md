@@ -188,26 +188,29 @@ names the kit. Claims stated at one time are ordered by their text, and by node 
 too, so a rebuild of the same log gives the same ledger: a node id is new on every build, and the claims of one turn
 have no recorded order, so the end one of them states does not close another.
 
-**Placement.** The ledger's claims are kept together where the best ranked of them already stands, in ledger
-order: the i-th of n takes that claim's score times `1 + (n - i) x 0.001`, with its score provenance and a `belief`
-adjustment that names it, so the receipt replays the score. The group gains no rank: the text ranking and the route
-list decide how high an address's claims stand, so a list question whose answer is another record ("Which cities
-will they visit?") keeps that record where it was, and the ledger only decides the order within the group. Each claim
-carries the `BELIEF` path, which packing reserves, and its `belief_state`, which the reader format shows as a tag. A
-claim of the ledger the search did not find is added beside the others. Until `BELIEF_VERSION` 2 the claims of a
-routed question led the results, which cost LoCoMo evidence in the top 25 on the mid tier.
+**Placement.** The ledger only reorders. The claims of the ledger that are among the results trade the places
+they already hold: the first claim of the ledger takes the best ranked member's place, the second the next member's
+place, and so on. Each takes the score of its new place, with a `belief` adjustment whose coefficient is that score
+over its own replayed score, so the receipt replays the score. When two members' scores are equal, the later claim
+of the ledger takes the nearest float below, so the ledger order holds. Every other candidate keeps its score and
+its rank, so a list question whose answer is another record ("Which cities will they visit?") keeps that record
+where it was. A claim of the ledger the search did not return, or that an earlier stage left out (a folded claim
+statement, a claim a filter dropped), is not added. Each member carries the `BELIEF` path, which packing reserves,
+and its `belief_state`, which the reader format shows as a tag. Until `BELIEF_VERSION` 2 the claims of a routed
+question led the results, which cost LoCoMo evidence in the top 25 on the mid tier. Version 2 still lifted the
+group and added claims; version 3 only reorders.
 
 **The catalog.** A question no word routes ("What is Sam up to these days?") can still be about an address. Its
 catalog is the claims on the entities it names (and the owner's, for a first-person question), read with the walk's
 statement; a seed must be the claim's subject or object, not a text mention. The claim of the catalog that the
 question matches best by meaning names the address, when that claim is among the 10 best semantic matches of the
 whole pool (`CATALOG_SEMANTIC_RANK`); otherwise the question is left to the text ranking. Every claim of the catalog
-at that address is read as one ledger, and the claims are kept together where the best ranked of them stood, as for
+at that address is read as one ledger, and its claims among the results are reordered in their own places, as for
 a routed question, so a claim that holds now is never below one that ended, and an address the question was not
 about gains no rank. A count or list question is not looked up this way.
 
 **Receipts and what stays the same.** A retrieval that placed a claim records `execution.features.belief_state`:
-the ledger version (`BELIEF_VERSION`, 2), the source (`route` or `catalog`) and each claim with its state, relation
+the ledger version (`BELIEF_VERSION`, 3), the source (`route` or `catalog`) and each claim with its state, relation
 and role. Nothing is written and no model is called; the ledger is computed from the stored claims each time, so a
 correction, a re-ingest or a rebuild changes the next answer and no stored memory is rewritten. A retrieval that
 places no claim, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts

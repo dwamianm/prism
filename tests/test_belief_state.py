@@ -24,9 +24,9 @@ from prme.client import config_from_directory
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.models.relevance import RetrievalReceipt, make_receipt
-from prme.retrieval.beliefs import BELIEF_PATH, BELIEF_SCORE_STEP, Belief, is_single_valued, place_beliefs, read_ledger
+from prme.retrieval.beliefs import BELIEF_PATH, Belief, is_single_valued, place_beliefs, read_ledger
 from prme.retrieval.config import RRF_RECENCY_ORDER_SEMANTIC_TOP, PackingConfig, ScoringWeights
-from prme.retrieval.models import MemoryBundle
+from prme.retrieval.models import MemoryBundle, ScoreAdjustment
 from prme.retrieval.pipeline import _asks_for_history
 from prme.retrieval.relation_walk import _role_names_subject, _typed, attribute_key, catalog_walk
 from prme.retrieval.relations import ROUTING_VERSION, ClaimRelation, RelationStep, concept_map, route_question
@@ -34,7 +34,7 @@ from prme.retrieval.scoring import _order_recency, score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
 from tests import test_durable_ingestion
-from tests.test_rank_fusion import EXECUTION, RRF, candidate
+from tests.test_rank_fusion import EXECUTION, RRF, candidate, receipt
 from tests.test_rank_fusion import NOW as SCORED_AT
 from tests.test_rank_fusion_session_context import _graph, _session_decays
 from tests.test_relation_routing import isolated, receipt_bytes  # noqa: F401 (fixture)
@@ -280,50 +280,94 @@ def belief(number, state="current") -> Belief:
     return Belief(node_id=node_id(number), state=state, relation="works_at", role=None, pivot="sam", when=NOW)
 
 
-def nodes_of(*numbers):
-    return {node_id(number): candidate(number).node for number in numbers}
-
-
 def order(results) -> list[int]:
     return [result.node.id.int for result in results]
 
 
-def test_claims_take_the_place_of_the_best_ranked_of_them_in_ledger_order_and_their_scores_replay():
-    # The ledger orders the address's claims; it does not lift them above the text ranking.
+def test_claims_trade_the_places_they_hold_in_ledger_order_and_their_scores_replay():
+    # The ledger orders the address's claims among their own places; it does not lift them.
     scored = scored_pool(.9, .7, .5, .3)
-    best = scored[1]
     before = {result.node.id.int: result.composite_score for result in scored}
-    results, placed = place_beliefs(scored, [belief(3), belief(2, "ended")], nodes_of(1, 2, 3, 4))
+    results, placed = place_beliefs(scored, [belief(3), belief(2, "ended")])
     assert placed == 2 and order(results) == [1, 3, 2, 4]
-    assert results[1].composite_score > results[2].composite_score > scored[2].composite_score
-    for result, coefficient, state in ((results[1], 1 + 2 * BELIEF_SCORE_STEP, "current"),
-                                       (results[2], 1 + BELIEF_SCORE_STEP, "ended")):
+    for result, place, state in ((results[1], 2, "current"), (results[2], 3, "ended")):
         assert BELIEF_PATH in result.paths and result.belief_state == state
+        # The member's own score times the coefficient: the place's score, to the last bit or two.
+        assert math.isclose(result.composite_score, before[place], rel_tol=1e-12)
         adjustment = result.score_provenance.adjustments[-1]
-        assert (adjustment.kind, adjustment.coefficient, adjustment.source_node_id) == ("belief", coefficient,
-                                                                                        best.node.id)
+        assert (adjustment.kind, adjustment.source_node_id) == ("belief", UUID(int=place))
+        assert math.isclose(adjustment.coefficient, before[place] / scored[result.node.id.int - 1].composite_score)
         assert result.score_provenance.replay_score() == result.composite_score
     assert {item.node.id.int: item.composite_score for item in (results[0], results[3])} == {1: before[1],
                                                                                             4: before[4]}
     assert results[0].belief_state is None
 
 
-def test_a_claim_that_was_not_retrieved_is_added_beside_the_others():
+def test_a_claim_that_was_not_retrieved_is_not_added():
+    # Version 3: a claim the search did not return, or that an earlier stage left out, stays out.
     scored = scored_pool(.9, .5, .3)
-    results, placed = place_beliefs(scored, [belief(2), belief(5, "earlier")], nodes_of(1, 2, 3, 5))
-    assert placed == 2 and order(results) == [1, 2, 5, 3]
-    added = results[2]
-    assert added.paths == [BELIEF_PATH] and added.belief_state == "earlier"
-    assert added.score_provenance.replay_score() == added.composite_score
+    results, placed = place_beliefs(scored, [belief(2), belief(5, "earlier")])
+    assert placed == 1 and order(results) == [1, 2, 3]
+    assert [result.composite_score for result in results] == [result.composite_score for result in scored]
+    assert results[1].belief_state == "current" and BELIEF_PATH in results[1].paths
+    assert results[1].score_provenance == scored[1].score_provenance
+
+
+def test_every_other_candidate_keeps_its_rank_and_its_score():
+    scored = scored_pool(.95, .9, .8, .7, .6, .5, .4, .3)
+    # The ledger names the claims at ranks 7, 2 and 5, in that order, and one claim that was not retrieved.
+    results, placed = place_beliefs(scored, [belief(7), belief(9), belief(2, "earlier"), belief(5, "ended")])
+    assert placed == 3 and order(results) == [1, 7, 3, 4, 2, 6, 5, 8]
+    for rank in (0, 2, 3, 5, 7):
+        assert results[rank] == scored[rank]
+    assert all(math.isclose(results[rank].composite_score, scored[rank].composite_score, rel_tol=1e-12)
+               for rank in (1, 4, 6))
+    assert [results[rank].belief_state for rank in (1, 4, 6)] == ["current", "earlier", "ended"]
+    # The group's best relevance reaches every member, and a member keeps its own when that is higher.
+    assert all(results[rank].context_relevance >= scored[1].semantic_score for rank in (1, 4, 6))
+
+
+def test_the_placed_results_replay_from_a_receipt():
+    scored = scored_pool(.95, .9, .8, .7, .6, .5, .4, .3)
+    results, _placed = place_beliefs(scored, [belief(7), belief(2, "earlier"), belief(5, "ended")])
+    saved = receipt(results, policy="score_id")
+    restored = RetrievalReceipt.model_validate_json(saved.model_dump_json())
+    assert restored.replay_ranking() == saved.replay_ranking() == tuple(result.node.id for result in results)
+    assert all(result.score_provenance.replay_score() == result.composite_score for result in results)
+
+
+@pytest.mark.parametrize("ledger_order, moved", [([3, 2], True), ([2, 3], False)])
+def test_two_claims_with_equal_scores_keep_the_ledger_order(ledger_order, moved):
+    # Candidates 2 and 3 tie on every channel, so they share a score; node id alone would put 2 first.
+    scored = scored_pool(.9, .5, .5, .3)
+    assert scored[1].composite_score == scored[2].composite_score
+    results, placed = place_beliefs(scored, [belief(number) for number in ledger_order])
+    assert placed == 2 and order(results) == [1, *ledger_order, 4]
+    assert math.isclose(results[1].composite_score, scored[1].composite_score, rel_tol=1e-12)
+    assert (results[2].composite_score < results[1].composite_score) is moved
+    assert (results[0], results[3]) == (scored[0], scored[3])
+    saved = receipt(results, policy="score_id")
+    assert saved.replay_ranking() == tuple(result.node.id for result in results)
+
+
+@pytest.mark.parametrize("coefficient, valid", [(.5, True), (1.0, True), (3.0, True), (0.0, False), (-1.0, False)])
+def test_a_belief_coefficient_is_any_positive_number(coefficient, valid):
+    def make():
+        return ScoreAdjustment(kind="belief", coefficient=coefficient, source_node_id=UUID(int=1))
+    if valid:
+        assert make().coefficient == coefficient
+    else:
+        with pytest.raises(ValidationError, match="above zero"):
+            make()
 
 
 def test_nothing_to_place_leaves_the_results_as_they_were():
     scored = scored_pool(.9, .5)
-    assert place_beliefs([], [belief(1)], nodes_of(1)) == ([], 0)
-    unchanged, placed = place_beliefs(scored, [], nodes_of(1, 2))
+    assert place_beliefs([], [belief(1)]) == ([], 0)
+    unchanged, placed = place_beliefs(scored, [])
     assert unchanged is scored and placed == 0
-    # None of the claims retrieved: nothing to stand beside.
-    unchanged, placed = place_beliefs(scored, [belief(9)], nodes_of(9))
+    # None of the claims retrieved: nothing to reorder.
+    unchanged, placed = place_beliefs(scored, [belief(9)])
     assert unchanged is scored and placed == 0
 
 

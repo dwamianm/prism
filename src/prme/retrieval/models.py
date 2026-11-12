@@ -182,8 +182,8 @@ class ScoreAdjustment(BaseModel):
             raise ValueError("An owner profile coefficient must be in (0, 1]")
         if self.kind == "second_round" and not 0 < self.coefficient <= 1:
             raise ValueError("A second-round coefficient must be in (0, 1]")
-        if self.kind == "belief" and not 1 < self.coefficient <= 2:
-            raise ValueError("A belief coefficient must be above one and at most two")
+        if self.kind == "belief" and not self.coefficient > 0:
+            raise ValueError("A belief coefficient must be above zero")
         return self
 
 
