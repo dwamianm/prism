@@ -19,6 +19,7 @@ def test_hosted_config_mirrors_the_service():
     assert config.backend == "postgres"
     assert config.embedding.provider == "fastembed"
     assert config.embedding.threads == hosted_profile.HOSTED_EMBEDDING_THREADS
+    assert config.memory_mode == "classic"
     assert config.enable_relation_routing is True
     assert config.enable_speaker_grounding is True
     assert config.enable_speaker_references is True

@@ -474,22 +474,29 @@ def _packs_build(packs: Path, benchmark: str) -> dict:
     return build
 
 
+# Settings that change no stored record: extraction names its model, scoring and packing apply when a pack is read,
+# and memory_mode with the two options it turns on acts only when a question is asked.
+_READ_TIME_SETTINGS = frozenset({"extraction", "scoring", "packing", "memory_mode", "enable_relation_routing",
+                                 "enable_belief_state"})
+
+
 def _check_defaults_build(packs: Path, build: dict) -> None:
     """A baseline's ingest() packs must hold what the defaults ingest at this commit.
 
     The build's engine configuration must be the one the evidence gate makes
     at this commit with no overrides, apart from extraction, whose model the
-    build names, and the scoring and packing settings, which apply when the
-    packs are replayed. A build made at an earlier commit qualifies while
-    nothing it was ingested with has changed, and so does one made with
-    overrides that the defaults have since adopted.
+    build names, and the settings that change no stored record (the scoring
+    and packing settings, which apply when the packs are replayed, and
+    memory_mode with its two read-time options). A build made at an earlier
+    commit qualifies while nothing it was ingested with has changed, and so
+    does one made with overrides that the defaults have since adopted.
     """
     from benchmarks.retrieval_eval import provenance
 
     current = provenance(gate.gate_config(Path("{pack}")))["engine_config"]
     recorded = build["provenance"].get("engine_config") or {}
     differing = sorted(key for key in current.keys() | recorded.keys()
-                       if key not in {"extraction", "scoring", "packing"} and current.get(key) != recorded.get(key))
+                       if key not in _READ_TIME_SETTINGS and current.get(key) != recorded.get(key))
     if differing:
         changed = ", ".join(differing)
         raise ValueError(f"The {packs.name} packs were not built with this commit's defaults ({changed}), so they "

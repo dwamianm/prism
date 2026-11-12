@@ -1,7 +1,8 @@
 # Relation routing
 
-`enable_relation_routing` (`PRME_ENABLE_RELATION_ROUTING`), off by default, answers a question that asks for a
-kind of relation from the graph by that relation (dwamianm/prism#399). "What are the names of Maya's dependents?"
+`enable_relation_routing` (`PRME_ENABLE_RELATION_ROUTING`), on by default through `memory_mode` since 2026-11-12 in
+the alpha channel, answers a question that asks for a kind of relation from the graph by that relation
+(dwamianm/prism#399). "What are the names of Maya's dependents?"
 shares no word with "My husband is Theo and my child is Nico.", and the claims `ingest()` extracted from that
 sentence carry open predicates (`is_husband_of`, `is_child_of`). Routing maps both sides to one vocabulary:
 "dependents" to `partner_of` and `kin_of` with the role child, and those predicates to the same relations, then
@@ -149,18 +150,20 @@ words that ask for a name and routes the normalizer's own words.
 
 ## The belief ledger
 
-`enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`), off by default, reads the claims a routed question reaches as a
-small ledger and says which one holds at the question's time (`src/prme/retrieval/beliefs.py`; finding 2.2 B of
+`enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`), on by default through `memory_mode` since 2026-11-12 in the
+alpha channel, reads the claims a routed question reaches as a small ledger and says which one holds at the
+question's time (`src/prme/retrieval/beliefs.py`; finding 2.2 B of
 `memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md`). Routing finds the claims at an address, an entity and a
 relation such as Sam and `works_at`, but rank fusion counts them as one more list, so "I work as a nurse at St.
 Mary's hospital" can rank above "I start at a pediatric clinic on November 2". The option turns relation routing on,
-and `memory_mode="address_first"` (`PRME_MEMORY_MODE`) turns on both, with four other read-time settings
-(`documentation/configuration.md`). The mode acts only when a question is asked: it does not turn on typed extraction
-or corrections, makes no model call and rewrites no stored memory. Without typed extraction a claim has no typed
-status, so the ledger reads it as `current` until a later claim at its address closes it or takes its place (below);
-stated facts (`ingest(assertions=...)`) and claims stored with `enable_typed_extraction` carry a status. Typed
-extraction and corrections were part of the mode until 2026-11-11 and were taken out after the fast probes and the
-mid tier showed losses with them
+and `memory_mode="address_first"` (`PRME_MEMORY_MODE`, the default in the alpha channel since 2026-11-12) turns
+on both, with four other read-time settings (`documentation/configuration.md`). `PRME_MEMORY_MODE=classic`
+restores the configuration before the mode. The mode acts only when a question is asked: it does not turn on typed
+extraction or corrections, makes no model call and rewrites no stored memory. Without typed extraction a claim has
+no typed status, so the ledger reads it as `current` until a later claim at its address closes it or takes its place
+(below); stated facts (`ingest(assertions=...)`) and claims stored with `enable_typed_extraction` carry a status.
+Typed extraction and corrections were part of the mode until 2026-11-11 and were taken out after the fast probes
+and the mid tier showed losses with them
 (`benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`).
 
 **Addresses.** The claims of the route's last step are grouped by the entity they were read on, their relation and,

@@ -2634,6 +2634,70 @@ offline gate without loss, mid tier without loss) and meets criterion 2 on a rea
 alpha channel, by the owner's directive of 2026-10-19. The full benchmark audit and the default-change rule's answer
 runs are pending.
 
+### Address-first memory on by default (2026-11-12)
+
+By the owner's directive of 2026-10-19 (ship what passes the fast tiers and audit it at a stable release), and the
+owner's decision of 2026-11-12 to turn it on, the alpha channel defaults `memory_mode` to `address_first`. The mode
+acts at read time only, so nothing stored is rewritten and `DERIVATION_VERSION` does not move. The gate ran on
+`origin/main` at `934d60fd` (PR #561 merged as `81e45546`, with #562's seed walk), with
+`deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.16) on a local server, every extraction replayed from the cache
+(0 model calls). "Off" is the default before this change, "on" is the mode:
+
+```sh
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label off --model deepseek-v4.1-flash:cloud --cloud
+uv run python -m benchmarks.diagnostics.chat_probe --conversation benchmarks/conversations/defects-v1.json build --label on --model deepseek-v4.1-flash:cloud --cloud --set memory_mode="address_first"
+uv run python -m benchmarks.fast_cycle run --label on --out /tmp/on --set memory_mode="address_first"
+```
+
+The chat probe takes the same three commands without `--conversation`, and the member probe adds `--speaker
+--set enable_speaker_grounding=true` to both builds.
+
+| Tier | Off | On |
+|---|---|---|
+| Defect probes, `defects-v1` | 7/7 in the top 3, 7/7 in the top 5 | 7/7 and 7/7; learning 3 to 1 |
+| Chat probe, `chat-v1` | 14/18 in the top 3, 15/18 in the top 5, 35 owner claims | 15/18 and 16/18, 35 owner claims; job-now 8 to 2, sister-city 3 to 2, language 2 to 3, title-now 10 to 11 |
+| Member probe, `member-v1` | 10/12 in the top 3, 11/12 in the top 5, 7 owner claims, records repeated 84 of 648 | 11/12 and 12/12, 7 owner claims, 60 of 624 |
+| Corrections probe | same result either way | same result either way |
+| Fast cycle, DuckDB | the committed baseline | pass, 0 failed, 7 moved, 126 unchanged |
+
+No measure is worse in its good direction across the three probes and the fast cycle, so the alpha rule's probe
+criteria and its fast cycle criterion are met. The corrections probe is recorded, not gated: the explicit path shows
+the new value first and the `ingest()` path the old line first, on both sides, which is the known weakness of
+2026-10-19 and is not caused by the mode.
+
+**Read cost.** Three LoCoMo `ingest()` packs, copied to `/tmp/flip/lat` and opened with the evidence gate's
+configuration, off against on, in interleaved pairs after an untimed warm-up (median and 95th percentile, nearest
+rank; the reads of every run on a pack are pooled):
+
+| Pack | Turns | Timed reads a side | Off median | Off p95 | On median | On p95 | Median | p95 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| conv-30 | 369 | 155 | 396.8 ms | 777.9 ms | 406.3 ms | 838.2 ms | +2.4% | +7.8% |
+| conv-26 | 419 | 115 | 381.9 ms | 624.4 ms | 390.2 ms | 673.4 ms | +2.2% | +7.8% |
+| conv-47 | 689 | 115 | 522.1 ms | 1,043.1 ms | 544.1 ms | 1,165.3 ms | +4.2% | +11.7% |
+
+The median moves by 2.2 to 4.2 percent and the 95th percentile by 7.8 to 11.7 percent, so the mode's extra read
+time stays under the 15 percent a flip may spend at the 95th percentile. One earlier run of conv-30 under load
+averages of 16 to 34 measured 21.7 percent there; a repeat on a quiet machine measured 4.1 percent, and the pooled
+reads are the table above. The 75-read runs on their own measured -4.6, +0.8 and -0.4 percent at the 95th
+percentile.
+
+**The baseline.** `benchmarks/fixtures/fast-cycle/baseline-main.json` was taken again on the defaults, since the mode
+moves 7 of the 133 compared measures on purpose (the four ranks and the three counts above, as the fast cycle
+reports them). The answer track keeps its committed baselines: its check that a baseline's `ingest()` packs hold the
+defaults now ignores the settings that change no stored record (`memory_mode`, `enable_relation_routing` and
+`enable_belief_state`, as it already ignored extraction, scoring and packing), and the mid tier's `--reuse-build`
+accepts `memory_mode`.
+
+**Not met, recorded plainly.** On the mid tier of 2026-11-11 the mode lost 0.2 points of LoCoMo evidence in the top 25
+(95% interval -0.5 to -0.0 over questions, -0.4 to -0.1 over conversations, 0 gained and 6 of 1,536 questions lost).
+All 6 are lost by relation routing's route list, which puts the claims the walk reaches above the evidence turn; a
+route weight of 1.0 instead of 2.0 did not bring any of them back. The mode packed more evidence overall (+0.8
+points of all evidence packed, +0.6 of projected accuracy, both intervals above zero) and the offline evidence gate
+has no interval below zero. Whether the top-25 row gates a mid tier change was open when the mode merged; it is
+recorded as a known weakness, and the stable release's audit re-examines it
+(`benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`). The full benchmark audit and the answer track
+for this default are pending, as they are for every alpha default.
+
 ### Fast cycle: store, ingest and retrieve in under a minute (prototype)
 
 The multi-day benchmarks cannot check every change. The fast cycle is a
@@ -2750,7 +2814,9 @@ The table below is the baseline before 0.16.0a3 (the engine tree of
 `origin/main` at `0622c9f9`, with the structure options off). Since the alpha
 channel turned them on, `benchmarks/fixtures/fast-cycle/baseline-main.json` is a
 replay on the tree of the default flip (see "Structure options on by default"
-above), and 49 of its measures differ from this table on purpose. The earlier
+above), and 49 of its measures differ from this table on purpose; it was taken
+again on 2026-11-12 for the address-first default, which moves 7 more (see
+"Address-first memory on by default" above). The earlier
 baseline on 2026-10-19 (`baseline-main.json`,
 the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
 committed cache; its 132 store and ingest measures equal the baseline taken at

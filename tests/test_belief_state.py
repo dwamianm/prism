@@ -1,9 +1,9 @@
 """Address-first memory: the belief ledger and the other options memory_mode="address_first" turns on.
 
-``memory_mode="address_first"`` (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md, off by default) turns on typed
-extraction and relation routing, and with them: the belief ledger (``enable_belief_state``,
-``prme.retrieval.beliefs``), which reads the claims at an address and says which one holds now, with its catalog
-lookup for a question no word routes (``relation_walk.catalog_walk``, pipeline stage 5.5f2);
+``memory_mode="address_first"`` (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md; the product default since
+2026-11-12, and the tests start in ``classic``) turns on relation routing, and with it: the belief ledger
+(``enable_belief_state``, ``prme.retrieval.beliefs``), which reads the claims at an address and says which one holds
+now, with its catalog lookup for a question no word routes (``relation_walk.catalog_walk``, pipeline stage 5.5f2);
 ``packing.session_context_direct_first``; and ``scoring.rrf_recency_order``. The options clock_window_filter,
 collapse_identical_text and second_round have their own module, ``tests/test_address_first_repairs.py``. These tests
 cover each with small in-memory fixtures. No model call.
@@ -33,7 +33,7 @@ from prme.retrieval.relations import ROUTING_VERSION, ClaimRelation, RelationSte
 from prme.retrieval.scoring import _order_recency, score_and_rank
 from prme.retrieval.session_context import expand_session_context
 from prme.types import EdgeType, NodeType, Scope
-from tests import test_durable_ingestion
+from tests import conftest, test_durable_ingestion
 from tests.test_rank_fusion import EXECUTION, RRF, candidate, receipt
 from tests.test_rank_fusion import NOW as SCORED_AT
 from tests.test_rank_fusion_session_context import _graph, _session_decays
@@ -722,6 +722,23 @@ ALL_ON = {"enable_relation_routing": True, "enable_belief_state": True, "session
 
 def test_address_first_turns_each_option_on():
     assert address_first_options(settings(memory_mode="address_first")) == ALL_ON
+
+
+def test_address_first_is_the_product_default(monkeypatch):
+    # The alpha channel turned the mode on by default on 2026-11-12, after the fast tiers passed.
+    conftest.product_defaults(monkeypatch)
+    assert settings().memory_mode == "address_first"
+    assert address_first_options(settings()) == ALL_ON
+    # PRME_MEMORY_MODE=classic restores the configuration before it, every setting and its receipt version.
+    monkeypatch.setenv("PRME_MEMORY_MODE", "classic")
+    classic = settings()
+    assert address_first_options(classic) == {
+        "enable_relation_routing": False, "enable_belief_state": False, "session_context_direct_first": None,
+        "clock_window_filter": False, "collapse_identical_text": False, "rrf_recency_order": False}
+    # Nothing the mode adds reaches the dump a receipt records.
+    dumped = classic.model_dump(mode="json")
+    assert "clock_window_filter" not in dumped["packing"] and "session_context_direct_first" not in dumped["packing"]
+    assert "collapse_identical_text" not in dumped["packing"] and "rrf_recency_order" not in dumped["scoring"]
 
 
 def test_address_first_turns_on_nothing_that_acts_when_memories_are_stored():

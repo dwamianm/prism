@@ -26,7 +26,9 @@ OPENAI_API_KEY= ANTHROPIC_API_KEY= uv run pytest tests/contract -q --memory-mode
 
 Every pack is then built with `memory_mode="address_first"`, and the expected failures are not strict: an id the
 mode fixes shows as XPASS and nothing fails for being fixed. The default, `--memory-mode classic`, is the product as
-configured, with strict expected failures. Run the option from a command that names `tests/contract` or
+it was configured before the alpha channel turned address-first memory on (2026-11-12), with strict expected
+failures; the scorecard names the mode outright rather than leaving it to the product default, so both runs keep
+their recorded results. Run the option from a command that names `tests/contract` or
 `tests/contract_holdout`, since only their conftests add it.
 
 At the end of the run a table shows passed, xpassed, xfailed and failed per group (skipped and errors when there are

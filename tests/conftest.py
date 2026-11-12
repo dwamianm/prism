@@ -89,6 +89,10 @@ STRUCTURE_OPTIONS = (
 # The pronoun repair (2026-10-22) is one more request for a source with a claim on a pronoun, and a test's stand-in
 # extractor never answers it, so a test starts with it off and turns it on to test it.
 REPAIR_OPTIONS = ("PRME_ENABLE_PRONOUN_REPAIR",)
+# memory_mode defaulted to address_first in the alpha channel on 2026-11-12. Most tests count ranks, contexts and
+# receipts that the mode changes, and the classic mode stays supported, so a test starts in the classic mode (not
+# "false", which the mode's Literal refuses) and turns the mode on to test it. ``product_defaults`` removes it.
+MODE_OPTIONS = {"PRME_MEMORY_MODE": "classic"}
 # Scoring defaults the alpha channel turned on. They are kept off by taking them out of the product's default
 # settings, not by an environment variable: a PRME_SCORING__ variable would make PRMEConfig fill rank fusion's
 # defaults into weighted scoring that a test passes in code as a dict, which leaves out the weighted fusion.
@@ -100,6 +104,8 @@ def product_defaults(monkeypatch):
     from prme.retrieval.config import DEFAULT_SCORING_SETTINGS
 
     for name in (*STRUCTURE_OPTIONS, *REPAIR_OPTIONS):
+        monkeypatch.delenv(name)
+    for name in MODE_OPTIONS:
         monkeypatch.delenv(name)
     for name, value in ALPHA_SCORING.items():
         monkeypatch.setitem(DEFAULT_SCORING_SETTINGS, name, value)
@@ -125,6 +131,8 @@ def structure_options_off(monkeypatch):
 
     for name in (*STRUCTURE_OPTIONS, *REPAIR_OPTIONS):
         monkeypatch.setenv(name, "false")
+    for name, value in MODE_OPTIONS.items():
+        monkeypatch.setenv(name, value)
     for name in ALPHA_SCORING:
         monkeypatch.delitem(DEFAULT_SCORING_SETTINGS, name)
 

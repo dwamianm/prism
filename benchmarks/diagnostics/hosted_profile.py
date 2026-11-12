@@ -154,6 +154,9 @@ def _hosted_config(database_url: str) -> PRMEConfig:
         enable_superseded_source_suppression=False,
         enable_speaker_references=True,
         enable_speaker_grounding=True,
+        # The service runs the classic mode: it sets relation routing itself and takes none of the mode's other
+        # read-time settings, and this profile measures the service as it is deployed.
+        memory_mode="classic",
         enable_relation_routing=True,
         enable_claim_sentence_text=True,
         enable_ingest_claim_fixes=True,
@@ -213,6 +216,7 @@ def settings_digest(config: PRMEConfig) -> dict[str, Any]:
                 "enable_claim_sentence_text",
                 "enable_ingest_claim_fixes",
                 "lexical_term_weights",
+                "memory_mode",
                 "enable_windowed_extraction",
                 "enable_owner_window_extraction",
                 "enable_fact_text_resolution",
