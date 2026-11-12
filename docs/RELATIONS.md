@@ -90,7 +90,12 @@ empty list or a word with a space raises `ValueError`, with the option on or off
 
 `route_question()` reads the question's words: a people word routes to its relation and role, a concept word to
 its relations, and any other word whose stem is a derived cue to the cued relations ("lives", "allergic"),
-`prefers` with negative polarity when the question says dislike, avoid or hate. When a people or concept word
+`prefers` with negative polarity when the question says dislike, avoid or hate. A word the predicate normalizer
+maps to a relation (its word table: dog, pet, trip, hates, manages and the others) routes to that relation as
+well, with the word's polarity and role, so the words that store a relation also ask for it. A word that asks for a
+name ("called", "named", "name", "names") says nothing about the relation and is skipped: "called" stems to "call",
+which `involved_in`'s definition holds ("on call"), so "What is the dog called?" would otherwise ask for
+`involved_in`. "Who is on call?" still routes there. When a people or concept word
 belongs to someone ("Dana's sister", "my sister") and the question asks for more ("Where does Dana's sister
 live?", "Who is my sister's husband?"), the route is two steps: the possessed words, then the rest. Otherwise it is
 one step. A question about
@@ -138,8 +143,9 @@ off, receipts included, and a configured `rrf_route_weight` is recorded only on 
 fails is logged and leaves the ranking as with the option off; the response metadata and the receipt's parameters
 record it as `backend_failures.ROUTE`.
 
-The routing version recorded in receipts (`ROUTING_VERSION`) is 2: version 2 added the pet concept and the rule for
-the role's end of a typed claim, either of which can change a route or its candidates.
+The routing version recorded in receipts (`ROUTING_VERSION`) is 3: version 2 added the pet concept and the rule for
+the role's end of a typed claim, either of which can change a route or its candidates, and version 3 skips the
+words that ask for a name and routes the normalizer's own words.
 
 ## The belief ledger
 

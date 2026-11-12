@@ -708,4 +708,4 @@ def test_the_pet_concept_routes_to_owns(question):
 
 def test_the_pet_concept_and_the_routing_version():
     assert concept_map()["pet"] == (RelationStep("owns"),)
-    assert ROUTING_VERSION == 2
+    assert ROUTING_VERSION == 3
