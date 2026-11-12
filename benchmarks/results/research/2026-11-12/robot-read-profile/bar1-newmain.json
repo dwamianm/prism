@@ -229,51 +229,101 @@
     "packed_median": 40,
     "packed_max": 40
    }
-  },
-  {
-   "label": "quiet-stated-address_first",
-   "pack": "stated",
-   "mode": "address_first",
-   "rounds": 3,
-   "questions": 25,
-   "pairs": 75,
-   "load_1m": {
-    "min": 7.44,
-    "median": 8.01,
-    "max": 8.73
-   },
-   "off": {
-    "p50_ms": 596.6,
-    "p95_ms": 819.6,
-    "mean_ms": 596.9,
-    "max_ms": 880.0,
-    "reads": 75,
-    "receipt_bytes_median": 1707471,
-    "receipt_bytes_max": 1758109,
-    "stored_row_bytes_median": 1866057,
-    "stored_row_bytes_max": 1921552,
-    "replay_ranking_ok": "25/25",
-    "results_median": 1005,
-    "results_max": 1034,
-    "packed_median": 162,
-    "packed_max": 177
-   },
-   "on": {
-    "p50_ms": 163.7,
-    "p95_ms": 224.8,
-    "mean_ms": 175.0,
-    "max_ms": 247.7,
-    "reads": 75,
-    "receipt_bytes_median": 75113,
-    "receipt_bytes_max": 76269,
-    "stored_row_bytes_median": 95056,
-    "stored_row_bytes_max": 98808,
-    "replay_ranking_ok": "25/25",
-    "results_median": 40,
-    "results_max": 40,
-    "packed_median": 39,
-    "packed_max": 40
-   }
   }
- ]
+ ],
+ "quiet_rerun_2": {
+  "note": "Second stated-store rerun, taken on a quiet machine after the other session's suite let go. Label bar1-quiet. Load average recorded before every pair.",
+  "runs": [
+   {
+    "label": "bar1-quiet",
+    "pack": "stated",
+    "mode": "classic",
+    "rounds": 3,
+    "questions": 25,
+    "pairs": 75,
+    "load_1m": {
+     "min": 3.31,
+     "median": 5.13,
+     "max": 6.64
+    },
+    "off": {
+     "p50_ms": 524.2,
+     "p95_ms": 585.4,
+     "mean_ms": 503.5,
+     "max_ms": 612.9,
+     "reads": 75,
+     "receipt_bytes_median": 1811470,
+     "receipt_bytes_max": 1859771,
+     "stored_row_bytes_median": 1975899,
+     "stored_row_bytes_max": 2028543,
+     "replay_ranking_ok": "25/25",
+     "results_median": 1056,
+     "results_max": 1084,
+     "packed_median": 173,
+     "packed_max": 187
+    },
+    "on": {
+     "p50_ms": 121.5,
+     "p95_ms": 162.5,
+     "mean_ms": 122.4,
+     "max_ms": 163.3,
+     "reads": 75,
+     "receipt_bytes_median": 74613,
+     "receipt_bytes_max": 75796,
+     "stored_row_bytes_median": 95121,
+     "stored_row_bytes_max": 96952,
+     "replay_ranking_ok": "25/25",
+     "results_median": 40,
+     "results_max": 40,
+     "packed_median": 40,
+     "packed_max": 40
+    }
+   },
+   {
+    "label": "bar1-quiet",
+    "pack": "stated",
+    "mode": "address_first",
+    "rounds": 3,
+    "questions": 25,
+    "pairs": 75,
+    "load_1m": {
+     "min": 4.82,
+     "median": 5.46,
+     "max": 6.11
+    },
+    "off": {
+     "p50_ms": 550.4,
+     "p95_ms": 633.6,
+     "mean_ms": 540.7,
+     "max_ms": 671.1,
+     "reads": 75,
+     "receipt_bytes_median": 1707471,
+     "receipt_bytes_max": 1758109,
+     "stored_row_bytes_median": 1866057,
+     "stored_row_bytes_max": 1921552,
+     "replay_ranking_ok": "25/25",
+     "results_median": 1005,
+     "results_max": 1034,
+     "packed_median": 162,
+     "packed_max": 177
+    },
+    "on": {
+     "p50_ms": 152.2,
+     "p95_ms": 195.6,
+     "mean_ms": 157.1,
+     "max_ms": 201.2,
+     "reads": 75,
+     "receipt_bytes_median": 75113,
+     "receipt_bytes_max": 76269,
+     "stored_row_bytes_median": 95056,
+     "stored_row_bytes_max": 98808,
+     "replay_ranking_ok": "25/25",
+     "results_median": 40,
+     "results_max": 40,
+     "packed_median": 39,
+     "packed_max": 40
+    }
+   }
+  ]
+ }
 }

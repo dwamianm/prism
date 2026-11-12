@@ -1,15 +1,16 @@
 # Robot read profile (2026-11-12)
 
 Task 22 asks for a read that takes at most 200 ms at the 95th percentile on a store of 20,000 facts. With the
-current defaults, one `retrieve()` on 20,500 stated facts takes about 640 to 960 ms at the 95th percentile depending
+current defaults, one `retrieve()` on 20,500 stated facts takes about 585 to 970 ms at the 95th percentile depending
 on machine load, and it stores a receipt of about 1.8 MB. This change adds an opt-in read profile that cuts both by
 roughly a factor of ten: the receipt goes to 75 KB or less, and the bench store reads in 52 to 54 ms at the 95th
 percentile. With the profile off, every read is byte-identical to `main`.
 
-**The stated store has not yet been measured on a quiet machine.** Its best result in this pass is 224.8 ms at the
-95th percentile, against the 200 ms target, on a machine that another session's full test suite was loading; the
-same code measured 197.8 ms on an earlier, quieter pass. The bench store's result is wide and clean. Bar 1 is
-recorded below as met on the bench store and open on the stated store.
+**On a quiet machine the stated store also meets the target**: 162.5 ms (`classic`) and 195.6 ms
+(`address_first`) at the 95th percentile, measured when the 1-minute load average was 3.3 to 6.6. Two earlier runs
+of the same code, made while another session's full test suite held the load at 7 to 12, missed at 213.7 to 246.6 ms;
+the earlier pass on `main` `934d60fd` measured 197.8 ms. Bar 1 is met on both stores and both memory modes. Load
+moves the number and is part of the story; it is not all of it, and what is not accounted for is recorded below.
 
 ## What changed
 
@@ -68,7 +69,8 @@ The machine was busy for every run of this second pass: a full test suite of ano
 after that, held the 1-minute load average between 7.4 and 18. Two consequences, both stated in the tables:
 
 - The bar 1 table gives every number with the load average recorded next to it, and a stated-store rerun was made
-  later, when the load briefly fell to 7.6; the load rose again during it.
+  later, when the load briefly fell to 7.6; the load rose again during it. A third stated-store run, after the other
+  session let go, was made at a 1-minute load average of 3.3 to 6.6 and is in the third table below.
 - The offline gate runs below were made under the same load, so their retrieval seconds are not compared.
 
 **Bar 1** (`scripts/interleaved.py`): two engines open side by side, off and on, each on its own copy of the pack.
@@ -98,22 +100,25 @@ averaged 7.4 to 8.7 (median 8.0):
 | stated | classic | 708.2 ms | 1065.2 ms | 170.4 ms | **228.2 ms** | 7.53, 10.02, 12.29 |
 | stated | address_first | 596.6 ms | 819.6 ms | 163.7 ms | **224.8 ms** | 7.44, 8.01, 8.73 |
 
-So bar 1 is met on the bench store and **not met on the stated store in this pass**: 224.8 ms and 228.2 ms at
-best, against 200 ms. The earlier pass of the same code and scripts on `main` `934d60fd` met it on both, at 157.0 ms
-and 197.8 ms, the second by 2.2 ms only.
+So after those two runs bar 1 was met on the bench store and not met on the stated store. A third stated-store run
+was then made on a quiet machine, once the other session's suite let go:
 
-The two passes differ, and load does not explain all of it. In `classic`, the bench store's off-side p95 was
-275.8 ms then and 266.8 ms now, which is flat, while its on-side rose from 38.9 to 52.4 ms, 35 per cent. The stated
-store's off-side rose from 643.4 to 964.4 ms and its on-side from 157.0 to 213.7 ms. One reading is that a short read
-is proportionally more exposed to a loaded machine than a long one: a 25 ms read that loses 13 ms to scheduling has
-lost half its time, while a 135 ms read that keeps its threads busy averages the same contention out. That is a
-hypothesis, not a measurement, and it is not proven here.
+| Store | Mode | Off p50 | Off p95 | On p50 | On p95 | Load average (min, median, max) |
+|---|---|---|---|---|---|---|
+| stated | classic | 524.2 ms | 585.4 ms | 121.5 ms | **162.5 ms** | 3.31, 5.13, 6.64 |
+| stated | address_first | 550.4 ms | 633.6 ms | 152.2 ms | **195.6 ms** | 4.82, 5.46, 6.11 |
 
-What the numbers do support: on the stated store, the on-side p95 is between a fifth and a quarter of the off-side
-p95 of the same run, in every run of both passes, so the profile's own saving is large and steady. The bench rows,
-where the off side is flat, are the clean evidence that the profile reaches the target: 52.4 ms and 54.3 ms against
-200 ms, at a load average of 9.7 to 11.7. A stated-store run on a quiet machine is still owed, and until it exists
-the stated target is open.
+**Bar 1 is met on both stores and in both memory modes.** The stated store reads in 162.5 ms in `classic` and
+195.6 ms in `address_first`, against 200 ms, on the same code and scripts that missed at load 7 to 12.
+
+Read across all three runs, the stated store's own numbers do not line up with load alone. Its quiet run measured
+162.5 ms (`classic`) and 195.6 ms (`address_first`) at a load average of 3.3 to 6.6. The earlier `934d60fd` pass
+measured 157.0 ms and 197.8 ms, the `classic` figure at a load average of 4.5 to 10.9, median 8.2, which is busier
+than the quiet run and yet faster. This pass's busy runs measured 213.7 to 246.6 ms at a load average of 7 to 12. So
+load moves the number, roughly 30 to 40 per cent between the quiet and busy runs of this pass, but it does not
+account for every difference between passes; run to run variation on a shared machine is also present and is not
+separated here. What is steady in all six runs of both passes is the profile's own saving: the on-side p95 is
+between a fifth and a quarter of the off-side p95 of the same run.
 
 ### Bar 2: profile off is byte-identical to `main`
 
@@ -236,10 +241,13 @@ runs were made under different load (3.9 to 5.7 before, 17.3 to 13.2 after), so 
 - The 40-record context drops evidence ranked below 40. The gate rows above show how much on the two benchmarks.
   A robot that needs wider recall can set `PRME_RESULT_LIMIT` or pass `limit` per read, at the cost of a larger
   receipt.
-- **The stated-store timing target is open.** The best stated-store result in this pass is 224.8 ms, measured at a
-  load average of 7.4 to 8.7 on a machine another session was loading. The earlier pass measured 197.8 ms on the
-  same code. A stated-store run on a quiet machine is owed before the bar is closed either way.
+- **The stated-store target is met only on a quiet machine, by a narrow margin in `address_first`.** It reads in
+  162.5 ms (`classic`) and 195.6 ms (`address_first`) at a load average of 3.3 to 6.6, and in 213.7 to 246.6 ms at a
+  load average of 7 to 12. A deployer whose machine runs other work will see the higher number, so the margin in
+  `address_first` is 4.4 ms on an idle machine and negative on a busy one. The profile's saving over the defaults is
+  large either way.
 - The receipt is still built from 1,000 scored candidates when a caller passes a large `limit`; serializing the
   receipt once (study `READ-PATH-COST.md`, bounded alternative 1) would cut about 16 to 25 ms more on the stated
-  store, but it changes `source_files_sha256` and is a separate decision. It would not close the gap on its own.
+  store, but it changes `source_files_sha256` and is a separate decision. Bar 1 does not need it; it would widen the
+  `address_first` margin on a busy machine.
 - PostgreSQL was not measured.
