@@ -12,6 +12,7 @@ import asyncio
 import logging
 import re
 from collections import defaultdict
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -226,9 +227,17 @@ async def _seed_reach(
     if len(expandable) > SEED_REACH_MAX_NODES:
         return None
     adjacency: dict[str, set[str]] = defaultdict(set)
-    for edge in await graph_store.get_edges(node_ids=list(expandable)):
-        source, target = str(edge.source_id), str(edge.target_id)
-        if source != target and source in known and target in known and not _unverified_alias(edge):
+    if _walks_once(graph_store):
+        # Only the two ends of each link the walk can step along, not records.
+        links = await graph_store.walk_links(list(expandable))
+    else:
+        links = [
+            (str(edge.source_id), str(edge.target_id))
+            for edge in await graph_store.get_edges(node_ids=list(expandable))
+            if edge.source_id != edge.target_id and not _unverified_alias(edge)
+        ]
+    for source, target in links:
+        if source in known and target in known:
             adjacency[source].add(target)
             adjacency[target].add(source)
     hops: dict[str, dict[str, int]] = defaultdict(dict)
@@ -252,6 +261,46 @@ async def _seed_reach(
     }
 
 
+def _walks_once(graph_store: GraphStore) -> bool:
+    """Whether the store walks from all seeds at once (``walk_from_seeds`` and ``walk_links``).
+
+    DuckDB and PostgreSQL do. Any other store, such as the privacy read
+    view, which forwards no method it does not know, keeps the per-seed
+    walks and the edge records.
+    """
+    return getattr(type(graph_store), "walk_from_seeds", None) is not None
+
+
+async def _graph_walks(
+    graph_store: GraphStore,
+    seed_ids: list[str],
+    *,
+    max_hops: int,
+    valid_at: datetime | None,
+    user_id: str,
+) -> AsyncIterator[tuple[str | None, list]]:
+    """Each graph walk's seed and the nodes it reached, with their fewest hops.
+
+    A store with ``walk_from_seeds`` (DuckDB and PostgreSQL) walks once from
+    every seed and yields one walk with no seed: its nodes are small
+    ``WalkedNode`` rows, each node once, a seed with its fewest hops from
+    another seed. Any other store, such as the privacy view, walks from each
+    seed in turn with ``get_neighborhood_with_depth``, as before. Both give
+    the same nodes and hop counts. A walk never steps onto a node another
+    user owns, so an edge that crosses users can neither bring that node in
+    nor reach the user's own nodes through it (#433, #438).
+    """
+    if _walks_once(graph_store):
+        yield None, await graph_store.walk_from_seeds(
+            seed_ids, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
+        )
+        return
+    for seed_id in seed_ids:
+        yield seed_id, await graph_store.get_neighborhood_with_depth(
+            seed_id, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
+        )
+
+
 async def _generate_graph_candidates(
     analysis: QueryAnalysis,
     graph_store: GraphStore,
@@ -268,9 +317,9 @@ async def _generate_graph_candidates(
 
     Seeds are the entity nodes the question names (see
     ``_find_seed_entities``; matched in SQL via content LIKE filters, so only
-    matching entity nodes are hydrated). For each seed, runs a single
-    depth-aware neighborhood query to determine per-node hop distances
-    for graph_proximity scoring.
+    matching entity nodes are hydrated). ``_graph_walks`` gives each reached
+    node's fewest hops from a seed, for graph_proximity scoring, and only
+    the kept candidates become full records.
 
     Scope and temporal filters are forwarded to query_nodes() for seed
     discovery and used for post-filter on neighborhood results, and the
@@ -306,14 +355,9 @@ async def _generate_graph_candidates(
     max_hops = min(config.graph_max_hops, 3)
     _HOP_PROXIMITY = {1: 1.0, 2: 0.7, 3: 0.4}
 
-    for seed_id in seed_ids:
-        # The walk never steps onto another user's node, so an edge that
-        # crosses users can neither bring that node in nor reach the user's
-        # own nodes through it (#433, #438).
-        neighbors = await graph_store.get_neighborhood_with_depth(
-            seed_id, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
-        )
-
+    async for seed_id, neighbors in _graph_walks(
+        graph_store, seed_ids, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
+    ):
         for neighbor, depth in neighbors:
             nid = str(neighbor.id)
             if nid == seed_id:
@@ -348,16 +392,30 @@ async def _generate_graph_candidates(
             if depth < node_depth.get(nid, depth + 1):
                 node_depth[nid] = depth
 
-    # Post-filter to max_candidates: sort by confidence DESC, created_at DESC.
+    # Post-filter to max_candidates: sort by confidence DESC, created_at DESC,
+    # then node id, so equal records keep one order whatever order the walk
+    # returned them in.
     candidates = [
         {"node": node_map[nid], "graph_proximity": node_proximity[nid]}
         for nid in node_proximity
         if nid in node_map
     ]
     candidates.sort(
-        key=lambda c: (-c["node"].confidence, -c["node"].created_at.timestamp()),
+        key=lambda c: (-c["node"].confidence, -c["node"].created_at.timestamp(), str(c["node"].id)),
     )
     candidates = candidates[: config.graph_max_candidates]
+    from prme.storage.seed_walk import WalkedNode  # prme.storage imports this module's callers
+
+    walked = [str(c["node"].id) for c in candidates if isinstance(c["node"], WalkedNode)]
+    if walked:
+        # One walk from all seeds returns small rows; only the kept nodes
+        # become full records.
+        records = {str(node.id): node for node in await graph_store.get_nodes(walked, user_id=user_id)}
+        candidates = [
+            {**c, "node": records[str(c["node"].id)]} if isinstance(c["node"], WalkedNode) else c
+            for c in candidates
+            if not isinstance(c["node"], WalkedNode) or str(c["node"].id) in records
+        ]
     if seed_reach:
         try:
             reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)

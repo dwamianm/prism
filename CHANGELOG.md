@@ -105,6 +105,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   role, so the words that store a relation also ask for it; the dog question now routes to `owns`. The relation
   definitions are unchanged, so extraction's prompt is unchanged. The route of 77 of 495 questions across the probes
   and the graph oracle's question sets changes (`benchmarks/results/research/2026-11-11/PERFECT-EXTRACTION-AND-ROUTER.md`).
+- The graph candidate stage of `retrieve()` walks the graph once from all of a question's seed entities, instead of
+  once per seed, on DuckDB and PostgreSQL (`walk_from_seeds`, `src/prme/storage/seed_walk.py`). The walk returns
+  each reached node once, as a small row with its fewest hops, and only the kept candidates (at most
+  `packing.graph_max_candidates`) are read as full records. The seed reach count reads the links it steps along
+  as two ids each (`walk_links`) instead of full edge records, and DuckDB's `get_nodes` writes canonical ids into
+  its SQL as literals, as `get_edges` now does, instead of binding each one. Before, a question with 44 seeds over
+  20,500 stated facts made about 500,000 rows into records to keep 150, and its read took 18.5 s. The candidates, their
+  proximities, the seed reach counts (`scoring.rrf_graph_seed_count`, including its 5,000 node limit) and the
+  retrieval receipts are the same as before. Graph candidates with the same confidence and creation time are now
+  ordered by node id, so their order no longer depends on the order a walk returned them in. A store without the
+  method, such as the privacy read view, walks from each seed as before. No setting changes, and stored memories
+  are not rewritten (`benchmarks/results/research/2026-11-12/BOUNDED-GRAPH-WALK.md`).
 
 ## [0.17.0a7] - 2026-11-10
 

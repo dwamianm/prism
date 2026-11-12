@@ -23,6 +23,7 @@ from prme.models.nodes import MemoryNode
 from prme.storage.graph_rows import EDGE_COLUMNS as _EDGE_COLUMNS
 from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS
 from prme.storage.graph_rows import record_to_edge, record_to_node
+from prme.storage.seed_walk import WalkedNode, seed_walk_sql, walk_links_sql, walked_nodes
 from prme.storage.organizer_merge import MergeResult
 from prme.storage.owner_reads import (
     CROSS_USER_EDGE_WHERE,
@@ -1537,6 +1538,45 @@ class PgGraphStore:
                 conn, [node for node, _depth in results], user_id
             )
         return [(node, depth) for node, (_node, depth) in zip(nodes, results)]
+
+    async def walk_from_seeds(
+        self,
+        seed_ids: list[str],
+        *,
+        max_hops: int,
+        valid_at: datetime | None = None,
+        user_id: str,
+    ) -> list[tuple[WalkedNode, int]]:
+        """Every node within ``max_hops`` of any seed, once, with its fewest hops.
+
+        The per-seed walks of ``get_neighborhood_with_depth`` in one query
+        (``prme.storage.seed_walk``): a seed is returned when another seed
+        reaches it, at its fewest hops from another seed. The rows are small
+        ``WalkedNode`` records; read full records with ``get_nodes``.
+        """
+        if not seed_ids:
+            return []
+        query = seed_walk_sql("postgres", with_valid_at=valid_at is not None)
+        params: list = [user_id, max_hops, [UUID(str(seed)) for seed in seed_ids]]
+        if valid_at is not None:
+            params.append(valid_at)
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        return walked_nodes([tuple(row) for row in rows], epoch=False)
+
+    async def walk_links(self, node_ids: list[str]) -> list[tuple[str, str]]:
+        """The links a graph walk can step along that touch ``node_ids``, as two ids each.
+
+        The edges ``get_edges(node_ids=...)`` returns, without an edge from a
+        node to itself or an alias proposal no one accepted, as (source,
+        target) text instead of full records (``prme.storage.seed_walk``).
+        """
+        if not node_ids:
+            return []
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(walk_links_sql("postgres", "$1::uuid[]"),
+                                    [UUID(str(node_id)) for node_id in node_ids])
+        return [(row[0], row[1]) for row in rows]
 
     async def find_shortest_path(
         self,
