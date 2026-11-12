@@ -787,9 +787,12 @@ What else changes with these defaults:
 - Retrieval receipts are written as version 22 by default, since folding became
   a default on 2026-10-06, and as version 19 with
   `PRME_PACKING__FOLD_REPEATED_TEXT=false`. Since the alpha channel turned
-  `memory_mode` on (2026-11-12), a default receipt also records the scoring
-  version with `scoring.rrf_recency_order` and the packing settings the mode
-  sets; `PRME_MEMORY_MODE=classic` writes the receipts from before.
+  `memory_mode` on (2026-11-12), a default receipt also records
+  `scoring.rrf_recency_order` and the packing settings the mode sets
+  (`clock_window_filter`, `collapse_identical_text` and
+  `session_context_direct_first`); the schema version stays 22, while the
+  scoring configuration version a response reports changes with those
+  weights. `PRME_MEMORY_MODE=classic` writes the receipts from before.
 
 To go back to the v0.12.0 defaults, set all three:
 

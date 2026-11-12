@@ -107,7 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ScoringWeights` built in code keeps its own field defaults. On the defaults, the configuration dump now names
   `memory_mode`, `enable_relation_routing`, `enable_belief_state`, `packing.clock_window_filter`,
   `packing.collapse_identical_text`, `packing.session_context_direct_first` and `scoring.rrf_recency_order`, and a
-  default receipt records the new scoring version and those packing settings.
+  default receipt records those packing settings and `scoring.rrf_recency_order`; the receipt's schema version stays
+  22, while the scoring configuration version a response reports moves with the weights.
 - Evidence on the defaults the mode now sets, `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.16) on a local
   server, extraction replayed from the cache, so no model call. Off against on: the answers in the top 3 and the
   top 5 were 7 and 7 against 7 and 7 of 7 on `defects-v1`, 14 and 15 against 15 and 16 of 18 on `chat-v1`, and 10
