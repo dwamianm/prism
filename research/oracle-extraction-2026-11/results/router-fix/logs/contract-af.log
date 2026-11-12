@@ -1,0 +1,27 @@
+..xxxxx..xx.....xx.x..............xxx.xxx.x.xXx.x..xx..x..xx.........xXx [ 45%]
+XX.XXXXX..XXXXX.xX.........X...XX.xXXX.XXXXXX.XXXXX.XXX..X..X..X...XXXXX [ 90%]
+X.xxxxxxxxxxxxxx                                                         [100%]
+============= tests/contract/ scorecard, memory mode address_first =============
+group                                      passed  xpassed  xfailed   failed
+S1 churn, 10 min apart                          4       13        1        0
+S1 churn, 3 days apart                         13        4        1        0
+S1 churn stated, 10 min apart                   3       15        0        0
+S1 churn stated, 3 days apart                   9        9        0        0
+S2 flood, rare event in top 5                   6        1        1        0
+S2 flood, routine share                         0        0        1        0
+S4 time window                                  1        1        0        0
+S5 two hops                                     0        0        8        0
+S6 unknown                                      0        0        6        0
+S8 determinism                                  3        0        0        0
+chat store(), answers in top 3                  6        1        6        0
+chat store(), no stale above                    2        0        2        0
+chat store(), unanswerable                      0        0        1        0
+chat ingest(), answers in top 3                 6        0        7        0
+chat ingest(), no stale above                   3        0        1        0
+chat ingest(), unanswerable                     0        0        1        0
+chat ingest(), answer first                     1        0        1        0
+chat ingest(), ended never above current       14        0        0        0
+chat ingest(), corrected claim retired          1        0        6        0
+chat ingest(), no true claim retired            1        0        0        0
+total                                          73       44       43        0
+73 passed, 43 xfailed, 44 xpassed in 181.20s (0:03:01)

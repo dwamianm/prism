@@ -1,0 +1,78 @@
+stated	probe:defects-v1	shipments	What did the team choose for the shipment table?
+name+stated	probe:chat-v1	dog	What kind of dog does Dana have, and what is it called?
+stated	probe:member-v1	trip	Where is Maya planning a trip?
+stated	gold:defects-v1	shipments	What did the team choose for the shipment table?
+name+stated	gold:chat-v1	dog	What kind of dog does Dana have, and what is it called?
+name+stated	gold:store-v1	dog	What is Alex's dog called?
+stated	gold:store-v1	japan-budget	How much is the Japan trip budget?
+name	gold:store-v1	dashboard	What is the Datadog dashboard for the migration called?
+stated	gold:store-v1	timescale	Why did Alex reject TimescaleDB?
+stated	gold:store-v1	flights	Which airline did Alex book for the Japan trip?
+stated	gold:store-v1	employer-observability	What does Alex's employer use for observability?
+stated	blind-v1	defects-v1:multi-hop:3	Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?
+stated	blind-v1:paraphrase	defects-v1:multi-hop:3#p1	Alex is planning a trip to Japan with Jordan. What allergy does Jordan have that Alex needs to prepare for at restaurants?
+stated	blind-v1:paraphrase	defects-v1:multi-hop:3#p3	What allergy does Jordan have that Alex needs to prepare for at restaurants on their planned trip to Japan?
+stated	blind-v1	defects-v1:negation:1	Which city did Alex and Jordan decide not to include in their Japan trip?
+stated	blind-v1:paraphrase	defects-v1:negation:1#p1	Which city did Alex and Jordan decide not to include in their Japan trip?
+stated	blind-v1:paraphrase	defects-v1:negation:1#p2	Which city did Alex and Jordan decide to leave out of their Japan trip?
+stated	blind-v1:paraphrase	defects-v1:negation:1#p3	What city did Alex and Jordan decide not to include in their trip to Japan?
+name	blind-v1:paraphrase	store-v1:lookup:1#p2	Alex has a border collie—what is it called?
+name	blind-v1:paraphrase	store-v1:multi-hop:1#p3	What is Alex's manager called, and what is the manager's job title?
+stated	blind-v1	store-v1:multi-hop:4	What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?
+stated	blind-v1:paraphrase	store-v1:multi-hop:4#p1	What is the name of Alex's partner, and what dietary restriction does that person have that affects the Japan trip?
+stated	blind-v1:paraphrase	store-v1:multi-hop:4#p2	Who is Alex's partner, and which dietary restriction of theirs affects the Japan trip?
+stated	blind-v1:paraphrase	store-v1:multi-hop:4#p3	Alex's partner has a dietary restriction that affects the Japan trip—what is the partner's name and what is the restriction?
+stated	blind-v1	store-v1:multi-hop:5	Which database did Alex reject for the shipment_events migration, and why was it ruled out?
+stated	blind-v1:paraphrase	store-v1:multi-hop:5#p1	Which database did Alex reject for the shipment_events migration, and why was it ruled out?
+stated	blind-v1:paraphrase	store-v1:multi-hop:5#p2	What database was rejected by Alex for the shipment_events migration, and for what reason was it ruled out?
+stated	blind-v1	store-v1:temporal:5	What are the dates of the Japan trip after the change?
+stated	blind-v1:paraphrase	store-v1:temporal:5#p1	After the change, what are the dates of the Japan trip?
+stated	blind-v1:paraphrase	store-v1:temporal:5#p2	What dates does the Japan trip now have following the change?
+stated	blind-v1:paraphrase	store-v1:temporal:5#p3	Following the change, when does the Japan trip take place?
+stated	blind-v1:paraphrase	store-v1:negation:4#p1	Does Alex want an ORM used for new services?
+stated	blind-v1	store-v1:aggregation:5	Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?
+stated	blind-v1:paraphrase	store-v1:aggregation:5#p1	Which programming languages does Alex prefer for services and internal tooling, and which does Alex dislike?
+stated	blind-v1:paraphrase	store-v1:aggregation:5#p3	For services and internal tooling, which programming languages does Alex prefer, and which does Alex dislike?
+stated	blind-v1	chat-v1:lookup:1	What's the name of Dana's dog?
+stated	blind-v1:paraphrase	chat-v1:lookup:1#p1	What is the name of the dog that belongs to Dana?
+stated	blind-v1:paraphrase	chat-v1:lookup:1#p2	Dana's dog goes by what name?
+stated	blind-v1:paraphrase	chat-v1:lookup:1#p3	What name does Dana's dog have?
+name	blind-v1:paraphrase	chat-v1:lookup:3#p2	Dana's sister's new baby is called what?
+name	blind-v1:paraphrase	chat-v1:multi-hop:5#p3	Dana's golden retriever that ate one of Sam's running shoes is called what?
+stated	blind-v1	chat-v1:negation:4	Is Sam coming on the Portland trip?
+stated	blind-v1:paraphrase	chat-v1:negation:4#p1	Is Sam going to come on the Portland trip?
+stated	blind-v1:paraphrase	chat-v1:negation:4#p2	Will Sam be joining the Portland trip?
+stated	blind-v1:paraphrase	chat-v1:negation:4#p3	Is Sam coming along on the trip to Portland?
+stated	blind-v1	store-v1:lookup:r2.8	What is the budget for the Japan trip, excluding flights?
+stated	blind-v1:paraphrase	store-v1:lookup:r2.8#p1	What is the Japan trip budget, not counting flights?
+stated	blind-v1:paraphrase	store-v1:lookup:r2.8#p2	Excluding flights, what is the budget for the Japan trip?
+stated	blind-v1:paraphrase	store-v1:lookup:r2.8#p3	How much is budgeted for the Japan trip, excluding flights?
+stated	blind-v1	store-v1:correction:r2.3	What are the dates of Alex and Jordan's Japan trip?
+stated	blind-v1:paraphrase	store-v1:correction:r2.3#p1	What are the dates for Alex and Jordan's Japan trip?
+stated	blind-v1:paraphrase	store-v1:correction:r2.3#p3	For Alex and Jordan's Japan trip, what are the dates?
+stated	blind-v1	store-v1:multi-hop:r2.6	Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?
+stated	blind-v1:paraphrase	store-v1:multi-hop:r2.6#p1	Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?
+name	blind-v1	chat-v1:lookup:r2.10	What is Dana's current diet called now that she eats fish again?
+name	blind-v1:paraphrase	chat-v1:lookup:r2.10#p1	What is Dana's current diet called now that she eats fish again?
+name	blind-v1:paraphrase	chat-v1:lookup:r2.10#p2	Now that Dana eats fish again, what is her current diet called?
+stated	blind-v1	chat-v1:multi-hop:r2.2	What tool does Dana's former employer Northwind use as its standard for dashboards?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.2#p1	What tool does Northwind, Dana's former employer, use as its standard for dashboards?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.2#p2	Which tool is the dashboard standard at Dana's former employer, Northwind?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.2#p3	What dashboard tool does Dana's former employer Northwind use as its standard?
+stated	blind-v1	chat-v1:multi-hop:r2.3	What is the name of Dana's dog, who is a 3-year-old golden retriever?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.3#p1	What is the name of Dana's dog, a 3-year-old golden retriever?
+name	blind-v1:paraphrase	chat-v1:multi-hop:r2.3#p2	Dana's 3-year-old golden retriever is called what?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.3#p3	What name does Dana's dog, who is a 3-year-old golden retriever, have?
+stated	blind-v1	chat-v1:multi-hop:r2.4	What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.4#p1	What is the name of Dana's sister's baby, whom Dana plans to meet on her July trip to Portland?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.4#p2	Dana's sister's baby, whom Dana plans to meet on her July trip to Portland, is named what?
+stated	blind-v1:paraphrase	chat-v1:multi-hop:r2.4#p3	What name does Dana's sister's baby have, the one Dana plans to meet on her July trip to Portland?
+name	blind-v1:paraphrase	chat-v1:multi-hop:r2.6#p2	Melanie's fiancé, to whom she got engaged around the time of the half marathon, is called what?
+stated	blind-v2	draw2-v1:lookup:2	What is the name of Noor's cat?
+stated	blind-v2	draw2-v1:lookup:7	What is the budget for the Portugal trip, excluding flights?
+name+stated	blind-v2	draw2-v1:multi-hop:5	What is the new design system for the Patient Portal called, and which tool did Noor reject for it?
+stated	blind-v2	draw2-v1:multi-hop:12	What is the budget for the Portugal trip, and what flight did Noor book?
+stated	blind-v2	draw2-v1:temporal:9	What are the current dates for the Portugal trip?
+stated	blind-v2	draw2-v1:aggregation:9	What dates is Noor's Portugal trip, and what is its budget excluding flights?
+stated	blind-v2	draw2-v1:aggregation:r2.4	Which tools does Noor like for work, and which one does she dislike?
+changed by the name rule alone: 14; by the stated rule alone: 67; total 77
