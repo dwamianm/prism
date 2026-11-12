@@ -1,0 +1,31 @@
+{
+ "point": 4000,
+ "pairs": {
+  "current-a vs current-b": {
+   "operations_rows": [
+    12000,
+    12000
+   ],
+   "operations_same_with_checksums_dropped_and_references_sorted": true,
+   "operations_rows_only_a": 0,
+   "operations_rows_only_b": 0,
+   "top10_same_scores_rounded_9": 24,
+   "top50_same_scores_rounded_9": 24,
+   "expected_rank_same": 25,
+   "questions": 25
+  },
+  "current-a vs prototype": {
+   "operations_rows": [
+    12000,
+    12000
+   ],
+   "operations_same_with_checksums_dropped_and_references_sorted": true,
+   "operations_rows_only_a": 0,
+   "operations_rows_only_b": 0,
+   "top10_same_scores_rounded_9": 25,
+   "top50_same_scores_rounded_9": 25,
+   "expected_rank_same": 25,
+   "questions": 25
+  }
+ }
+}

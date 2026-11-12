@@ -37,9 +37,14 @@ class EntityMerger:
     a new node otherwise.
     """
 
-    def __init__(self, graph_store: GraphStore, graph_writer: GraphWriter) -> None:
+    def __init__(self, graph_store: GraphStore, graph_writer: GraphWriter, *,
+                 filter_by_name: bool = False) -> None:
         self._graph_store = graph_store
         self._graph_writer = graph_writer
+        # Research prototype (research/write-rate-2026-11): the scan asks the store for the entities whose content
+        # holds the name, instead of reading every entity of the owner and scope (enable_filtered_entity_lookup).
+        # The exact match below still decides, in the same ID order, so the entity found is the same.
+        self._filter_by_name = filter_by_name
 
     async def find_or_create_owner_reference(self, user_id: str, *, scope: Scope,
                                              evidence_event_id: str) -> tuple[str, bool]:
@@ -72,10 +77,11 @@ class EntityMerger:
         normalized_name = name.strip().lower()
         unresolved = unresolved_personal_reference(name, entity_type)
         after_id: str | None = None
+        narrow = {"content_contains_any": [normalized_name]} if self._filter_by_name and normalized_name else {}
         while True:
             existing_nodes = await self._graph_store.scan_nodes(
                 node_type=NodeType.ENTITY, user_id=user_id, scope=scope,
-                after_id=after_id, limit=256,
+                after_id=after_id, limit=256, **narrow,
             )
             for node in existing_nodes:
                 node_name = node.content.strip().lower()

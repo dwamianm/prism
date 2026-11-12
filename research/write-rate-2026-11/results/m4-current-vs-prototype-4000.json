@@ -1,0 +1,698 @@
+{
+ "a": "data/write-rate-2026-11/m4/current-a",
+ "b": "data/write-rate-2026-11/m4/prototype",
+ "points": {
+  "4000": {
+   "ambiguous_node_rows": [
+    0,
+    0
+   ],
+   "build_clocks": [
+    103215,
+    103215
+   ],
+   "events": {
+    "count": [
+     4000,
+     4000
+    ],
+    "same": true,
+    "rows_only_a": 0,
+    "rows_only_b": 0,
+    "example_a": [],
+    "example_b": []
+   },
+   "nodes": {
+    "count": [
+     8620,
+     8620
+    ],
+    "same": true,
+    "rows_only_a": 0,
+    "rows_only_b": 0,
+    "example_a": [],
+    "example_b": []
+   },
+   "edges": {
+    "count": [
+     16115,
+     16115
+    ],
+    "same": true,
+    "rows_only_a": 0,
+    "rows_only_b": 0,
+    "example_a": [],
+    "example_b": []
+   },
+   "operations": {
+    "count": [
+     12025,
+     12025
+    ],
+    "same": false,
+    "rows_only_a": 8025,
+    "rows_only_b": 8025,
+    "example_a": [
+     "{\"actor_id\": \"derivation\", \"namespace_id\": \"personal\", \"op_type\": \"DERIVATION_COMMITTED\", \"payload\": {\"created_at\": \"<clock>\", \"edge_ids\": [\"<id>\", \"<id>\", \"<id>\"], \"event_id\": \"node-1034\", \"generation\": 1, \"node_ids\": [\"node-5034\"], \"plan_checksum\": \"a098ff83505eb22f2ed3635a1697189813114a35e3473c356854bd600353ed33\", \"plan_id\": \"<id>\", \"user_id\": \"robot-1\"}, \"target_id\": \"node-1034\"}",
+     "{\"actor_id\": \"derivation\", \"namespace_id\": \"personal\", \"op_type\": \"DERIVATION_COMMITTED\", \"payload\": {\"created_at\": \"<clock>\", \"edge_ids\": [\"<id>\", \"<id>\", \"<id>\"], \"event_id\": \"node-1051\", \"generation\": 1, \"node_ids\": [\"node-5051\"], \"plan_checksum\": \"912c3b116c588ab3cbec84250ab9e4ef9992a1c800d5b88dc4729bee2304e933\", \"plan_id\": \"<id>\", \"user_id\": \"robot-1\"}, \"target_id\": \"node-1051\"}"
+    ],
+    "example_b": [
+     "{\"actor_id\": \"derivation\", \"namespace_id\": \"personal\", \"op_type\": \"DERIVATION_COMMITTED\", \"payload\": {\"created_at\": \"<clock>\", \"edge_ids\": [\"<id>\", \"<id>\", \"<id>\"], \"event_id\": \"node-1034\", \"generation\": 1, \"node_ids\": [\"node-5034\"], \"plan_checksum\": \"37c1fd13179b12d71152b3b3ecd357e67eb7b0f4ac5b2e5f0d13c353dbe315bc\", \"plan_id\": \"<id>\", \"user_id\": \"robot-1\"}, \"target_id\": \"node-1034\"}",
+     "{\"actor_id\": \"derivation\", \"namespace_id\": \"personal\", \"op_type\": \"DERIVATION_COMMITTED\", \"payload\": {\"created_at\": \"<clock>\", \"edge_ids\": [\"<id>\", \"<id>\", \"<id>\"], \"event_id\": \"node-1051\", \"generation\": 1, \"node_ids\": [\"node-5051\"], \"plan_checksum\": \"e4922a6cc1b10e38a5ad661040fd2c89ccf8589dd7eb06ac9eb20de016ebc591\", \"plan_id\": \"<id>\", \"user_id\": \"robot-1\"}, \"target_id\": \"node-1051\"}"
+    ]
+   },
+   "vectors": {
+    "count": [
+     8505,
+     8505
+    ],
+    "same": true,
+    "rows_only_a": 0,
+    "rows_only_b": 0,
+    "example_a": [],
+    "example_b": []
+   },
+   "lexical": {
+    "count": [
+     7885,
+     7885
+    ],
+    "same": true,
+    "rows_only_a": 0,
+    "rows_only_b": 0,
+    "example_a": [],
+    "example_b": []
+   },
+   "answers": [
+    {
+     "question": "Where is the spare bowl now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      4,
+      4
+     ],
+     "results": [
+      898,
+      901
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 3 against 1",
+      ".bundle.excluded_ids: 737 items against 739",
+      ".bundle.excluded_ids[0]: \"node-3762\" against \"node-3763\"",
+      ".bundle.excluded_ids[1]: \"node-8479\" against \"node-3762\"",
+      ".bundle.excluded_ids[2]: \"node-5152\" against \"node-8479\""
+     ]
+    },
+    {
+     "question": "Where is the yellow bowl now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      3,
+      3
+     ],
+     "results": [
+      914,
+      919
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 4 against 1",
+      ".bundle.excluded_ids: 751 items against 757",
+      ".bundle.excluded_ids[0]: \"node-2267\" against \"node-1301\"",
+      ".bundle.excluded_ids[1]: \"node-3710\" against \"node-2091\"",
+      ".bundle.excluded_ids[2]: \"node-4190\" against \"node-1152\""
+     ]
+    },
+    {
+     "question": "Where is the white scarf now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      2,
+      2
+     ],
+     "results": [
+      927,
+      926
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 3 against 2",
+      ".bundle.excluded_ids: 765 items against 764",
+      ".bundle.excluded_ids[0]: \"node-3034\" against \"node-3960\"",
+      ".bundle.excluded_ids[1]: \"node-3471\" against \"node-3481\"",
+      ".bundle.excluded_ids[2]: \"node-1554\" against \"node-1850\""
+     ]
+    },
+    {
+     "question": "Where is the striped screwdriver now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      3,
+      3
+     ],
+     "results": [
+      951,
+      946
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 4 against 0",
+      ".bundle.excluded_ids: 795 items against 790",
+      ".bundle.excluded_ids[0]: \"node-1095\" against \"node-3824\"",
+      ".bundle.excluded_ids[1]: \"node-3824\" against \"node-3037\"",
+      ".bundle.excluded_ids[2]: \"node-3037\" against \"node-3827\""
+     ]
+    },
+    {
+     "question": "Where is the round bowl now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      6,
+      6
+     ],
+     "results": [
+      881,
+      870
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 3 against 5",
+      ".bundle.excluded_ids: 719 items against 708",
+      ".bundle.excluded_ids[0]: \"node-8340\" against \"node-5148\"",
+      ".bundle.excluded_ids[1]: \"node-5148\" against \"node-6267\"",
+      ".bundle.excluded_ids[2]: \"node-6267\" against \"node-6925\""
+     ]
+    },
+    {
+     "question": "Where is the green basket now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      1,
+      1
+     ],
+     "results": [
+      868,
+      870
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 1 against 0",
+      ".bundle.excluded_ids: 708 items against 710",
+      ".bundle.excluded_ids[0]: \"node-5463\" against \"node-7536\"",
+      ".bundle.excluded_ids[1]: \"node-7213\" against \"node-7362\"",
+      ".bundle.excluded_ids[2]: \"node-4466\" against \"node-5463\""
+     ]
+    },
+    {
+     "question": "Where is the white mug now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": true
+     },
+     "expected_rank": [
+      2,
+      2
+     ],
+     "results": [
+      846,
+      845
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 685 items against 684",
+      ".bundle.excluded_ids[119]: \"node-3009\" against \"node-6825\"",
+      ".bundle.excluded_ids[120]: \"node-1820\" against \"node-3009\"",
+      ".bundle.excluded_ids[121]: \"node-2008\" against \"node-1820\"",
+      ".bundle.excluded_ids[122]: \"node-716\" against \"node-2008\""
+     ]
+    },
+    {
+     "question": "Where is the blue screwdriver now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": false,
+      "bundle": false
+     },
+     "expected_rank": [
+      8,
+      8
+     ],
+     "results": [
+      929,
+      933
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 2 against 4",
+      ".bundle.excluded_ids: 773 items against 776",
+      ".bundle.excluded_ids[0]: \"node-4593\" against \"node-8283\"",
+      ".bundle.excluded_ids[40]: \"node-4891\" against \"node-4296\"",
+      ".bundle.excluded_ids[41]: \"node-4296\" against \"node-3322\""
+     ]
+    },
+    {
+     "question": "Where is the spare lamp now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": true
+     },
+     "expected_rank": [
+      5,
+      5
+     ],
+     "results": [
+      878,
+      877
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 720 items against 719",
+      ".bundle.excluded_ids[101]: \"node-7694\" against \"node-7707\"",
+      ".bundle.excluded_ids[102]: \"node-7703\" against \"node-7694\"",
+      ".bundle.excluded_ids[103]: \"node-7784\" against \"node-7703\"",
+      ".bundle.excluded_ids[104]: \"node-7724\" against \"node-7784\""
+     ]
+    },
+    {
+     "question": "Where is the green charger now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      3,
+      3
+     ],
+     "results": [
+      910,
+      909
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 1 against 3",
+      ".bundle.excluded_ids: 748 items against 747",
+      ".bundle.excluded_ids[64]: \"node-840\" against \"node-5463\"",
+      ".bundle.excluded_ids[65]: \"node-5495\" against \"node-840\"",
+      ".bundle.excluded_ids[69]: \"node-5451\" against \"node-5462\""
+     ]
+    },
+    {
+     "question": "Where is the round scarf now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      7,
+      7
+     ],
+     "results": [
+      927,
+      930
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 1 against 0",
+      ".bundle.excluded_ids: 764 items against 769",
+      ".bundle.excluded_ids[0]: \"node-1086\" against \"node-3234\"",
+      ".bundle.excluded_ids[1]: \"node-4577\" against \"node-4122\"",
+      ".bundle.excluded_ids[2]: \"node-1092\" against \"node-4584\""
+     ]
+    },
+    {
+     "question": "Where is the spare bottle now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      1,
+      1
+     ],
+     "results": [
+      858,
+      856
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 699 items against 697",
+      ".bundle.excluded_ids[7]: \"node-7728\" against \"node-4014\"",
+      ".bundle.excluded_ids[8]: \"node-4014\" against \"node-4330\"",
+      ".bundle.excluded_ids[9]: \"node-4330\" against \"node-1908\"",
+      ".bundle.excluded_ids[10]: \"node-1908\" against \"node-1910\""
+     ]
+    },
+    {
+     "question": "Where is the old screwdriver now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      7,
+      7
+     ],
+     "results": [
+      935,
+      932
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 1 against 0",
+      ".bundle.excluded_ids: 778 items against 775",
+      ".bundle.excluded_ids[9]: \"node-4289\" against \"node-4759\"",
+      ".bundle.excluded_ids[10]: \"node-4593\" against \"node-4289\"",
+      ".bundle.excluded_ids[11]: \"node-1698\" against \"node-4593\""
+     ]
+    },
+    {
+     "question": "Where is the leather lamp now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      7,
+      7
+     ],
+     "results": [
+      863,
+      862
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 703 items against 704",
+      ".bundle.excluded_ids[0]: \"node-6042\" against \"node-5944\"",
+      ".bundle.excluded_ids[1]: \"node-5974\" against \"node-5947\"",
+      ".bundle.excluded_ids[2]: \"node-5971\" against \"node-6042\"",
+      ".bundle.excluded_ids[3]: \"node-5889\" against \"node-5974\""
+     ]
+    },
+    {
+     "question": "Where is the red bag now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      1,
+      1
+     ],
+     "results": [
+      816,
+      819
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 8 against 0",
+      ".bundle.excluded_ids: 655 items against 657",
+      ".bundle.excluded_ids[0]: \"node-8457\" against \"node-4960\"",
+      ".bundle.excluded_ids[1]: \"node-5731\" against \"node-8457\"",
+      ".bundle.excluded_ids[2]: \"node-8461\" against \"node-5731\""
+     ]
+    },
+    {
+     "question": "Where is the heavy box now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      8,
+      8
+     ],
+     "results": [
+      932,
+      929
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 2 against 1",
+      ".bundle.excluded_ids: 770 items against 767",
+      ".bundle.excluded_ids[22]: \"node-5597\" against \"node-5630\"",
+      ".bundle.excluded_ids[23]: \"node-4206\" against \"node-5640\"",
+      ".bundle.excluded_ids[24]: \"node-3885\" against \"node-5597\""
+     ]
+    },
+    {
+     "question": "Where is the small scarf now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      5,
+      5
+     ],
+     "results": [
+      971,
+      967
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 1 against 7",
+      ".bundle.excluded_ids: 810 items against 807",
+      ".bundle.excluded_ids[0]: \"node-2367\" against \"node-920\"",
+      ".bundle.excluded_ids[1]: \"node-1689\" against \"node-928\"",
+      ".bundle.excluded_ids[2]: \"node-922\" against \"node-1232\""
+     ]
+    },
+    {
+     "question": "Where is the green kettle now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      6,
+      6
+     ],
+     "results": [
+      872,
+      871
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 711 items against 710",
+      ".bundle.excluded_ids[0]: \"node-1029\" against \"node-8244\"",
+      ".bundle.excluded_ids[1]: \"node-7605\" against \"node-7269\"",
+      ".bundle.excluded_ids[2]: \"node-5450\" against \"node-7758\"",
+      ".bundle.excluded_ids[3]: \"node-5799\" against \"node-5975\""
+     ]
+    },
+    {
+     "question": "Where is the square screwdriver now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      6,
+      6
+     ],
+     "results": [
+      881,
+      879
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 0 against 2",
+      ".bundle.excluded_ids: 723 items against 721",
+      ".bundle.excluded_ids[0]: \"node-6855\" against \"node-7173\"",
+      ".bundle.excluded_ids[1]: \"node-2698\" against \"node-5853\"",
+      ".bundle.excluded_ids[2]: \"node-7037\" against \"node-6855\""
+     ]
+    },
+    {
+     "question": "Where is the golden flashlight now?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      8,
+      8
+     ],
+     "results": [
+      872,
+      873
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 709 items against 710",
+      ".bundle.excluded_ids[0]: \"node-4862\" against \"node-6799\"",
+      ".bundle.excluded_ids[1]: \"node-6799\" against \"node-3909\"",
+      ".bundle.excluded_ids[2]: \"node-3909\" against \"node-5180\"",
+      ".bundle.excluded_ids[3]: \"node-5180\" against \"node-6966\""
+     ]
+    },
+    {
+     "question": "What is on the pantry drawer?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      null,
+      null
+     ],
+     "results": [
+      1057,
+      1060
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 882 items against 885",
+      ".bundle.excluded_ids[2]: \"node-7369\" against \"node-5324\"",
+      ".bundle.excluded_ids[3]: \"node-8399\" against \"node-8554\"",
+      ".bundle.excluded_ids[4]: \"node-8496\" against \"node-4742\"",
+      ".bundle.excluded_ids[5]: \"node-7059\" against \"node-7939\""
+     ]
+    },
+    {
+     "question": "What is on the laundry room rack?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": true
+     },
+     "expected_rank": [
+      null,
+      null
+     ],
+     "results": [
+      889,
+      886
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids: 732 items against 729",
+      ".bundle.excluded_ids[21]: \"node-2596\" against \"node-8067\"",
+      ".bundle.excluded_ids[22]: \"node-2790\" against \"node-2596\"",
+      ".bundle.excluded_ids[23]: \"node-3699\" against \"node-2790\"",
+      ".bundle.excluded_ids[24]: \"node-3212\" against \"node-3699\""
+     ]
+    },
+    {
+     "question": "What is on the kitchen drawer?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      null,
+      null
+     ],
+     "results": [
+      955,
+      949
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 0 against 1",
+      ".bundle.excluded_ids: 797 items against 791",
+      ".bundle.excluded_ids[13]: \"node-7084\" against \"node-6673\"",
+      ".bundle.excluded_ids[14]: \"node-7119\" against \"node-5698\"",
+      ".bundle.excluded_ids[18]: \"node-8601\" against \"node-5699\""
+     ]
+    },
+    {
+     "question": "What is on the bedroom table?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      null,
+      null
+     ],
+     "results": [
+      1003,
+      1003
+     ],
+     "first_differences": [
+      ".bundle.excluded_ids[152]: \"node-4791\" against \"node-7732\"",
+      ".bundle.excluded_ids[153]: \"node-7056\" against \"node-4791\"",
+      ".bundle.excluded_ids[154]: \"node-6627\" against \"node-7056\"",
+      ".bundle.excluded_ids[155]: \"node-5592\" against \"node-6627\"",
+      ".bundle.excluded_ids[156]: \"node-5309\" against \"node-5592\""
+     ]
+    },
+    {
+     "question": "What is on the living room table?",
+     "same": false,
+     "levels": {
+      "whole": false,
+      "top10": true,
+      "bundle": false
+     },
+     "expected_rank": [
+      null,
+      null
+     ],
+     "results": [
+      892,
+      886
+     ],
+     "first_differences": [
+      ".bundle.budget_remaining: 0 against 1",
+      ".bundle.excluded_ids: 736 items against 730",
+      ".bundle.excluded_ids[0]: \"node-698\" against \"node-3212\"",
+      ".bundle.excluded_ids[1]: \"node-1925\" against \"node-698\"",
+      ".bundle.excluded_ids[2]: \"node-3216\" against \"node-1925\""
+     ]
+    }
+   ],
+   "answers_same": 0,
+   "answers_same_by_level": {
+    "whole": 0,
+    "top10": 24,
+    "bundle": 3
+   },
+   "expected_rank_same": 25,
+   "same_everywhere": false
+  }
+ }
+}

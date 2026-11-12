@@ -100,17 +100,21 @@ class PlanningGraph:
 
     async def scan_nodes(
         self, *, user_id: str, scope: Scope | None = None, node_type: NodeType | None = None,
-        after_id: str | None = None, limit: int = 100,
+        after_id: str | None = None, limit: int = 100, content_contains_any: list[str] | None = None,
     ) -> list[MemoryNode]:
         if (user_id, scope) != (self.event.user_id, self.event.scope):
             raise ValueError("Planning scans require the source owner and scope")
         if limit <= 0:
             return []
+        # ``content_contains_any`` narrows the page as the store's scan does (a case-insensitive substring match);
+        # the planned nodes are narrowed the same way here. Every durable node the scan returns is still checked.
+        narrow = {"content_contains_any": content_contains_any} if content_contains_any else {}
+        folded = [value.lower() for value in content_contains_any or ()]
         # Fetch enough durable entries to fill a page even when earlier
         # replacements in this plan hide some of them.
         durable = await self.graph.scan_nodes(
             user_id=user_id, scope=scope, node_type=node_type,
-            after_id=after_id, limit=limit + len(self._retired),
+            after_id=after_id, limit=limit + len(self._retired), **narrow,
         )
         if self.legacy_check is not None:
             await self.legacy_check(durable)
@@ -119,7 +123,8 @@ class PlanningGraph:
         result = [node for node in candidates.values()
                   if node.id not in self._retired and node.lifecycle_state in ACTIVE_LIFECYCLE_STATES
                   and (node_type is None or node.node_type == node_type)
-                  and (after_id is None or str(node.id) > after_id)]
+                  and (after_id is None or str(node.id) > after_id)
+                  and (not folded or any(value in node.content.lower() for value in folded))]
         page = sorted(result, key=lambda n: str(n.id))[:limit]
         self._scan_page = {node.id: node for node in page if node.id not in self.nodes}
         return [node.model_copy(deep=True) for node in page]

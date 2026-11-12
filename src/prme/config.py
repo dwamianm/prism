@@ -1147,6 +1147,17 @@ class PRMEConfig(_ProjectSettings):
             "runs are pending."
         ),
     )
+    enable_filtered_entity_lookup: bool = Field(
+        default=False,
+        description=(
+            "Research prototype (research/write-rate-2026-11, not a product "
+            "option). When True, ingestion's entity lookup asks the store "
+            "only for the owner's entities whose text contains the name, "
+            "instead of reading every entity of the owner and scope and "
+            "checking each one. The exact name and type match still decides, "
+            "so the entity found is the same. False keeps the full scan."
+        ),
+    )
     enable_mention_links: bool = Field(
         default=True,
         description=(

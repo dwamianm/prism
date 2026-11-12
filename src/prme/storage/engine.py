@@ -849,6 +849,7 @@ class MemoryEngine:
                 pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
                 named_claim_text=config.enable_named_claim_text,
                 typed_extraction=config.enable_typed_extraction,
+                filtered_entity_lookup=config.enable_filtered_entity_lookup,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -1043,6 +1044,7 @@ class MemoryEngine:
                 pronoun_repair_turns=config.extraction_window_turns if config.enable_pronoun_repair else None,
                 named_claim_text=config.enable_named_claim_text,
                 typed_extraction=config.enable_typed_extraction,
+                filtered_entity_lookup=config.enable_filtered_entity_lookup,
             )
 
             startup.push_async_callback(pipeline.shutdown)

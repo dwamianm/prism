@@ -1,0 +1,533 @@
+{
+  "mode": "single",
+  "path": "current",
+  "settings": {},
+  "pack": "data/write-rate-2026-11/m4/current-a/400/pack",
+  "stored_at_start": 400,
+  "offer": {
+    "calls": "ingest(content, assertions=..., wait_for_extraction=False), one per fact, in sequence",
+    "facts": 100
+  },
+  "offer_seconds": 0.851,
+  "offered_facts_per_second": 117.48,
+  "accept_latency_ms_per_call": {
+    "count": 100,
+    "p50": 4.41,
+    "p95": 18.55,
+    "max": 156.44,
+    "mean": 8.51
+  },
+  "accept_latency_ms_per_fact": {
+    "count": 100,
+    "p50": 4.41,
+    "p95": 18.55,
+    "max": 156.44,
+    "mean": 8.51
+  },
+  "calls_late_ms": {
+    "count": 100,
+    "p50": 0.0,
+    "p95": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+  },
+  "settle_seconds": 180.0,
+  "run_seconds": 154.36,
+  "committed": 100,
+  "not_committed_at_stop": 0,
+  "commit_wait_s": {
+    "count": 100,
+    "p50": 91.73,
+    "p95": 148.06,
+    "max": 153.48,
+    "mean": 91.92
+  },
+  "commit_wait_lower_bound_s_for_backlog": null,
+  "committed_facts_per_second_after_offer_start": 0.65,
+  "samples": [
+    {
+      "offered_index": 0,
+      "object": "small remote",
+      "rank": 2,
+      "results": 933,
+      "found_after_s": 32.171,
+      "committed_after_s": 30.951
+    },
+    {
+      "offered_index": 5,
+      "object": "spare leash",
+      "rank": 2,
+      "results": 921,
+      "found_after_s": 38.276,
+      "committed_after_s": 37.507
+    },
+    {
+      "offered_index": 10,
+      "object": "leather jacket",
+      "rank": 1,
+      "results": 912,
+      "found_after_s": 44.728,
+      "committed_after_s": 43.822
+    },
+    {
+      "offered_index": 15,
+      "object": "silver notebook",
+      "rank": 1,
+      "results": 932,
+      "found_after_s": 50.87,
+      "committed_after_s": 50.068
+    },
+    {
+      "offered_index": 20,
+      "object": "leather kettle",
+      "rank": 1,
+      "results": 902,
+      "found_after_s": 56.777,
+      "committed_after_s": 55.903
+    },
+    {
+      "offered_index": 25,
+      "object": "striped jacket",
+      "rank": 1,
+      "results": 939,
+      "found_after_s": 63.004,
+      "committed_after_s": 62.032
+    },
+    {
+      "offered_index": 30,
+      "object": "glass tape measure",
+      "rank": 1,
+      "results": 955,
+      "found_after_s": 69.036,
+      "committed_after_s": 68.156
+    },
+    {
+      "offered_index": 35,
+      "object": "golden bowl",
+      "rank": 1,
+      "results": 912,
+      "found_after_s": 74.677,
+      "committed_after_s": 73.678
+    },
+    {
+      "offered_index": 40,
+      "object": "metal umbrella",
+      "rank": 2,
+      "results": 941,
+      "found_after_s": 80.044,
+      "committed_after_s": 79.234
+    },
+    {
+      "offered_index": 45,
+      "object": "heavy umbrella",
+      "rank": 1,
+      "results": 951,
+      "found_after_s": 86.275,
+      "committed_after_s": 85.473
+    },
+    {
+      "offered_index": 50,
+      "object": "striped basket",
+      "rank": 2,
+      "results": 907,
+      "found_after_s": 92.525,
+      "committed_after_s": 91.73
+    },
+    {
+      "offered_index": 55,
+      "object": "leather remote",
+      "rank": 2,
+      "results": 931,
+      "found_after_s": 98.54,
+      "committed_after_s": 97.639
+    },
+    {
+      "offered_index": 60,
+      "object": "paper bottle",
+      "rank": 1,
+      "results": 923,
+      "found_after_s": 105.475,
+      "committed_after_s": 104.612
+    },
+    {
+      "offered_index": 65,
+      "object": "large tape measure",
+      "rank": 1,
+      "results": 966,
+      "found_after_s": 111.389,
+      "committed_after_s": 110.562
+    },
+    {
+      "offered_index": 70,
+      "object": "red remote",
+      "rank": 1,
+      "results": 933,
+      "found_after_s": 117.938,
+      "committed_after_s": 116.917
+    },
+    {
+      "offered_index": 75,
+      "object": "red screwdriver",
+      "rank": 1,
+      "results": 926,
+      "found_after_s": 123.614,
+      "committed_after_s": 122.789
+    },
+    {
+      "offered_index": 80,
+      "object": "yellow jacket",
+      "rank": 1,
+      "results": 944,
+      "found_after_s": 130.014,
+      "committed_after_s": 129.146
+    },
+    {
+      "offered_index": 85,
+      "object": "old clipboard",
+      "rank": 3,
+      "results": 985,
+      "found_after_s": 135.597,
+      "committed_after_s": 134.811
+    },
+    {
+      "offered_index": 90,
+      "object": "green mug",
+      "rank": 2,
+      "results": 937,
+      "found_after_s": 142.104,
+      "committed_after_s": 141.233
+    },
+    {
+      "offered_index": 95,
+      "object": "striped lamp",
+      "rank": 1,
+      "results": 947,
+      "found_after_s": 148.988,
+      "committed_after_s": 148.062
+    }
+  ],
+  "backlog_curve": [
+    {
+      "t": 0.0,
+      "accepted": 0,
+      "committed": 0
+    },
+    {
+      "t": 2.22,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 4.45,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 6.68,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 8.89,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 11.11,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 13.33,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 15.55,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 17.78,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 20.01,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 22.23,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 24.46,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 26.69,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 28.91,
+      "accepted": 100,
+      "committed": 0
+    },
+    {
+      "t": 32.29,
+      "accepted": 100,
+      "committed": 1
+    },
+    {
+      "t": 34.5,
+      "accepted": 100,
+      "committed": 3
+    },
+    {
+      "t": 36.74,
+      "accepted": 100,
+      "committed": 5
+    },
+    {
+      "t": 39.63,
+      "accepted": 100,
+      "committed": 7
+    },
+    {
+      "t": 41.85,
+      "accepted": 100,
+      "committed": 8
+    },
+    {
+      "t": 44.9,
+      "accepted": 100,
+      "committed": 11
+    },
+    {
+      "t": 47.12,
+      "accepted": 100,
+      "committed": 13
+    },
+    {
+      "t": 49.33,
+      "accepted": 100,
+      "committed": 15
+    },
+    {
+      "t": 52.33,
+      "accepted": 100,
+      "committed": 17
+    },
+    {
+      "t": 54.54,
+      "accepted": 100,
+      "committed": 19
+    },
+    {
+      "t": 57.57,
+      "accepted": 100,
+      "committed": 21
+    },
+    {
+      "t": 59.78,
+      "accepted": 100,
+      "committed": 23
+    },
+    {
+      "t": 61.99,
+      "accepted": 100,
+      "committed": 25
+    },
+    {
+      "t": 65.13,
+      "accepted": 100,
+      "committed": 27
+    },
+    {
+      "t": 67.34,
+      "accepted": 100,
+      "committed": 30
+    },
+    {
+      "t": 70.37,
+      "accepted": 100,
+      "committed": 32
+    },
+    {
+      "t": 72.58,
+      "accepted": 100,
+      "committed": 34
+    },
+    {
+      "t": 75.74,
+      "accepted": 100,
+      "committed": 37
+    },
+    {
+      "t": 77.95,
+      "accepted": 100,
+      "committed": 39
+    },
+    {
+      "t": 80.91,
+      "accepted": 100,
+      "committed": 41
+    },
+    {
+      "t": 83.14,
+      "accepted": 100,
+      "committed": 43
+    },
+    {
+      "t": 85.34,
+      "accepted": 100,
+      "committed": 45
+    },
+    {
+      "t": 88.27,
+      "accepted": 100,
+      "committed": 47
+    },
+    {
+      "t": 90.51,
+      "accepted": 100,
+      "committed": 49
+    },
+    {
+      "t": 93.44,
+      "accepted": 100,
+      "committed": 51
+    },
+    {
+      "t": 95.64,
+      "accepted": 100,
+      "committed": 53
+    },
+    {
+      "t": 97.85,
+      "accepted": 100,
+      "committed": 55
+    },
+    {
+      "t": 100.88,
+      "accepted": 100,
+      "committed": 57
+    },
+    {
+      "t": 103.12,
+      "accepted": 100,
+      "committed": 59
+    },
+    {
+      "t": 106.12,
+      "accepted": 100,
+      "committed": 61
+    },
+    {
+      "t": 108.35,
+      "accepted": 100,
+      "committed": 63
+    },
+    {
+      "t": 110.56,
+      "accepted": 100,
+      "committed": 65
+    },
+    {
+      "t": 113.65,
+      "accepted": 100,
+      "committed": 67
+    },
+    {
+      "t": 115.87,
+      "accepted": 100,
+      "committed": 69
+    },
+    {
+      "t": 119.1,
+      "accepted": 100,
+      "committed": 71
+    },
+    {
+      "t": 121.31,
+      "accepted": 100,
+      "committed": 74
+    },
+    {
+      "t": 123.51,
+      "accepted": 100,
+      "committed": 76
+    },
+    {
+      "t": 126.53,
+      "accepted": 100,
+      "committed": 77
+    },
+    {
+      "t": 128.77,
+      "accepted": 100,
+      "committed": 79
+    },
+    {
+      "t": 131.75,
+      "accepted": 100,
+      "committed": 82
+    },
+    {
+      "t": 133.97,
+      "accepted": 100,
+      "committed": 84
+    },
+    {
+      "t": 136.96,
+      "accepted": 100,
+      "committed": 86
+    },
+    {
+      "t": 139.17,
+      "accepted": 100,
+      "committed": 88
+    },
+    {
+      "t": 141.42,
+      "accepted": 100,
+      "committed": 90
+    },
+    {
+      "t": 144.4,
+      "accepted": 100,
+      "committed": 92
+    },
+    {
+      "t": 146.66,
+      "accepted": 100,
+      "committed": 94
+    },
+    {
+      "t": 148.88,
+      "accepted": 100,
+      "committed": 95
+    },
+    {
+      "t": 151.92,
+      "accepted": 100,
+      "committed": 97
+    },
+    {
+      "t": 154.15,
+      "accepted": 100,
+      "committed": 99
+    }
+  ],
+  "model_calls_missed": 0,
+  "searchable_within_1s": {
+    "samples_found": 20,
+    "samples_found_within_1s": 0,
+    "facts_committed_within_1s": 0,
+    "facts_offered": 100
+  }
+}

@@ -316,6 +316,7 @@ class IngestionPipeline:
         pronoun_repair_turns: int | None = None,
         named_claim_text: bool = False,
         typed_extraction: bool = False,
+        filtered_entity_lookup: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -413,7 +414,12 @@ class IngestionPipeline:
         else:
             from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
             self._confidence_matrix = DEFAULT_CONFIDENCE_MATRIX
-        self._entity_merger = EntityMerger(graph_store, graph_writer) if graph_writer else EntityMerger(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
+        # Entity lookups read only the entities whose text holds the name (enable_filtered_entity_lookup).
+        self._filtered_entity_lookup = filtered_entity_lookup
+        self._entity_merger = EntityMerger(
+            graph_store, graph_writer or WriteQueueGraphWriter(graph_store, write_queue),
+            filter_by_name=filtered_entity_lookup,
+        )
         self._supersedence_detector = SupersedenceDetector(graph_store, graph_writer) if graph_writer else SupersedenceDetector(graph_store, WriteQueueGraphWriter(graph_store, write_queue))
         self._retry_tasks: dict[str, asyncio.Task] = {}
         self._background_tasks: set[asyncio.Task] = set()
@@ -1599,7 +1605,7 @@ class IngestionPipeline:
             merged_claim,
         )
 
-        entity_merger = EntityMerger(graph_store, writer)
+        entity_merger = EntityMerger(graph_store, writer, filter_by_name=self._filtered_entity_lookup)
         supersedence_detector = SupersedenceDetector(graph_store, writer)
         # Map entity name -> entity_id for relationship wiring
         from prme.ingestion.entity_references import EntityReferences
