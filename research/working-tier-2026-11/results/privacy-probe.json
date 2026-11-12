@@ -1,0 +1,140 @@
+[
+ {
+  "path": "current",
+  "case": "marked-scope",
+  "write_refused": [
+   "ExtractionError",
+   "MaterializationError",
+   "privacy_provider_unavailable"
+  ],
+  "fact_nodes_after": 1
+ },
+ {
+  "path": "working",
+  "case": "marked-scope",
+  "write_refused": null,
+  "lookup": {
+   "refused": [
+    "privacy_provider_unavailable"
+   ]
+  },
+  "by_address": {
+   "refused": [
+    "privacy_provider_unavailable"
+   ]
+  },
+  "retrieve_with_working": {
+   "refused": [
+    "privacy_provider_unavailable"
+   ]
+  },
+  "working_backlog": 1,
+  "working_backlog_other_user": 1,
+  "working_backlog_project": 1
+ },
+ {
+  "path": "current",
+  "case": "marked-other-user",
+  "write_refused": null,
+  "fact_nodes_after": 2
+ },
+ {
+  "path": "working",
+  "case": "marked-other-user",
+  "write_refused": null,
+  "lookup": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "green mug"
+   ]
+  },
+  "by_address": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "green mug"
+   ]
+  },
+  "retrieve_with_working": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "green mug"
+   ]
+  },
+  "working_backlog": 1,
+  "working_backlog_other_user": 1,
+  "working_backlog_project": 1
+ },
+ {
+  "path": "current",
+  "case": "other-user-table",
+  "write_refused": null,
+  "fact_nodes_after": 2
+ },
+ {
+  "path": "working",
+  "case": "other-user-table",
+  "write_refused": null,
+  "lookup": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "by_address": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "retrieve_with_working": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "working_backlog": 1,
+  "working_backlog_other_user": 1,
+  "working_backlog_project": 1
+ },
+ {
+  "path": "current",
+  "case": "other-scope-table",
+  "write_refused": null,
+  "fact_nodes_after": 2
+ },
+ {
+  "path": "working",
+  "case": "other-scope-table",
+  "write_refused": null,
+  "lookup": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "by_address": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "retrieve_with_working": {
+   "refused": null,
+   "addresses_returned": 1,
+   "subjects": [
+    "red mug"
+   ]
+  },
+  "working_backlog": 1,
+  "working_backlog_other_user": 1,
+  "working_backlog_project": 1
+ }
+]

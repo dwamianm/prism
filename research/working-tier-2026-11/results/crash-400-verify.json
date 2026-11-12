@@ -1,0 +1,16 @@
+{
+ "replay": {
+  "logged_facts": 60,
+  "checkpoint": 0,
+  "leases_reset": 0
+ },
+ "logged": 60,
+ "drain_batches": 3,
+ "seconds": 188.2,
+ "facts_stored": 60,
+ "facts_derived": 60,
+ "missing_events": [],
+ "missing_records": [],
+ "model_calls_missed": 0,
+ "left_in_working_table": 0
+}

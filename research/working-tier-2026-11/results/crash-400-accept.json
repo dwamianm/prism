@@ -1,0 +1,12 @@
+{
+ "replay": {
+  "logged_facts": 0,
+  "checkpoint": 0,
+  "leases_reset": 0
+ },
+ "accepted": 60,
+ "logged": 60,
+ "backlog": 60,
+ "model_calls_missed": 0,
+ "mode": "kill_at"
+}
