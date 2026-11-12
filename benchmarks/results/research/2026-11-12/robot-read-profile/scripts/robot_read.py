@@ -29,7 +29,7 @@ def setup(pack: str):
         return questions, when, common.USER
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "read_cost", os.path.expanduser("~/Sites/prism-read-cost/benchmarks/diagnostics/read_cost.py"))
+        "read_cost", os.path.join(os.getcwd(), "benchmarks/diagnostics/read_cost.py"))
     read_cost = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(read_cost)
     return list(read_cost.QUESTIONS), read_cost.reference_time(20000), read_cost.USER
@@ -52,7 +52,7 @@ async def main(args):
     from benchmarks.diagnostics.product_packing import _quiet_offline_cli, gate_config
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        "read_cost", os.path.expanduser("~/Sites/prism-read-cost/benchmarks/diagnostics/read_cost.py"))
+        "read_cost", os.path.join(os.getcwd(), "benchmarks/diagnostics/read_cost.py"))
     read_cost = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(read_cost)
     fingerprint, install_stage_timer = read_cost.fingerprint, read_cost.install_stage_timer

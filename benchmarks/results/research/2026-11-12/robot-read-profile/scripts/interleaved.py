@@ -23,9 +23,9 @@ os.environ.update({"OPENAI_API_KEY": "", "ANTHROPIC_API_KEY": "sk-ant-blocked", 
                    "TOKENIZERS_PARALLELISM": "false"})
 PACKS = {"stated": Path("~/Sites/prism-write-rate/data/write-rate-2026-11/m3-pack/pack").expanduser(),
          "bench": Path("~/Sites/prism/data/read-cost-v1/packs/n20000-s1/pack").expanduser()}
-# read_cost.py is on read-path-cost-2026-11 only; load its helpers (questions, fingerprint) from that file.
+# read_cost.py is tracked on main since #563; load its helpers (questions, fingerprint) from the tree under test.
 _spec = importlib.util.spec_from_file_location(
-    "read_cost", os.path.expanduser("~/Sites/prism-read-cost/benchmarks/diagnostics/read_cost.py"))
+    "read_cost", os.path.join(os.getcwd(), "benchmarks/diagnostics/read_cost.py"))
 read_cost = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(read_cost)
 

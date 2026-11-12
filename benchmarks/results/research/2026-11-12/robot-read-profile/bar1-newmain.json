@@ -1,0 +1,279 @@
+{
+ "kind": "task22-robot-read-bar1",
+ "commit": "main 3fc87120 plus the read_profile change",
+ "method": "scripts/interleaved.py, 3 rounds, off and on engines open side by side on separate copies, reads in pairs with the order flipped each pair; 1-minute load average recorded before every pair",
+ "runs": [
+  {
+   "label": "main-bench-classic",
+   "pack": "bench",
+   "mode": "classic",
+   "rounds": 3,
+   "questions": 60,
+   "pairs": 180,
+   "load_1m": {
+    "min": 9.71,
+    "median": 10.69,
+    "max": 11.73
+   },
+   "off": {
+    "p50_ms": 135.5,
+    "p95_ms": 266.8,
+    "mean_ms": 159.8,
+    "max_ms": 862.3,
+    "reads": 180,
+    "receipt_bytes_median": 1414941,
+    "receipt_bytes_max": 1742504,
+    "stored_row_bytes_median": 1544736,
+    "stored_row_bytes_max": 1898303,
+    "replay_ranking_ok": "60/60",
+    "results_median": 850.5,
+    "results_max": 1000,
+    "packed_median": 136.0,
+    "packed_max": 145
+   },
+   "on": {
+    "p50_ms": 25.4,
+    "p95_ms": 52.4,
+    "mean_ms": 29.3,
+    "max_ms": 83.9,
+    "reads": 180,
+    "receipt_bytes_median": 71543,
+    "receipt_bytes_max": 76175,
+    "stored_row_bytes_median": 89569,
+    "stored_row_bytes_max": 95814,
+    "replay_ranking_ok": "60/60",
+    "results_median": 40.0,
+    "results_max": 40,
+    "packed_median": 40.0,
+    "packed_max": 40
+   }
+  },
+  {
+   "label": "main-bench-address_first",
+   "pack": "bench",
+   "mode": "address_first",
+   "rounds": 3,
+   "questions": 60,
+   "pairs": 180,
+   "load_1m": {
+    "min": 9.65,
+    "median": 9.86,
+    "max": 10.04
+   },
+   "off": {
+    "p50_ms": 97.8,
+    "p95_ms": 143.6,
+    "mean_ms": 100.6,
+    "max_ms": 264.5,
+    "reads": 180,
+    "receipt_bytes_median": 142953,
+    "receipt_bytes_max": 375510,
+    "stored_row_bytes_median": 157503,
+    "stored_row_bytes_max": 410879,
+    "replay_ranking_ok": "60/60",
+    "results_median": 84.0,
+    "results_max": 219,
+    "packed_median": 70.0,
+    "packed_max": 88
+   },
+   "on": {
+    "p50_ms": 39.8,
+    "p95_ms": 54.3,
+    "mean_ms": 40.6,
+    "max_ms": 86.0,
+    "reads": 180,
+    "receipt_bytes_median": 22596,
+    "receipt_bytes_max": 72560,
+    "stored_row_bytes_median": 25631,
+    "stored_row_bytes_max": 81059,
+    "replay_ranking_ok": "60/60",
+    "results_median": 10.0,
+    "results_max": 40,
+    "packed_median": 10.0,
+    "packed_max": 40
+   }
+  },
+  {
+   "label": "main-stated-classic",
+   "pack": "stated",
+   "mode": "classic",
+   "rounds": 3,
+   "questions": 25,
+   "pairs": 75,
+   "load_1m": {
+    "min": 9.59,
+    "median": 10.57,
+    "max": 11.71
+   },
+   "off": {
+    "p50_ms": 652.5,
+    "p95_ms": 964.4,
+    "mean_ms": 649.4,
+    "max_ms": 1103.4,
+    "reads": 75,
+    "receipt_bytes_median": 1811470,
+    "receipt_bytes_max": 1859771,
+    "stored_row_bytes_median": 1975899,
+    "stored_row_bytes_max": 2028543,
+    "replay_ranking_ok": "25/25",
+    "results_median": 1056,
+    "results_max": 1084,
+    "packed_median": 173,
+    "packed_max": 187
+   },
+   "on": {
+    "p50_ms": 160.6,
+    "p95_ms": 213.7,
+    "mean_ms": 164.3,
+    "max_ms": 224.6,
+    "reads": 75,
+    "receipt_bytes_median": 74613,
+    "receipt_bytes_max": 75796,
+    "stored_row_bytes_median": 95121,
+    "stored_row_bytes_max": 96952,
+    "replay_ranking_ok": "25/25",
+    "results_median": 40,
+    "results_max": 40,
+    "packed_median": 40,
+    "packed_max": 40
+   }
+  },
+  {
+   "label": "main-stated-address_first",
+   "pack": "stated",
+   "mode": "address_first",
+   "rounds": 3,
+   "questions": 25,
+   "pairs": 75,
+   "load_1m": {
+    "min": 8.76,
+    "median": 10.43,
+    "max": 12.29
+   },
+   "off": {
+    "p50_ms": 664.8,
+    "p95_ms": 970.0,
+    "mean_ms": 678.8,
+    "max_ms": 1121.0,
+    "reads": 75,
+    "receipt_bytes_median": 1707471,
+    "receipt_bytes_max": 1758109,
+    "stored_row_bytes_median": 1866057,
+    "stored_row_bytes_max": 1921552,
+    "replay_ranking_ok": "25/25",
+    "results_median": 1005,
+    "results_max": 1034,
+    "packed_median": 162,
+    "packed_max": 177
+   },
+   "on": {
+    "p50_ms": 196.2,
+    "p95_ms": 246.6,
+    "mean_ms": 201.0,
+    "max_ms": 283.6,
+    "reads": 75,
+    "receipt_bytes_median": 75113,
+    "receipt_bytes_max": 76269,
+    "stored_row_bytes_median": 95056,
+    "stored_row_bytes_max": 98808,
+    "replay_ranking_ok": "25/25",
+    "results_median": 40,
+    "results_max": 40,
+    "packed_median": 39,
+    "packed_max": 40
+   }
+  }
+ ],
+ "quiet_rerun": [
+  {
+   "label": "quiet-stated-classic",
+   "pack": "stated",
+   "mode": "classic",
+   "rounds": 3,
+   "questions": 25,
+   "pairs": 75,
+   "load_1m": {
+    "min": 7.53,
+    "median": 10.02,
+    "max": 12.29
+   },
+   "off": {
+    "p50_ms": 708.2,
+    "p95_ms": 1065.2,
+    "mean_ms": 713.8,
+    "max_ms": 1204.5,
+    "reads": 75,
+    "receipt_bytes_median": 1811470,
+    "receipt_bytes_max": 1859771,
+    "stored_row_bytes_median": 1975899,
+    "stored_row_bytes_max": 2028543,
+    "replay_ranking_ok": "25/25",
+    "results_median": 1056,
+    "results_max": 1084,
+    "packed_median": 173,
+    "packed_max": 187
+   },
+   "on": {
+    "p50_ms": 170.4,
+    "p95_ms": 228.2,
+    "mean_ms": 173.4,
+    "max_ms": 255.6,
+    "reads": 75,
+    "receipt_bytes_median": 74613,
+    "receipt_bytes_max": 75796,
+    "stored_row_bytes_median": 95121,
+    "stored_row_bytes_max": 96952,
+    "replay_ranking_ok": "25/25",
+    "results_median": 40,
+    "results_max": 40,
+    "packed_median": 40,
+    "packed_max": 40
+   }
+  },
+  {
+   "label": "quiet-stated-address_first",
+   "pack": "stated",
+   "mode": "address_first",
+   "rounds": 3,
+   "questions": 25,
+   "pairs": 75,
+   "load_1m": {
+    "min": 7.44,
+    "median": 8.01,
+    "max": 8.73
+   },
+   "off": {
+    "p50_ms": 596.6,
+    "p95_ms": 819.6,
+    "mean_ms": 596.9,
+    "max_ms": 880.0,
+    "reads": 75,
+    "receipt_bytes_median": 1707471,
+    "receipt_bytes_max": 1758109,
+    "stored_row_bytes_median": 1866057,
+    "stored_row_bytes_max": 1921552,
+    "replay_ranking_ok": "25/25",
+    "results_median": 1005,
+    "results_max": 1034,
+    "packed_median": 162,
+    "packed_max": 177
+   },
+   "on": {
+    "p50_ms": 163.7,
+    "p95_ms": 224.8,
+    "mean_ms": 175.0,
+    "max_ms": 247.7,
+    "reads": 75,
+    "receipt_bytes_median": 75113,
+    "receipt_bytes_max": 76269,
+    "stored_row_bytes_median": 95056,
+    "stored_row_bytes_max": 98808,
+    "replay_ranking_ok": "25/25",
+    "results_median": 40,
+    "results_max": 40,
+    "packed_median": 39,
+    "packed_max": 40
+   }
+  }
+ ]
+}

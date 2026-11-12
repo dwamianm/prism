@@ -5,7 +5,7 @@ cd /tmp/task22/robot
 for pack in bench stated; do
   for mode in classic address_first; do
     PYTHONPATH=src:. /tmp/task22/stack/.venv/bin/python /tmp/task22/interleaved.py --pack $pack --mode $mode \
-      --label bar1 --rounds 3 > /tmp/task22/reports-step2/bar1-$pack-$mode.log 2>&1
+      --label bar1 --rounds 3 > /tmp/task22/reports-new/main-bar1-$pack-$mode.log 2>&1
     echo "$pack $mode exit $?"
   done
 done

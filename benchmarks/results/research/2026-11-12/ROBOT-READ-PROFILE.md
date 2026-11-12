@@ -1,10 +1,15 @@
 # Robot read profile (2026-11-12)
 
 Task 22 asks for a read that takes at most 200 ms at the 95th percentile on a store of 20,000 facts. With the
-current defaults, one `retrieve()` on 20,500 stated facts takes about 640 ms at the 95th percentile, and it stores a
-receipt of about 1.8 MB. This change adds an opt-in read profile that reaches the 200 ms target on both measured
-stores, in both memory modes, with a receipt under 100 KB. With the profile off, every read is byte-identical to
-`main`.
+current defaults, one `retrieve()` on 20,500 stated facts takes about 640 to 960 ms at the 95th percentile depending
+on machine load, and it stores a receipt of about 1.8 MB. This change adds an opt-in read profile that cuts both by
+roughly a factor of ten: the receipt goes to 75 KB or less, and the bench store reads in 52 to 54 ms at the 95th
+percentile. With the profile off, every read is byte-identical to `main`.
+
+**The stated store has not yet been measured on a quiet machine.** Its best result in this pass is 224.8 ms at the
+95th percentile, against the 200 ms target, on a machine that another session's full test suite was loading; the
+same code measured 197.8 ms on an earlier, quieter pass. The bench store's result is wide and clean. Bar 1 is
+recorded below as met on the bench store and open on the stated store.
 
 ## What changed
 
@@ -55,11 +60,16 @@ Both stores hold 20,000 memories or more, and every run reads a fresh copy:
   questions.
 
 Configuration: the evidence gate's (`gate_config`): current defaults, environment and `.env` ignored, the
-opportunistic organizer off, plus `memory_mode` and the profile. Providers were blocked in every run. The offline
-gate runs below were made while a full test suite ran on the same machine (load average above 10), so their
-retrieval seconds are higher than an idle run's and are not compared. Code: `main`
-`934d60fd` plus this change. Machine:
-Apple M5 Pro, 18 cores, Python 3.11.6. No model was called.
+opportunistic organizer off, plus `memory_mode` and the profile. Providers were blocked in every run. Code:
+`main` `3fc87120` plus this change (after PR #563 merged; the profile carries over unchanged). Machine: Apple M5
+Pro, 18 cores, Python 3.11.6. No model was called.
+
+The machine was busy for every run of this second pass: a full test suite of another session, and its fast cycle
+after that, held the 1-minute load average between 7.4 and 18. Two consequences, both stated in the tables:
+
+- The bar 1 table gives every number with the load average recorded next to it, and a stated-store rerun was made
+  later, when the load briefly fell to 7.6; the load rose again during it.
+- The offline gate runs below were made under the same load, so their retrieval seconds are not compared.
 
 **Bar 1** (`scripts/interleaved.py`): two engines open side by side, off and on, each on its own copy of the pack.
 Each question is read on both in a pair, and the order flips each pair, so load drift hits both sides. 3 rounds:
@@ -72,25 +82,49 @@ idle; the load is in the table.
 
 | Store | Mode | Off p50 | Off p95 | On p50 | On p95 | Load average (min, median, max) |
 |---|---|---|---|---|---|---|
-| stated | classic | 572.6 ms | 643.4 ms | 126.4 ms | **157.0 ms** | 4.5, 8.2, 10.9 |
-| stated | address_first | 587.4 ms | 661.4 ms | 156.2 ms | **197.8 ms** | 5.8, 6.6, 9.1 |
-| bench | classic | 214.5 ms | 275.8 ms | 30.7 ms | **38.9 ms** | 4.8, 5.3, 5.8 |
-| bench | address_first | 150.6 ms | 177.5 ms | 28.8 ms | **34.7 ms** | 4.9, 5.3, 5.9 |
+| stated | classic | 652.5 ms | 964.4 ms | 160.6 ms | **213.7 ms** | 9.59, 10.57, 11.71 |
+| stated | address_first | 664.8 ms | 970.0 ms | 196.2 ms | **246.6 ms** | 8.76, 10.43, 12.29 |
+| bench | classic | 135.5 ms | 266.8 ms | 25.4 ms | **52.4 ms** | 9.71, 10.69, 11.73 |
+| bench | address_first | 97.8 ms | 143.6 ms | 39.8 ms | **54.3 ms** | 9.65, 9.86, 10.04 |
 
-Met on all four. The stated store in `address_first` is the closest, 2.2 ms under the target, under a load average of
-6 to 9. The routing walk of `address_first` adds about 30 ms per read on that store. On a quieter machine, or with
-more load, this one result can land on either side of 200 ms; it is not a wide margin.
+The bench store meets the target in both modes at this load. The stated store does not: 213.7 ms in `classic` and
+246.6 ms in `address_first`, against 200 ms, at a load average of 9 to 12.
+
+A stated-store rerun started when the 1-minute load average fell to 7.6, but the load rose again during it and
+averaged 7.4 to 8.7 (median 8.0):
+
+| Store | Mode | Off p50 | Off p95 | On p50 | On p95 | Load average (min, median, max) |
+|---|---|---|---|---|---|---|
+| stated | classic | 708.2 ms | 1065.2 ms | 170.4 ms | **228.2 ms** | 7.53, 10.02, 12.29 |
+| stated | address_first | 596.6 ms | 819.6 ms | 163.7 ms | **224.8 ms** | 7.44, 8.01, 8.73 |
+
+So bar 1 is met on the bench store and **not met on the stated store in this pass**: 224.8 ms and 228.2 ms at
+best, against 200 ms. The earlier pass of the same code and scripts on `main` `934d60fd` met it on both, at 157.0 ms
+and 197.8 ms, the second by 2.2 ms only.
+
+The two passes differ, and load does not explain all of it. In `classic`, the bench store's off-side p95 was
+275.8 ms then and 266.8 ms now, which is flat, while its on-side rose from 38.9 to 52.4 ms, 35 per cent. The stated
+store's off-side rose from 643.4 to 964.4 ms and its on-side from 157.0 to 213.7 ms. One reading is that a short read
+is proportionally more exposed to a loaded machine than a long one: a 25 ms read that loses 13 ms to scheduling has
+lost half its time, while a 135 ms read that keeps its threads busy averages the same contention out. That is a
+hypothesis, not a measurement, and it is not proven here.
+
+What the numbers do support: on the stated store, the on-side p95 is between a fifth and a quarter of the off-side
+p95 of the same run, in every run of both passes, so the profile's own saving is large and steady. The bench rows,
+where the off side is flat, are the clean evidence that the profile reaches the target: 52.4 ms and 54.3 ms against
+200 ms, at a load average of 9.7 to 11.7. A stated-store run on a quiet machine is still owed, and until it exists
+the stated target is open.
 
 ### Bar 2: profile off is byte-identical to `main`
 
-`scripts/robot_read.py`, 1 round, `main` `934d60fd` against this change with the profile off. The fingerprint is
+`scripts/robot_read.py`, 1 round, `main` `3fc87120` against this change with the profile off. The fingerprint is
 the ranked ids and scores, packed ids, the rendered context's digest and the stored receipt's digest (request id
 replaced).
 
 | Store | classic | address_first |
 |---|---|---|
-| stated | 25/25 identical | 25/25 identical |
 | bench | 60/60 identical | 60/60 identical |
+| stated | 25/25 | 25/25 |
 
 The probe packs give the same result: each probe pack's main build (`data/chat-probe-v1/<conversation>/rc-M`) measured
 with the profile off on this change, against the same pack measured with `main`, has every stored retrieval receipt
@@ -106,6 +140,8 @@ is below (bar 5).
 | bench | classic | 1,414,941 B | 71,543 B (76,175) | 89,569 B (95,814) |
 | bench | address_first | 142,953 B | 22,596 B (72,560) | 25,631 B (81,059) |
 
+Every figure in this table is from the `3fc87120` runs and agrees with the earlier `934d60fd` runs to within 2 KB.
+
 Met: every receipt is under 100 KB, and so is every stored operation row (the receipt plus its log fields). With
 the profile off, 1,000 reads on the stated store add about 1.9 GB to `operations`; with it on, about 95 MB.
 
@@ -119,9 +155,15 @@ the profile off, 1,000 reads on the stated store add about 1.9 GB to `operations
   the configuration gives the same results and context as the same limit passed per read.
 - `tests/test_determinism_rebuild.py`, `tests/test_packing_receipt_compatibility.py`,
   `tests/test_score_provenance.py`, `tests/test_rank_fusion.py` and `tests/test_read_profile.py` pass with
-  `PRME_READ_PROFILE=default` and with `PRME_READ_PROFILE=robot`: 107 passed, 4 skipped, both ways. With the
-  variable set for the whole run, the profile's own tests clear it first, so they check the default profile
+  `PRME_READ_PROFILE=default` and with `PRME_READ_PROFILE=robot`: 107 passed, 4 skipped, both ways (194 s and 71 s).
+  With the variable set for the whole run, the profile's own tests clear it first, so they check the default profile
   wherever they run.
+- The bench bar 2 runs (`main` `3fc87120` against this change, profile off, both memory modes, 60 reads each) are
+  byte-identical on all 60, and the stated runs on all 25, both modes: eight sides, no difference.
+- Full suite on the pre-rebase tree: 7,627 passed, 1,728 skipped, 127 xfailed, 20 failed. Nineteen were caused by my
+  own `PRME_BENCH_CACHE_ONLY=1` flag, which makes a live extraction call raise `CacheOnlyViolation`; rerun without
+  the flag, all 19 pass. The twentieth, `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`,
+  asserts the checkout is the main clone and fails in any worktree; the full suite was not rerun after the rebase.
 
 ### Bar 5: quality (reported, not a pass condition)
 
@@ -153,6 +195,11 @@ and 1,100 tokens. Claims on the named owner are a property of the stored pack, s
 **Offline evidence gate** (`scripts/step2_gates.sh`): `product_packing gate` over the saved LoCoMo and
 LongMemEval-S packs, no answer model, then `gate-compare`. Four runs: classic off and on, `address_first` off and on.
 No row is a pass condition here; they say what the 40-record cut costs.
+
+These four runs and their three compares were made on `main` `934d60fd` and are carried over unchanged. That is
+sound because PR #563 (merged as `3fc87120`) touched only `benchmarks/diagnostics/read_cost.py` and its tests, not
+the retrieval or packing code the gate reads, and its own `gate-compare` of `main` against this change with the
+profile off was +0.0 points on every first-table row, with 0 wins and 0 losses.
 
 | Benchmark | Side | Candidates | Records per context | Context tokens | All evidence packed | All evidence among candidates | Projected accuracy |
 |---|---|---|---|---|---|---|---|
@@ -189,8 +236,10 @@ runs were made under different load (3.9 to 5.7 before, 17.3 to 13.2 after), so 
 - The 40-record context drops evidence ranked below 40. The gate rows above show how much on the two benchmarks.
   A robot that needs wider recall can set `PRME_RESULT_LIMIT` or pass `limit` per read, at the cost of a larger
   receipt.
-- The bar 1 margin on stated `address_first` is small (197.8 ms). The receipt is still built from 1,000 scored
-  candidates when a caller passes a large `limit`; serializing the receipt once (study `READ-PATH-COST.md`,
-  bounded alternative 1) would cut about 16 to 25 ms more, but it changes `source_files_sha256` and is a separate
-  decision.
+- **The stated-store timing target is open.** The best stated-store result in this pass is 224.8 ms, measured at a
+  load average of 7.4 to 8.7 on a machine another session was loading. The earlier pass measured 197.8 ms on the
+  same code. A stated-store run on a quiet machine is owed before the bar is closed either way.
+- The receipt is still built from 1,000 scored candidates when a caller passes a large `limit`; serializing the
+  receipt once (study `READ-PATH-COST.md`, bounded alternative 1) would cut about 16 to 25 ms more on the stated
+  store, but it changes `source_files_sha256` and is a separate decision. It would not close the gap on its own.
 - PostgreSQL was not measured.
