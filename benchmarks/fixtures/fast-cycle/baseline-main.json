@@ -2,18 +2,18 @@
  "kind": "prme-fast-cycle-report",
  "schema_version": 1,
  "label": "main",
- "created_at": "2026-10-20T16:39:10.819803+00:00",
+ "created_at": "2026-11-12T16:38:09.592319+00:00",
  "provenance": {
-  "commit": "1d066985368543cc5151f04050451cc58d6b34de",
-  "src_tree": "74a2ff95484f0aaa706d3af36930b7c2a6f143df",
+  "commit": "5063c89223c8699ffd727a514b9e67e55f3da575",
+  "src_tree": "6b61113b9519109412e0f4db0e162ea3d1c18ef6",
   "src_modified": false,
   "settings": {}
  },
  "seconds": {
-  "store": 8.560290166991763,
-  "ingest": 20.397947124991333,
-  "store-extract": 23.916212500000256,
-  "total": 52.87444979198335
+  "store": 27.68484037500457,
+  "ingest": 93.98257095800363,
+  "store-extract": 132.03042233399174,
+  "total": 253.69783366699994
  },
  "stages": {
   "store": {
@@ -25,8 +25,8 @@
    "calls": 75,
    "nodes": 75,
    "edges": 0,
-   "store_seconds": 7.860730207990855,
-   "retrieve_seconds": 0.6554958339984296,
+   "store_seconds": 26.30944612500025,
+   "retrieve_seconds": 1.014376875013113,
    "measures": {
     "nodes_per_store_call": 1.0,
     "edges_per_store_call": 0.0,
@@ -394,7 +394,7 @@
      ]
     }
    ],
-   "seconds": 8.560290166991763
+   "seconds": 27.68484037500457
   },
   "ingest": {
    "mode": "replay",
@@ -406,7 +406,7 @@
     "defects-v1": {
      "turns": 14,
      "speaker": false,
-     "seconds": 4.62432116700802,
+     "seconds": 14.370205333994818,
      "conversation_sha256": "a198c2be1f27c0b5522f52316855f2b6a788cac0afc2703fc46edbbd4f3d703d",
      "live_calls": 0,
      "cache_hits": 14,
@@ -419,7 +419,7 @@
       "remote_host": "https://ollama.com",
       "remote_model": "deepseek-v4.1-flash"
      },
-     "server_version": "0.40.6",
+     "server_version": "0.40.16",
      "questions": {
       "cities": "Which cities will Alex and Jordan visit in Japan?",
       "learning": "What coding language is Alex learning?",
@@ -436,9 +436,9 @@
        "note: Hi, I am Alex Rivera. My partner Jordan and I are planning a trip to Japan in late March next year."
       ],
       "learning": [
-       "fact: My partner Jordan and I are planning a trip to Japan in late March next year.",
-       "fact: Hi, I am Alex Rivera.",
-       "fact: On weekends I am learning Rust."
+       "fact: On weekends I am learning Rust.",
+       "fact: Yes, I write Go for services and TypeScript for tooling.",
+       "fact: My partner Jordan and I are planning a trip to Japan in late March next year."
       ],
       "work-languages": [
        "fact: Yes, I write Go for services and TypeScript for tooling.",
@@ -470,7 +470,7 @@
     "corrections-v1": {
      "turns": 16,
      "speaker": true,
-     "seconds": 3.568223875001422,
+     "seconds": 14.078569666991825,
      "conversation_sha256": "7ef185ed2e365fffc713f37aa8f4d312aa24ca69d159df3023c5b7ad13a8e1a9",
      "live_calls": 0,
      "cache_hits": 16,
@@ -483,7 +483,7 @@
       "remote_host": "https://ollama.com",
       "remote_model": "deepseek-v4.1-flash"
      },
-     "server_version": "0.40.6",
+     "server_version": "0.40.16",
      "questions": {
       "move-city": "Where is Riley moving?",
       "jo-birthday": "When is Jo's birthday?",
@@ -520,7 +520,7 @@
        "probe": "move-city",
        "records": [
         {
-         "id": "760b04e6-23d8-4126-8acd-931ddd5be894",
+         "id": "45796bf3-d5f8-40a2-8eae-0e2dcba6399b",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -532,7 +532,7 @@
          "replacement": null
         },
         {
-         "id": "bfc73cae-0f59-4fa7-baf3-c46580a5c2f7",
+         "id": "b870b51f-3b27-4bc5-a7b2-25af5cb58f03",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -544,7 +544,7 @@
          "replacement": null
         },
         {
-         "id": "20c0db6b-c88a-4413-bd98-3ff121a59246",
+         "id": "542fd804-e308-490f-9127-6f89180400dc",
          "type": "decision",
          "state": "tentative",
          "mentions": [
@@ -556,7 +556,7 @@
          "replacement": null
         },
         {
-         "id": "2c1f636b-20f2-472e-afcd-13673094d53b",
+         "id": "05a14133-ae3d-45ba-b46a-ce2ba839b382",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -569,7 +569,7 @@
          "replacement": null
         },
         {
-         "id": "a6fe45f8-9945-4624-9219-6980f6d0ae19",
+         "id": "ca0f620a-19ba-4e12-aa1b-1ace21592110",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -581,7 +581,7 @@
          "replacement": null
         },
         {
-         "id": "1706aa1f-6a95-48fa-aada-9a7dbad80636",
+         "id": "bed7f224-0f9d-4d0c-95a4-6f2a8bf0826e",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -624,7 +624,7 @@
         "old_value_shown_before_the_new_value": false
        },
        "question": "Where is Riley moving?",
-       "tokens_used": 692,
+       "tokens_used": 695,
        "token_budget": 4096
       },
       {
@@ -634,7 +634,7 @@
        "probe": "jo-birthday",
        "records": [
         {
-         "id": "e9e738f1-f3c0-468a-93cb-20b5621bb335",
+         "id": "3554bfdc-450c-4709-aad2-39a028593eea",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -646,7 +646,7 @@
          "replacement": null
         },
         {
-         "id": "cc95dcce-8be8-49f1-b10f-249baf13f83f",
+         "id": "a750f810-816e-4db2-9061-0f80cdf53610",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -658,7 +658,7 @@
          "replacement": null
         },
         {
-         "id": "f0165a87-d8b1-4991-afa8-b47ad16110bf",
+         "id": "9d11ea3f-08a9-4ba5-8d52-88ad59b54d2a",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -670,7 +670,7 @@
          "replacement": null
         },
         {
-         "id": "a9ebf828-6f45-4d00-8e98-198433c3d454",
+         "id": "635afcd3-d866-41de-a1df-d9df075a8210",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -682,7 +682,7 @@
          "replacement": null
         },
         {
-         "id": "486028a3-6574-4aa8-89a2-759e29536c8e",
+         "id": "8896a1c1-76da-4c33-b216-a184727afe1b",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -734,7 +734,7 @@
        "probe": "coffee",
        "records": [
         {
-         "id": "2b58c43b-2552-4fb7-8b2a-0c015b7039c6",
+         "id": "69d01eca-b631-41f1-84cd-3a4f260c4e1f",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -746,7 +746,7 @@
          "replacement": null
         },
         {
-         "id": "6271b26e-69a3-494f-aab0-59222353d238",
+         "id": "02fa02ee-f068-4008-a39d-a2790d05c1b5",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -758,7 +758,7 @@
          "replacement": null
         },
         {
-         "id": "5c4167e2-35b5-4369-8470-9f79d22f46d5",
+         "id": "6896f69f-e055-4629-af5f-3ab2c7a25c7b",
          "type": "preference",
          "state": "tentative",
          "mentions": [
@@ -770,7 +770,7 @@
          "replacement": null
         },
         {
-         "id": "4f2778e2-1531-4557-9089-72a455b624c3",
+         "id": "dfd53148-4419-4af4-9f7d-35dea282f0ef",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -812,7 +812,7 @@
         "contradicts_edges": 0
        },
        "question": "How does Riley take coffee?",
-       "tokens_used": 692,
+       "tokens_used": 695,
        "token_budget": 4096
       },
       {
@@ -822,7 +822,7 @@
        "probe": "job",
        "records": [
         {
-         "id": "d3bfdd54-2a2b-4c03-a788-47d76d09eb3a",
+         "id": "2cfa7dc1-a881-4b34-b188-81c77a950e4e",
          "type": "fact",
          "state": "tentative",
          "mentions": [
@@ -834,7 +834,7 @@
          "replacement": null
         },
         {
-         "id": "809456f4-aee8-4a31-9c61-2d715b98b7b0",
+         "id": "9fe3eed3-d1b4-451e-ac7c-65d9d86cd42f",
          "type": "note",
          "state": "tentative",
          "mentions": [
@@ -849,7 +849,7 @@
        "edges": [],
        "context_lines": [
         {
-         "position": 0,
+         "position": 1,
          "line": "- [2026-03-02 18:00] \"Riley\": \"Hi, I'm Riley. I work as an ER nurse in Seattle, mostly night shifts.\"",
          "mentions": [
           "nurse"
@@ -875,7 +875,7 @@
     "chat-v1": {
      "turns": 54,
      "speaker": false,
-     "seconds": 12.143641624992597,
+     "seconds": 59.31374454101024,
      "conversation_sha256": "535a76267ea20486e0d5afdace7c7ff277f649ccc8c4687c448ee169c374af8d",
      "live_calls": 0,
      "cache_hits": 54,
@@ -888,7 +888,7 @@
       "remote_host": "https://ollama.com",
       "remote_model": "deepseek-v4.1-flash"
      },
-     "server_version": "0.40.6",
+     "server_version": "0.40.16",
      "questions": {
       "job-now": "Where does Dana work now?",
       "title-now": "What is Dana's job title now?",
@@ -911,14 +911,14 @@
      },
      "top_results": {
       "job-now": [
-       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
-       "fact: Sam is a nurse at Denver Health and works night shifts, so our schedules are kind of opposite.",
-       "fact: With Sam on nights at Denver Health, would it help to plan shared time around Sam's days off?"
+       "fact: We use Tableau at Northwind.",
+       "fact: Two weeks in at Brightpath and I already like my team more than the one at Northwind.",
+       "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri"
       ],
       "title-now": [
-       "fact: Mel has run like ten half marathons, so she's making me a training plan.",
-       "note: Will do. The new job is going well so far. Two weeks in at Brightpath and I already like my team more than the one at No",
-       "note: Thanks! Rachel will love that. She keeps asking what Ivy's aunt has been up to."
+       "fact: Two weeks in at Brightpath and I already like my team more than the one at Northwind.",
+       "fact: We use Tableau at Northwind.",
+       "fact: Mel has run like ten half marathons, so she's making me a training plan."
       ],
       "start-date": [
        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
@@ -957,13 +957,13 @@
       ],
       "sister-city": [
        "fact: Big news: my sister Rachel had her baby last Thursday!",
-       "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy.",
-       "fact: Rachel lives in Portland, so I haven't met Ivy yet."
+       "fact: Rachel lives in Portland, so I haven't met Ivy yet.",
+       "fact: Big news: my sister Rachel had her baby last Thursday! A girl named Ivy."
       ],
       "running-partner": [
        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
-       "fact: Training update: Mel and I did a 10 mile long run on Saturday.",
-       "fact: Three runs a week on a plan from an experienced runner is a solid base."
+       "fact: My friend Melanie talked me into it.",
+       "fact: Training update: Mel and I did a 10 mile long run on Saturday."
       ],
       "race-time": [
        "fact: I signed up for the Cherry Creek Half Marathon on May 17!",
@@ -996,9 +996,9 @@
        "note: Yes, somewhere around Boise for the overnight stop. And remind me, what was I training for back in February? I want to t"
       ],
       "language": [
+       "fact: I want to tell Rachel about it.",
        "fact: I just started using this assistant, so here's a bit about me: I live in Denver with my partner Sam and our golden retri",
-       "fact: Understood: Tableau is the standard at Northwind, even though you prefer Python.",
-       "preference: Their team uses Python for everything, which I love."
+       "fact: Understood: Tableau is the standard at Northwind, even though you prefer Python."
       ]
      }
     }
@@ -1029,7 +1029,7 @@
      "stale_in_context": 0,
      "repeated_records_in_contexts": 0,
      "answer_rank:cities": 2,
-     "answer_rank:learning": 3,
+     "answer_rank:learning": 1,
      "answer_rank:work-languages": 1,
      "answer_rank:travel": 3,
      "answer_rank:allergy": 1,
@@ -1090,12 +1090,12 @@
      "key_links_via_pronoun": 0,
      "key_links_not_linked": 0,
      "answers_in_context": 17,
-     "answers_in_top3": 14,
-     "answers_in_top5": 15,
+     "answers_in_top3": 15,
+     "answers_in_top5": 16,
      "stale_in_context": 3,
      "repeated_records_in_contexts": 18,
-     "answer_rank:job-now": 8,
-     "answer_rank:title-now": 10,
+     "answer_rank:job-now": 2,
+     "answer_rank:title-now": 11,
      "answer_rank:start-date": 2,
      "answer_rank:old-manager": 3,
      "answer_rank:partner-job": 2,
@@ -1103,7 +1103,7 @@
      "answer_rank:dog": 1,
      "answer_rank:niece-name": 1,
      "answer_rank:niece-born": null,
-     "answer_rank:sister-city": 3,
+     "answer_rank:sister-city": 2,
      "answer_rank:running-partner": 2,
      "answer_rank:race-time": 2,
      "answer_rank:coffee": 5,
@@ -1111,10 +1111,10 @@
      "answer_rank:mel-news": 3,
      "answer_rank:trip": 1,
      "answer_rank:overnight": 3,
-     "answer_rank:language": 2
+     "answer_rank:language": 3
     }
    },
-   "seconds": 20.397947124991333
+   "seconds": 93.98257095800363
   },
   "store-extract": {
    "backend": "duckdb",
@@ -1129,43 +1129,43 @@
    "edges": 368,
    "mode": "replay",
    "model": "deepseek-v4.1-flash:cloud",
-   "server_version": "0.40.6",
+   "server_version": "0.40.16",
    "live_calls": 0,
    "cache_hits": 75,
    "unreproduced": 0,
-   "store_seconds": 6.815425709006377,
-   "extract_seconds": 14.955991333001293,
-   "retrieve_seconds": 1.8730384999944363,
+   "store_seconds": 43.49665825000557,
+   "extract_seconds": 79.67833837500075,
+   "retrieve_seconds": 1.7979148329905001,
    "measures": {
     "nodes_per_store_call": 5.026666666666666,
     "edges_per_store_call": 4.906666666666666,
-    "context_tokens_mean": 3200.705882352941,
+    "context_tokens_mean": 3164.470588235294,
     "key_entities_found": 8,
     "questions_with_a_graph_candidate": 17,
     "questions_with_a_word_candidate": 17,
-    "answers_in_top1": 12,
-    "answers_in_top3": 14,
+    "answers_in_top1": 10,
+    "answers_in_top3": 15,
     "answers_in_context": 17,
-    "mean_reciprocal_rank": 0.7756535947712417,
+    "mean_reciprocal_rank": 0.7142156862745098,
     "stale_above_answer": 1,
     "stale_in_context": 5,
     "repeated_records_in_contexts": 102,
-    "answer_rank:rust": 1,
-    "answer_rank:japan-cities": 30,
+    "answer_rank:rust": 3,
+    "answer_rank:japan-cities": 24,
     "answer_rank:cutover": 1,
     "answer_rank:japan-dates": 2,
-    "answer_rank:pair-programming": 1,
-    "answer_rank:observability": 9,
+    "answer_rank:pair-programming": 3,
+    "answer_rank:observability": 10,
     "answer_rank:on-call": 1,
     "answer_rank:manager": 1,
     "answer_rank:allergy": 1,
-    "answer_rank:dog": 24,
-    "answer_rank:japan-budget": 1,
+    "answer_rank:dog": 1,
+    "answer_rank:japan-budget": 2,
     "answer_rank:dashboard": 1,
     "answer_rank:table-size": 1,
     "answer_rank:timescale": 1,
     "answer_rank:gravel-race": 1,
-    "answer_rank:flights": 2,
+    "answer_rank:flights": 3,
     "answer_rank:sql-style": 1,
     "extraction_requests": 75,
     "extraction_tokens": 462676,
@@ -1177,30 +1177,30 @@
     {
      "id": "rust",
      "question": "what coding language is alex learning?",
-     "answer_rank": 1,
+     "answer_rank": 3,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3149,
      "repeated_records": 6,
      "lexical_candidates": 162,
      "graph_candidates": 150,
      "top_results": [
+      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario.",
+      "fact: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing.",
       "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans.",
-      "preference: Alex uses Neovim as the main editor. Alex switched from VS Code in August 2026.",
-      "preference: Alex likes code examples in Go and TypeScript and dislikes Java examples.",
-      "preference: Alex likes code examples in Go and TypeScript and dislikes Java examples.",
-      "instruction: When reviewing Alex's code, point out race conditions and unchecked errors first."
+      "fact: Alex uses Neovim as the main editor.",
+      "preference: Alex uses Neovim as the main editor. Alex switched from VS Code in August 2026."
      ]
     },
     {
      "id": "japan-cities",
      "question": "which cities will Alex and jordan visit in Japan?",
-     "answer_rank": 30,
+     "answer_rank": 24,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3149,
      "repeated_records": 6,
      "lexical_candidates": 177,
      "graph_candidates": 150,
@@ -1209,7 +1209,7 @@
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+      "fact: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28."
      ]
     },
     {
@@ -1221,7 +1221,7 @@
       "2026-10-24"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3252,
+     "tokens_used": 3211,
      "repeated_records": 6,
      "lexical_candidates": 101,
      "graph_candidates": 49,
@@ -1242,7 +1242,7 @@
       "April 2027 for the cherry blossom"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3252,
+     "tokens_used": 3211,
      "repeated_records": 6,
      "lexical_candidates": 102,
      "graph_candidates": 90,
@@ -1257,43 +1257,43 @@
     {
      "id": "pair-programming",
      "question": "Does Alex like pair programming?",
-     "answer_rank": 1,
+     "answer_rank": 3,
      "answer_in_context": true,
      "stale_in_context": [
       "likes pair programming"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3167,
      "repeated_records": 6,
      "lexical_candidates": 149,
      "graph_candidates": 150,
      "top_results": [
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "fact: Alex wants to reach a staff engineer role within 18 months.",
       "fact: Correction: pair programming drains Alex.",
       "preference: Alex likes pair programming and does it most Thursdays.",
-      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario.",
-      "preference: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing.",
-      "preference: Alex prefers Go for services and TypeScript for internal tooling."
+      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario."
      ]
     },
     {
      "id": "observability",
      "question": "Is Alex leading the observability rewrite?",
-     "answer_rank": 9,
+     "answer_rank": 10,
      "answer_in_context": true,
      "stale_in_context": [
       "first declined"
      ],
      "stale_above_answer": true,
-     "tokens_used": 3190,
+     "tokens_used": 3161,
      "repeated_records": 6,
      "lexical_candidates": 190,
      "graph_candidates": 150,
      "top_results": [
+      "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+      "fact: Alex will present the migration plan at the engineering all-hands on 2026-10-21.",
+      "fact: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "preference: I would like you to lead the observability rewrite next quarter.",
-      "decision: Alex first declined to lead the observability rewrite, citing the migration workload.",
-      "decision: Alex first declined to lead the observability rewrite, citing the migration workload."
+      "preference: I would like you to lead the observability rewrite next quarter."
      ]
     },
     {
@@ -1305,7 +1305,7 @@
       "Alex is on call the week of 2026-10-26"
      ],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3146,
      "repeated_records": 6,
      "lexical_candidates": 127,
      "graph_candidates": 42,
@@ -1313,8 +1313,8 @@
       "fact: Priya Shah is now on call the week of 2026-10-26.",
       "fact: Priya Shah is now on call the week of 2026-10-26. Alex covers the week of 2026-11-02.",
       "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
-      "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
-      "fact: Alex covers the week of 2026-11-02."
+      "fact: Alex covers the week of 2026-11-02.",
+      "decision: Alex asked to swap the on-call week with Priya so the cutover is not during Alex's shift. Priya agreed."
      ]
     },
     {
@@ -1324,16 +1324,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3146,
      "repeated_records": 6,
      "lexical_candidates": 46,
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex's manager is Dana Okafor, VP of Engineering.",
-      "fact: Alex's manager is Dana Okafor, VP of Engineering.",
       "decision: Alex asked to swap the on-call week with Priya so the cutover is not during Alex's shift. Priya agreed.",
       "decision: Alex agreed to use pg_partman for partition management.",
-      "decision: Alex agreed to use pg_partman for partition management."
+      "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
+      "fact: Alex's partner is Jordan, a nurse practitioner."
      ]
     },
     {
@@ -1343,54 +1343,54 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3152,
      "repeated_records": 6,
      "lexical_candidates": 88,
      "graph_candidates": 86,
      "top_results": [
       "fact: Jordan is allergic to shellfish.",
+      "fact: Because of Jordan's shellfish allergy, Alex needs a Japanese allergy card for restaurants.",
       "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "fact: Because of Jordan's shellfish allergy, Alex needs a Japanese allergy card for restaurants.",
       "fact: Alex's partner is Jordan, a nurse practitioner."
      ]
     },
     {
      "id": "dog",
      "question": "What is Alex's dog called?",
-     "answer_rank": 24,
+     "answer_rank": 1,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3149,
      "repeated_records": 6,
      "lexical_candidates": 44,
      "graph_candidates": 150,
      "top_results": [
+      "fact: Alex has a border collie named Juniper, adopted in 2024.",
       "fact: Alex's partner is Jordan, a nurse practitioner. Jordan is allergic to shellfish.",
       "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
       "fact: Alex's partner is Jordan, a nurse practitioner.",
-      "preference: Alex reads science fiction. The current book is Children of Time.",
-      "fact: Alex is learning Rust on weekends and is reading Rust for Rustaceans."
+      "preference: Alex reads science fiction. The current book is Children of Time."
      ]
     },
     {
      "id": "japan-budget",
      "question": "How much is the Japan trip budget?",
-     "answer_rank": 1,
+     "answer_rank": 2,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3219,
+     "tokens_used": 3178,
      "repeated_records": 6,
      "lexical_candidates": 101,
      "graph_candidates": 90,
      "top_results": [
-      "fact: The Japan trip budget is 8,500 USD, not including flights.",
       "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March."
+      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
+      "fact: Correction: the Japan trip moved earlier, to 2027-03-28 through 2027-04-11, because the blossoms peak in late March.",
+      "event: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season."
      ]
     },
     {
@@ -1400,16 +1400,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3146,
      "repeated_records": 6,
      "lexical_candidates": 137,
      "graph_candidates": 64,
      "top_results": [
       "fact: The Datadog dashboard for this work is called Shipment Lookup SLO.",
-      "fact: The Datadog dashboard for this work is called Shipment Lookup SLO.",
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
       "instruction: Please have Sam review the migration runbook before Friday.",
-      "fact: Northwind runs on AWS: ECS Fargate for services, RDS Postgres for data, SQS for event delivery, and Datadog for observab"
+      "fact: Northwind runs on AWS: ECS Fargate for services, RDS Postgres for data, SQS for event delivery, and Datadog for observab",
+      "decision: Northwind decided to migrate shipment_events from one Postgres 14 instance to Postgres 16 with native range partitioning"
      ]
     },
     {
@@ -1419,16 +1419,16 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3219,
+     "tokens_used": 3175,
      "repeated_records": 6,
      "lexical_candidates": 87,
      "graph_candidates": 95,
      "top_results": [
       "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
       "decision: Northwind decided to migrate shipment_events from one Postgres 14 instance to Postgres 16 with native range partitioning",
-      "fact: The shipment_events table has 2.3 billion rows and grows by about 40 million rows per day.",
       "fact: A runaway autovacuum on shipment_events caused a 22 minute degradation on 2026-10-02.",
-      "fact: Assistant drafted the cutover checklist: freeze writes, run final sync, verify row counts, flip the view, watch Datadog "
+      "fact: Assistant drafted the cutover checklist: freeze writes, run final sync, verify row counts, flip the view, watch Datadog ",
+      "instruction: Please have Sam review the migration runbook before Friday."
      ]
     },
     {
@@ -1438,7 +1438,7 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3161,
      "repeated_records": 6,
      "lexical_candidates": 154,
      "graph_candidates": 150,
@@ -1446,8 +1446,8 @@
       "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
       "fact: TimescaleDB gives compression but needs extra operations work.",
       "decision: I think we should look at TimescaleDB instead of native partitioning.",
-      "decision: Alex rejected TimescaleDB because RDS does not offer it and the team ruled out self-hosting Postgres.",
-      "fact: Correction: pair programming drains Alex."
+      "fact: Correction: pair programming drains Alex.",
+      "preference: Correction: pair programming drains Alex. Alex prefers short 30 minute bursts and not full sessions."
      ]
     },
     {
@@ -1457,35 +1457,35 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3173,
      "repeated_records": 6,
      "lexical_candidates": 168,
      "graph_candidates": 150,
      "top_results": [
       "fact: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
+      "fact: Alex is on call the week of 2026-10-26, which overlaps the cutover.",
+      "fact: Alex will present the migration plan at the engineering all-hands on 2026-10-21.",
       "fact: Alex rides gravel bikes on weekends, about 60 miles a week.",
-      "event: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07.",
-      "preference: Alex writes table-driven tests in Go and wants subtests named after the scenario.",
-      "fact: Alex strained a calf on 2026-10-09 and is skipping long rides for two weeks."
+      "event: Alex signed up for a 100 km gravel race in Fruita on 2026-11-07."
      ]
     },
     {
      "id": "flights",
      "question": "Which airline did Alex book for the Japan trip?",
-     "answer_rank": 2,
+     "answer_rank": 3,
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3161,
      "repeated_records": 6,
      "lexical_candidates": 197,
      "graph_candidates": 150,
      "top_results": [
+      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
       "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip.",
       "fact: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28.",
-      "fact: Alex and Jordan plan a trip to Japan in April 2027 for the cherry blossom season.",
       "fact: The Japan trip budget is 8,500 USD, not including flights.",
-      "preference: Alex prefers trains to flights and wants a JR Pass for the Japan trip."
+      "event: Alex booked United flights from Denver to Tokyo Haneda departing 2027-03-28."
      ]
     },
     {
@@ -1495,20 +1495,20 @@
      "answer_in_context": true,
      "stale_in_context": [],
      "stale_above_answer": false,
-     "tokens_used": 3190,
+     "tokens_used": 3161,
      "repeated_records": 6,
      "lexical_candidates": 147,
      "graph_candidates": 150,
      "top_results": [
       "preference: Alex formats SQL with lowercase keywords and one clause per line.",
-      "preference: Alex formats SQL with lowercase keywords and one clause per line.",
       "preference: Alex likes pair programming and does it most Thursdays.",
       "decision: Alex chose OpenTelemetry for the observability rewrite, with Datadog as the backend.",
-      "preference: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing."
+      "preference: Alex went back to VS Code for the Go debugger but keeps Neovim for quick edits and writing.",
+      "fact: Assistant explained how Rust ownership maps onto Go's garbage collected model, using Alex's shipment parser as the examp"
      ]
     }
    ],
-   "seconds": 23.916212500000256
+   "seconds": 132.03042233399174
   }
  },
  "measures": {
@@ -1518,7 +1518,7 @@
    "store/context_tokens_mean": 1785.7058823529412,
    "store-extract/nodes_per_store_call": 5.026666666666666,
    "store-extract/edges_per_store_call": 4.906666666666666,
-   "store-extract/context_tokens_mean": 3200.705882352941,
+   "store-extract/context_tokens_mean": 3164.470588235294,
    "store-extract/extraction_requests": 75,
    "store-extract/extraction_tokens": 462676,
    "store-extract/extractions_incomplete": 0,
@@ -1612,29 +1612,29 @@
    "store/answer_rank:gravel-race": 3,
    "store/answer_rank:flights": 3,
    "store/answer_rank:sql-style": 1,
-   "store-extract/answers_in_top1": 12,
-   "store-extract/answers_in_top3": 14,
+   "store-extract/answers_in_top1": 10,
+   "store-extract/answers_in_top3": 15,
    "store-extract/answers_in_context": 17,
-   "store-extract/mean_reciprocal_rank": 0.7756535947712417,
+   "store-extract/mean_reciprocal_rank": 0.7142156862745098,
    "store-extract/stale_above_answer": 1,
    "store-extract/stale_in_context": 5,
    "store-extract/repeated_records_in_contexts": 102,
-   "store-extract/answer_rank:rust": 1,
-   "store-extract/answer_rank:japan-cities": 30,
+   "store-extract/answer_rank:rust": 3,
+   "store-extract/answer_rank:japan-cities": 24,
    "store-extract/answer_rank:cutover": 1,
    "store-extract/answer_rank:japan-dates": 2,
-   "store-extract/answer_rank:pair-programming": 1,
-   "store-extract/answer_rank:observability": 9,
+   "store-extract/answer_rank:pair-programming": 3,
+   "store-extract/answer_rank:observability": 10,
    "store-extract/answer_rank:on-call": 1,
    "store-extract/answer_rank:manager": 1,
    "store-extract/answer_rank:allergy": 1,
-   "store-extract/answer_rank:dog": 24,
-   "store-extract/answer_rank:japan-budget": 1,
+   "store-extract/answer_rank:dog": 1,
+   "store-extract/answer_rank:japan-budget": 2,
    "store-extract/answer_rank:dashboard": 1,
    "store-extract/answer_rank:table-size": 1,
    "store-extract/answer_rank:timescale": 1,
    "store-extract/answer_rank:gravel-race": 1,
-   "store-extract/answer_rank:flights": 2,
+   "store-extract/answer_rank:flights": 3,
    "store-extract/answer_rank:sql-style": 1,
    "defects-v1/answers_in_context": 7,
    "defects-v1/answers_in_top3": 7,
@@ -1642,7 +1642,7 @@
    "defects-v1/stale_in_context": 0,
    "defects-v1/repeated_records_in_contexts": 0,
    "defects-v1/answer_rank:cities": 2,
-   "defects-v1/answer_rank:learning": 3,
+   "defects-v1/answer_rank:learning": 1,
    "defects-v1/answer_rank:work-languages": 1,
    "defects-v1/answer_rank:travel": 3,
    "defects-v1/answer_rank:allergy": 1,
@@ -1663,12 +1663,12 @@
    "corrections-v1/old_claims_not_retired": 4,
    "corrections-v1/new_value_active": 2,
    "chat-v1/answers_in_context": 17,
-   "chat-v1/answers_in_top3": 14,
-   "chat-v1/answers_in_top5": 15,
+   "chat-v1/answers_in_top3": 15,
+   "chat-v1/answers_in_top5": 16,
    "chat-v1/stale_in_context": 3,
    "chat-v1/repeated_records_in_contexts": 18,
-   "chat-v1/answer_rank:job-now": 8,
-   "chat-v1/answer_rank:title-now": 10,
+   "chat-v1/answer_rank:job-now": 2,
+   "chat-v1/answer_rank:title-now": 11,
    "chat-v1/answer_rank:start-date": 2,
    "chat-v1/answer_rank:old-manager": 3,
    "chat-v1/answer_rank:partner-job": 2,
@@ -1676,7 +1676,7 @@
    "chat-v1/answer_rank:dog": 1,
    "chat-v1/answer_rank:niece-name": 1,
    "chat-v1/answer_rank:niece-born": null,
-   "chat-v1/answer_rank:sister-city": 3,
+   "chat-v1/answer_rank:sister-city": 2,
    "chat-v1/answer_rank:running-partner": 2,
    "chat-v1/answer_rank:race-time": 2,
    "chat-v1/answer_rank:coffee": 5,
@@ -1684,7 +1684,7 @@
    "chat-v1/answer_rank:mel-news": 3,
    "chat-v1/answer_rank:trip": 1,
    "chat-v1/answer_rank:overnight": 3,
-   "chat-v1/answer_rank:language": 2
+   "chat-v1/answer_rank:language": 3
   }
  }
 }

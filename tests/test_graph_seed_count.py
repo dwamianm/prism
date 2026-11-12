@@ -377,10 +377,13 @@ class TestTheSetting:
         dumped = scoring.model_dump(mode="json")
         assert (dumped["rrf_graph_seed_count"], dumped["rrf_graph_weight"]) == (True, WEIGHT)
         # A ScoringWeights built in code keeps it off, and the environment variable restores the scoring before.
+        # The mode's recency order stays on: it is a default of its own (memory_mode is address_first by default in
+        # the alpha channel since 2026-11-12), which an explicit false for this setting does not touch.
         assert ScoringWeights(fusion="rrf").rrf_graph_seed_count is False
         monkeypatch.setenv("PRME_SCORING__RRF_GRAPH_SEED_COUNT", "false")
         before = PRMEConfig(_env_file=None).scoring
-        assert before == ScoringWeights(fusion="rrf", rrf_recency_boost=.25, rrf_tie_break="event_time")
+        assert before == ScoringWeights(fusion="rrf", rrf_recency_boost=.25, rrf_tie_break="event_time",
+                                         rrf_recency_order=True)
 
 
 # --- A retrieval ---------------------------------------------------------------------------------------------------

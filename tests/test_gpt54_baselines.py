@@ -871,9 +871,9 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     assert kept["context_budget"] == baselines.RULE_BUDGET and kept["tokenizer"] == baselines.RULE_TOKENIZER
     # Every variant preparation stays on record with what it changes, outside the arm's folder; the defaults change
     # nothing (#130). The weighted formula leaves out its fusion and the rank fusion settings (the rank constant,
-    # recency boost and tie-break), recorded as None.
+    # recency boost, tie-break and memory_mode's recency order), recorded as None.
     fused = {"scoring.fusion": None, "scoring.rrf_k": None, "scoring.rrf_recency_boost": None,
-             "scoring.rrf_tie_break": None}
+             "scoring.rrf_recency_order": None, "scoring.rrf_tie_break": None}
     assert (variant["variant_settings"], kept["variant_settings"]) == ({"packing.token_budget": 2048}, fused)
     assert "variant_settings" not in prepared
     # Variants that send the reader the same text on every question count together whatever their settings, as
@@ -2858,10 +2858,12 @@ def test_variant_settings_are_what_the_overrides_change_from_the_defaults():
     assert baselines.variant_settings(gate.parse_overrides(['scoring={"fusion": "rrf"}'])) == {}
     assert baselines.variant_settings(gate.parse_overrides(["scoring.fusion=rrf", "scoring.rrf_k=60"])) == {}
     assert baselines.variant_settings(gate.parse_overrides(["scoring.rrf_k=30"])) == {"scoring.rrf_k": 30}
-    # The weighted formula leaves out its fusion and the rank fusion settings, so all are recorded as None.
+    # The weighted formula leaves out its fusion and the rank fusion settings, so all are recorded as None. The
+    # recency order is one of them: memory_mode turns it on by default in the alpha channel, and weighted scoring
+    # takes none of the rank fusion settings.
     assert baselines.variant_settings(gate.parse_overrides(['scoring.fusion="weighted"'])) == {
         "scoring.fusion": None, "scoring.rrf_k": None, "scoring.rrf_recency_boost": None,
-        "scoring.rrf_tie_break": None}
+        "scoring.rrf_recency_order": None, "scoring.rrf_tie_break": None}
     # The recency boost and tie-break are defaults too, so naming them changes nothing.
     assert baselines.variant_settings(gate.parse_overrides(
         ["scoring.rrf_recency_boost=0.25", 'scoring.rrf_tie_break="event_time"'])) == {}

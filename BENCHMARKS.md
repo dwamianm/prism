@@ -2682,12 +2682,28 @@ reads are the table above. The 75-read runs on their own measured -4.6, +0.8 and
 percentile.
 
 **The baseline.** `benchmarks/fixtures/fast-cycle/baseline-main.json` was taken again on the defaults, since the mode
-moves 7 of the 133 compared measures on purpose: five answer ranks (job-now, sister-city, language, title-now and
-learning) and the counts in the top 3 and the top 5. The answer track keeps its committed baselines: its check that a
-baseline's `ingest()` packs hold the
+moves 18 of the 168 measures, every one of them a read: no storage or extraction measure changed, and the ingest
+stage replayed its cache (0 live calls). Seven of the 18 are the probe ranks and counts above (job-now, sister-city,
+language, title-now, learning, chat top 3 and chat top 5). The other eleven are in the store-extract stage: four
+better (dog 24 to 1, japan-cities 30 to 24, top 3 14 to 15, context tokens 3200.7 to 3164.5) and seven worse (rust 1
+to 3, pair-programming 1 to 3, flights 2 to 3, japan-budget 1 to 2, observability 9 to 10, answers in the top 1 12 to
+10, mean reciprocal rank 0.776 to 0.714).
+
+The store-extract movement is attributed, not assumed. That stage reads a pack built through `store(...,
+extract=True)`, so the mode can only reach it at read time. On the same tree, `--set memory_mode=classic` reproduces
+the committed 2026-10-20 baseline exactly (0 of 168 measures differ), while the default moves the same 18, which
+rules out the code merged since (PR #562's single seed walk and PR #563's read path) and model drift (the stage
+replayed the cache). Each of the mode's six settings turned off alone changes nothing: the movement takes at least
+two of them together, with relation routing the largest single contributor (alone it moves dog 24 to 1, pair
+programming 1 to 3 and observability 9 to 12). Turning all six off reproduces the old baseline exactly. The default
+fast cycle runs the store and ingest stages, which pass; the store-extract row is a report to read, not a gated rule,
+and its top-1 and mean reciprocal rank rules are gated only when that stage runs.
+
+The answer track keeps its committed baselines: its check that a baseline's `ingest()` packs hold the
 defaults now ignores the settings that change no stored record (`memory_mode`, `enable_relation_routing` and
 `enable_belief_state`, as it already ignored extraction, scoring and packing), and the mid tier's `--reuse-build`
-accepts `memory_mode`.
+accepts `memory_mode`. A pair over address-first memory names the mode, or a setting it turns on, among its variant's
+settings, and the new baseline that follows this flip is prepared against it.
 
 **Not met, recorded plainly.** On the mid tier of 2026-11-11 the mode lost 0.2 points of LoCoMo evidence in the top 25
 (95% interval -0.5 to -0.0 over questions, -0.4 to -0.1 over conversations, 0 gained and 6 of 1,536 questions lost).
@@ -2816,8 +2832,8 @@ The table below is the baseline before 0.16.0a3 (the engine tree of
 channel turned them on, `benchmarks/fixtures/fast-cycle/baseline-main.json` is a
 replay on the tree of the default flip (see "Structure options on by default"
 above), and 49 of its measures differ from this table on purpose; it was taken
-again on 2026-11-12 for the address-first default, which moves 7 more (see
-"Address-first memory on by default" above). The earlier
+again on 2026-11-12 for the address-first default, which moves 18 more, 7 in the store and ingest stages and 11 in
+the store-extract stage (see "Address-first memory on by default" above). The earlier
 baseline on 2026-10-19 (`baseline-main.json`,
 the engine tree of `origin/main` at `0622c9f9`, DuckDB, from a replay of the
 committed cache; its 132 store and ingest measures equal the baseline taken at

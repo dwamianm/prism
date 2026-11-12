@@ -113,8 +113,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   top 5 were 7 and 7 against 7 and 7 of 7 on `defects-v1`, 14 and 15 against 15 and 16 of 18 on `chat-v1`, and 10
   and 11 against 11 and 12 of 12 on `member-v1`, and the user claims on the named owner stayed 12, 35 and 7. No
   measure is worse in its good direction; four ranks moved (job title 8 to 2, sister city 3 to 2, preferred
-  language 2 to 3, title now 10 to 11). The fast cycle passes against the committed baseline: 0 failed, 7 moved,
-  126 unchanged, the same 7 as the probe ranks. The corrections probe gives the same result either way. On the
+  language 2 to 3, title now 10 to 11). The fast cycle's default stages, store and ingest, pass against the previous
+  baseline: 0 failed, 7 moved, 126 unchanged, the same 7 as the probe ranks (the store-extract stage, which runs only
+  when named, moves 11 measures; Changed below records them). The corrections probe gives the same result either
+  way. On the
   mid tier of 2026-11-11 the mode packed more of the evidence (+0.8 points of all evidence packed, +0.6 of
   projected accuracy, both intervals above zero) and lost 0.2 points of evidence in the top 25 (6 of 1,536
   questions, both intervals below zero), all 6 lost by relation routing's route list. That row is a known
@@ -128,12 +130,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   One earlier run of the smallest pack under load averages of 16 to 34 measured 21.7 percent at p95; a repeat on a
   quiet machine measured 4.1 percent, and the pooled reads are the numbers above.
 - The benchmark harness builds the same defaults, so the committed fast cycle baseline is a replay of them
-  (`benchmarks/fixtures/fast-cycle/baseline-main.json`, taken at this change). The answer track's check that a
-  baseline's packs hold the defaults ignores the settings that change no stored record (`memory_mode`,
-  `enable_relation_routing` and `enable_belief_state`, as it already ignored extraction, scoring and packing), and
-  the mid tier's `--reuse-build` accepts `memory_mode`, so the DeepSeek baselines replay unchanged. The hosted
-  request profile pins `memory_mode="classic"`, since it measures the service as deployed, and the contract
-  scorecard names its mode outright so `--memory-mode classic` still builds the classic packs.
+  (`benchmarks/fixtures/fast-cycle/baseline-main.json`, taken at this change). The default stages, store and
+  ingest, pass against the previous baseline (0 failed, 7 moved, 126 unchanged); the store-extract stage, which
+  only runs when named, moves 11 measures with the mode (4 better, 7 worse: answers in the top 1 12 to 10 of 17 and
+  mean reciprocal rank 0.776 to 0.714), and the retake records them. That stage's movement is the mode: a run of it
+  with `memory_mode=classic` on the same tree reproduces the previous baseline exactly, and each of the mode's six
+  settings off alone changes nothing. The answer track's check that a baseline's packs hold the defaults ignores
+  the settings that change no stored record (`memory_mode`, `enable_relation_routing` and `enable_belief_state`, as
+  it already ignored extraction, scoring and packing), and the mid tier's `--reuse-build` accepts `memory_mode`. A
+  pair over address-first memory names the mode, or a setting it turns on, among its variant's settings, and the
+  baseline a flip starts is prepared against it. The hosted request profile pins `memory_mode="classic"`, since it
+  measures the service as deployed, and the contract scorecard names its mode outright so `--memory-mode classic`
+  still builds the classic packs.
 
 ### Fixed
 

@@ -476,9 +476,11 @@ def test_gate_config_selects_rank_fusion_and_refuses_a_rank_constant_without_it(
     fused = gate_config(tmp_path, parse_overrides(['scoring.fusion="rrf"', "scoring.rrf_k=30"]))
     assert (fused.scoring.fusion, fused.scoring.rrf_k) == ("rrf", 30)
     assert gate_config(tmp_path, parse_overrides(["scoring.fusion=rrf"])).scoring.rrf_k == 60
-    # Rank fusion is the default, so a constant alone applies to it, and other scoring settings keep it.
+    # Rank fusion is the default, so a constant alone applies to it, and other scoring settings keep it. The gate
+    # builds the product defaults, and memory_mode is address_first by default in the alpha channel, which turns
+    # rrf_recency_order on; a ScoringWeights built in code still keeps it off.
     assert gate_config(tmp_path).scoring == ScoringWeights(fusion="rrf", rrf_recency_boost=.25,
-                                                           rrf_tie_break="event_time")
+                                                           rrf_tie_break="event_time", rrf_recency_order=True)
     assert gate_config(tmp_path, parse_overrides(["scoring.rrf_k=30"])).scoring.rrf_k == 30
     assert gate_config(tmp_path, parse_overrides(["scoring.relevance_floor=0.3"])).scoring.fusion == "rrf"
     # A weighted fusion takes none of the rank fusion defaults, so it warns about nothing.
