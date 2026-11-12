@@ -2682,8 +2682,9 @@ reads are the table above. The 75-read runs on their own measured -4.6, +0.8 and
 percentile.
 
 **The baseline.** `benchmarks/fixtures/fast-cycle/baseline-main.json` was taken again on the defaults, since the mode
-moves 7 of the 133 compared measures on purpose (the four ranks and the three counts above, as the fast cycle
-reports them). The answer track keeps its committed baselines: its check that a baseline's `ingest()` packs hold the
+moves 7 of the 133 compared measures on purpose: five answer ranks (job-now, sister-city, language, title-now and
+learning) and the counts in the top 3 and the top 5. The answer track keeps its committed baselines: its check that a
+baseline's `ingest()` packs hold the
 defaults now ignores the settings that change no stored record (`memory_mode`, `enable_relation_routing` and
 `enable_belief_state`, as it already ignored extraction, scoring and packing), and the mid tier's `--reuse-build`
 accepts `memory_mode`.
