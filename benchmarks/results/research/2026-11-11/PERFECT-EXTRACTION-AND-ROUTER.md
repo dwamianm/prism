@@ -177,7 +177,7 @@ intervals stay below zero, so the loss that fails the alpha rule is still there.
 zero against `main-ret-v2`: it gains one question in all evidence packed and projected accuracy and four in
 evidence recall, and loses one more in the top 25. No row moves by more than 4 of 1,536 questions, so this mid
 tier says little about the router itself; the probes and the graph oracle measure it. Which of the six settings causes the
-top-25 loss is not measured here.
+top-25 loss is measured in the last section ("Which setting costs evidence in top 25"): `enable_belief_state`.
 
 ## Checks on this branch (48f850cc)
 
@@ -217,3 +217,108 @@ The limits: three small scripted chats, one person's facts, and each arm built o
 - **No "unknown" answer.** Retrieval always fills the context and never says that it does not know. A question
   about an object never seen returns as many records as a question about a seen one (the address-first thesis,
   `memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md`, finding D). Nothing in this work changes that.
+
+## Which setting costs evidence in top 25
+
+**Question.** `main-ret-v3` (all six settings of the mode's retrieval half) loses evidence in the top 25 on the
+defaults' packs: -0.7 points, 0 questions gained and 16 lost, both intervals below zero. Which setting causes it?
+
+**Setup.** Six mid tier runs at cd0332cd, a clean tree, providers blocked, one run at a time, each with one setting
+alone and the rest at the defaults:
+
+```sh
+uv run python -m benchmarks.mid_tier run --label <label> --out data/mid-tier-v1/reports/<label> \
+  --reuse-build main-0.17.0a6 --set <setting>
+uv run python -m benchmarks.mid_tier compare data/mid-tier-v1/reports/main-0.17.0a6 \
+  data/mid-tier-v1/reports/<label> --output data/mid-tier-v1/reports/<label>-vs-main.json
+```
+
+No model call; each run took 4 min 44 s to 5 min 01 s. Each report records commit cd0332cd and the one setting.
+Reports in the ignored `data/mid-tier-v1/reports/` (`one-<name>/`, `one-<name>-vs-main.md`).
+
+**Result: `enable_belief_state` causes all 16.** LoCoMo, 1,536 questions with evidence, against `main-0.17.0a6`:
+
+| Label | Setting alone | Evidence in top 25 | 95% questions | 95% conversations | W / L / T | All evidence packed (W / L) | Evidence recall (W / L) | Projected accuracy (W / L) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| one-routing | `enable_relation_routing=true` | -0.2 | -0.5 to -0.0 | -0.4 to -0.1 | 0 / 6 / 1530 | +0.4 (6 / 0) | +0.3 (9 / 0) | +0.3 (6 / 0) |
+| one-belief | `enable_belief_state=true` | -0.7 | -1.1 to -0.3 | -1.0 to -0.3 | 0 / 16 / 1520 | +0.8 (13 / 0) | +0.6 (19 / 2) | +0.6 (13 / 0) |
+| one-direct10 | `packing.session_context_direct_first=10` | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 | +0.0 (0 / 0) | +0.0 (0 / 0) | +0.0 (0 / 0) |
+| one-clock | `packing.clock_window_filter=true` | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 | +0.0 (0 / 0) | +0.0 (0 / 0) | +0.0 (0 / 0) |
+| one-collapse | `packing.collapse_identical_text=true` | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 | +0.0 (0 / 0) | +0.0 (0 / 0) | +0.0 (0 / 0) |
+| one-recency | `scoring.rrf_recency_order=true` | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 | +0.0 (0 / 0) | +0.0 (0 / 0) | +0.0 (0 / 0) |
+
+- `enable_belief_state` alone is not a no-op, so no `one-routing-belief` run was made. The engine turns relation
+  routing on whenever belief state is on (`relation_routing=config.enable_relation_routing or
+  config.enable_belief_state`, `src/prme/storage/engine.py` line 885), and a question no word routes takes the
+  catalog walk (`src/prme/retrieval/pipeline.py`, stage 5.5f2). So `one-belief` already runs routing plus belief,
+  and a run with both set would build the same retrieval.
+- `one-belief` is `main-ret-v3` on every question for evidence in the top 25 (the same 16 lost), all evidence
+  packed, evidence packed and projected accuracy. Evidence ranks differ on 110 questions, deeper in the list; none
+  changes evidence in the top 25. The other five settings add nothing to these rows.
+- The four packing and scoring settings move no row. Their evidence ranks move on 47 questions
+  (`session_context_direct_first=10`), 9 (`collapse_identical_text`), 69 (`rrf_recency_order`) and 0
+  (`clock_window_filter`); none changes evidence in the top 25 or what is packed.
+- LongMemEval-S (12 questions): every row the same in all six runs.
+- The 13 questions belief state gains in all evidence packed include all 6 that routing alone gains. The setting
+  that costs the top 25 is also the one that gives the packed gains.
+
+**The 16 questions.** The evidence turns' first ranks (up to 40) were taken again by replaying each question on a
+scratch copy of its pack with the gate's configuration under three settings: the defaults, routing alone and
+belief state alone. All 48 replayed rank sets equal the gate's. "New above" counts the records above the lowest
+evidence turn that were not above it with the defaults; in brackets, the ones that only the ledger adds (their one
+path is `BELIEF`, so they were not among the candidates before).
+
+| Question | Category | Route | Defaults | Routing alone | Belief state | Lost with routing alone | New above (ledger only) | Lost if a citing claim counts |
+|---|---|---|---|---|---|---|---|---|
+| conv-26-q0088 | single-hop | `owns` | D2:14 25 | D2:14 26 | D2:14 27 | yes | 2 (1) | yes |
+| conv-26-q0100 | single-hop | `prefers` | D4:15 22 | D4:15 25 | D4:15 26 | no | 4 (1) | no |
+| conv-42-q0107 | single-hop | `owns`, `prefers` | D5:6 20 | D5:6 24 | D5:6 26 | no | 6 (2) | no |
+| conv-42-q0119 | single-hop | `prefers` | D11:13 21 | D11:13 25 | D11:13 26 | no | 5 (1) | yes |
+| conv-44-q0003 | multi-hop | `partner_of` | D3:11 8, D3:1 21, D27:1 23 | D3:11 11, D3:1 22, D27:1 24 | D3:11 15, D3:1 26, D27:1 28 | no | 5 (4) | no |
+| conv-44-q0009 | multi-hop | `involved_in`, `member_of` | D27:2 5, D10:1 10, D6:2 15, D14:2 18 | D27:2 11, D10:1 16, D6:2 20, D14:2 23 | D27:2 14, D10:1 19, D6:2 23, D14:2 26 | no | 6 (3) | no |
+| conv-44-q0054 | multi-hop | `owns`, `prefers` | D4:21 13, D27:12 16 | D4:21 21, D27:12 24 | D4:21 23, D27:12 26 | no | 10 (2) | no |
+| conv-44-q0068 | single-hop | `involved_in`, `owns` | D6:2 19 | D6:2 31 | D6:2 36 | yes | 17 (5) | no |
+| conv-47-q0008 | multi-hop | `owns` | D1:14 23 | D1:14 26 | D1:14 26 | yes | 3 (0) | yes |
+| conv-47-q0108 | single-hop | none (catalog walk) | D18:9 23 | D18:9 23 | D18:9 27 | no | 4 (3) | no |
+| conv-49-q0006 | multi-hop | `involved_in` | D2:1 25 | D2:1 28 | D2:1 30 | yes | 5 (2) | yes |
+| conv-49-q0048 | multi-hop | `owns` | D9:1 7, D22:1 16, D8:1 23 | D9:1 13, D22:1 22, D8:1 29 | D9:1 13, D22:1 22, D8:1 29 | yes | 6 (0) | no |
+| conv-49-q0049 | multi-hop | `kin_of`, `partner_of` | D7:9 23 | D7:9 25 | D7:9 27 | no | 3 (2) | yes |
+| conv-49-q0105 | single-hop | `involved_in` | D8:12 23 | D8:12 25 | D8:12 27 | no | 4 (2) | no |
+| conv-41-q0119 | single-hop | `prefers` | D22:17 16 | D22:17 25 | D22:17 33 | no | 17 (8) | yes |
+| conv-43-q0128 | single-hop | `uses` | D15:32 5, D15:33 23 | D15:32 9, D15:33 27 | D15:32 9, D15:33 27 | yes | 4 (0) | yes |
+
+- Routing alone already loses 6 of the 16. Its route list (weight `RRF_ROUTE_WEIGHT`, 2.0) lifts the claims the
+  walk reaches above the text matches. Belief state adds the ledger on top and loses the other 10.
+- The ledger keeps every claim at the address together where the best ranked claim stands
+  (`place_beliefs`, `src/prme/retrieval/beliefs.py`): each takes that claim's score times
+  `1 + (n - i) * 0.001`, and a claim not among the candidates is added beside them. Across the 16 questions, 101
+  records are newly above the evidence; 36 of them are claims that only the ledger adds. 4 of the 101 cite an
+  evidence turn.
+- conv-47-q0108 has no route: the catalog walk found the address alone and the ledger placed 5 claims above the
+  evidence, 3 of them new to the pool.
+- The measure counts a turn only by records stored from that turn (`source_dialog_id`). An extracted claim has no
+  turn of its own, so it never counts in the top 25, even when its evidence reference names the evidence turn. If a
+  claim counted by the turns it cites, as the gate already counts packed extracted records, 9 of the 16 would not
+  be lost; 7 would still be (last column). This recount is a check of the cause, not the gate's measure: the
+  measure stays -0.7.
+- No question loses packed evidence. On all 16, evidence packed, all evidence packed and the projected score are
+  the same or better with belief state.
+
+**Worked example: conv-41-q0119** (single-hop), "How often does John get to see sunsets like the one he shared
+with Maria?" The evidence is D22:17, "(6:59 pm on 5 July, 2023) John: Thanks, Maria! I see
+them at least once a week. It's a good way to disconnect, think, and find peace in this" (the first 140 characters).
+The word "like" routes the question to `prefers`: "How often does John see sunsets he shared with Maria?" is not
+routed.
+
+- Defaults: D22:17 is at rank 16 (score 0.4621).
+- Routing alone: the walk reaches `prefers` claims, and 5 of them rank in the top 9, for example "I wanted to help
+  out in these tough times by doing a community food drive." (rank 1). D22:17 falls to rank 25, still in the top 25.
+- Belief state: the ledger places 13 claims at ranks 1 to 13, scores 1.1142 down to 1.1010, and 8 of them were not
+  among the candidates, for example "John wants to join military." (rank 2) and "John wants to help community food
+  drive." (rank 13). D22:17 keeps its score (0.4621) and falls to rank 33. None of the 17 records newly above it
+  cites D22:17. D22:17 is packed in all three runs.
+
+**Possible fix, not built.** Let the ledger reorder its claims only within the places they already hold, and add
+claims from outside the pool only below them, so the ledger cannot push text matches down. The same setting gives
+the 13 packed gains, so a fix must be measured on both rows.
+
