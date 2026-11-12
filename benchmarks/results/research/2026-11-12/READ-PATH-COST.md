@@ -94,7 +94,9 @@ receipt records (`execution.features.source_files_sha256`), so receipts stay byt
 2. `DuckPGQGraphStore._get_nodes_sync` writes node ids as quoted literals, but only when every id is exactly
    `str(UUID(id))`: 36 lowercase hexadecimal digits and hyphens, which cannot carry SQL. Any other string keeps the
    bound parameters, so it reads, and fails, exactly as before (DuckDB accepts uppercase, braced and hyphen-free
-   forms through a parameter, and rejects text that is not a UUID).
+   forms through a parameter, and rejects text that is not a UUID). This part is now on `main` through #562, which
+   has the same rule for `get_nodes` and `get_edges`. After the rebase onto `934d60fd`, this branch keeps `main`'s
+   version and changes only items 1 and 3.
 3. `RankingProfileStore` finds the latest profile state by id first (`ORDER BY created_at DESC, id DESC LIMIT 1` in a
    subquery), and reads one payload, instead of reading every `RANKING_PROFILE_STATE_CHANGED` payload of the owner.
    The row returned is the same; the id is the primary key, so there is no tie. The SQL runs on DuckDB and
@@ -160,11 +162,53 @@ LongMemEval-S 183 / 268 ms to 141 / 217 ms.
 Reports (ignored): `data/read-cost-v1/gate/` (`off`, `on`, `compare`) and `data/chat-probe-v1/<conversation>/`
 `rc-M`, `rc-M2` (main twice) and `rc-B` (branch).
 
+## Bar (a) after the rebase onto `main` 934d60fd
+
+#562 (one graph walk from all seeds) merged to `main` as `934d60fd`. This branch was rebased onto it. The one
+conflict was in `DuckPGQGraphStore._get_nodes_sync`, and the rebase keeps `main`'s version (item 2 under "What
+changed"). Bar (a) was then run again, with no further code change. Off side: `main` `934d60fd` in its own detached
+worktree. On side: this branch at `8497ec9e`, which has the same `src/` as `main` apart from items 1 and 3. Both sides
+used one Python environment. Providers blocked, `PRME_BENCH_CACHE_ONLY=1`. Ollama 0.40.16 (no model was called).
+
+**Stage-timing questions.** `read_cost run` on the saved packs above (`data/read-cost-v1/packs`, the same files as
+the earlier runs), then `read_cost compare`. Every read is identical at both sizes (60/60 and 60/60), and the
+fingerprint digests are equal (`read-cost-rebased-main.json`, `read-cost-rebased-branch.json`). The two sides ran one
+after the other, load average about 4 to 5.
+
+| Memories | `main` p50 | Branch p50 | `main` p95 | Branch p95 |
+|---|---|---|---|---|
+| 3,000 | 186.8 ms | 108.9 ms | 240.9 ms | 165.9 ms (0.69x) |
+| 20,000 | 196.3 ms | 115.2 ms | 270.7 ms | 172.1 ms (0.64x) |
+
+`main` is faster here than `main2` above (p95 270.7 ms against 317.3 ms at 20,000) because #562 now has the
+graph-store literal part.
+
+**Probes, same pack.** Each probe pack (`data/chat-probe-v1/<conversation>/rc-M`) was copied twice and measured with
+`chat_probe measure` (no model), once with each side's code. Every stored retrieval receipt is byte-identical with the
+request id masked: `defects-v1` 7/7, `chat-v1` 18/18, `member-v1` 12/12. Top 3 is 7/7, 14/18 and 10/12 on both sides,
+top 5 is 7/7, 15/18 and 11/12, and claims on the named owner are 12, 35 and 7.
+
+**Offline evidence gate.** `product_packing gate` on this branch, no `--set`, then `gate-compare` against the gate
+run of #562's head (`cf709aef`, which has the same `src/` tree as `main` `934d60fd`): every row of the first table
++0.0 pp, interval +0.0 to +0.0, 0 won and 0 lost (1,540 LoCoMo and 500 LongMemEval-S questions). All 2,040 rows are
+identical apart from `retrieval_seconds` and `reranking_seconds`, the context digest included. Retrieval p50 / p95
+went from 0.132 / 0.191 s to 0.100 / 0.147 s on LoCoMo and from 0.136 / 0.193 s to 0.103 / 0.161 s on
+LongMemEval-S. The two gate runs were at different times, so this latency is only a rough guide.
+
+**Tests.** `test_determinism_rebuild.py`, `test_packing_receipt_compatibility.py`, `test_privacy_receipts.py`,
+`test_ranking_profiles.py`, `test_ranking_profile_interfaces.py`, `test_owner_scoped_graph_reads.py` and
+`test_seed_walk.py`, providers blocked: 65 passed, 24 skipped (PostgreSQL), 1 failed. The failure was
+`test_privacy_receipts.py::test_CL06_component_minimized_receipt_labels_and_citations[directory]`. Run alone, it
+passed 3 times of 3 on this branch and 3 times of 3 on `main`. It failed the same way once in the earlier runs. It is
+a flaky test, not a result of this change, and is a follow-up. `ruff check` on the changed files: clean.
+
 ## Verdict
 
-- Bar (a): **met.** The stage-timing questions are identical at both sizes (60/60 and 60/60). The probes, the
-  same-pack receipts, the offline evidence gate and the determinism tests show no difference ("Bar (a)" above).
+- Bar (a): **met**, before and after the rebase onto `main` `934d60fd`. The stage-timing questions are identical at
+  both sizes (60/60 and 60/60). The probes, the same-pack receipts, the offline evidence gate and the determinism
+  tests show no difference ("Bar (a)" and "Bar (a) after the rebase" above).
 - Bar (b): **not met.** p95 at 20,000 memories is 221.5 ms, 0.70x of `main2`; the bar is 0.50x (158.7 ms).
+  After the rebase: 172.1 ms, 0.64x of `main` `934d60fd` (270.7 ms); the bar would be 135.4 ms. Still not met.
 - Bar (c): ruff passes on the changed files. Targeted tests pass with providers blocked: 97 passed, 27 skipped
   (PostgreSQL), in `test_determinism_rebuild.py`, `test_packing_receipt_compatibility.py`, `test_privacy_receipts.py`,
   `test_ranking_profiles.py`, `test_ranking_profile_interfaces.py`, `test_owner_scoped_graph_reads.py`,
