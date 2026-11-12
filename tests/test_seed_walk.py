@@ -7,8 +7,11 @@ nodes and validity windows, and check that the one walk returns every node
 the per-seed walks return, at the same fewest hops, a seed at its fewest hops
 from another seed, that ``walk_links`` gives the links of the edge records the
 seed reach count read before, and that the candidate stage gives the same
-candidates, records, proximities and seed reach counts on both paths.
-``tests/test_pg_seed_walk.py`` runs the same checks on PostgreSQL.
+candidates, records, proximities and seed reach counts on every path: the
+store's one query that also filters, orders and cuts (``walk_candidates``,
+task 24 of 2026-11-12), one walk cut in Python (``walk_from_seeds``) and the
+per-seed walks. ``tests/test_pg_seed_walk.py`` runs the same checks on
+PostgreSQL.
 """
 
 import random
@@ -29,13 +32,28 @@ SUMMARY_HIDDEN = {"summary_publication_kind": "hierarchical_source_excerpts_v2"}
 
 
 class PerSeed:
-    """The store without ``walk_from_seeds``, so the candidate stage walks from each seed in turn."""
+    """The store without ``walk_from_seeds`` or ``walk_candidates``, so the stage walks from each seed in turn."""
 
     def __init__(self, store):
         self._store = store
 
     def __getattr__(self, name):
-        if name == "walk_from_seeds":
+        if name in ("walk_from_seeds", "walk_candidates"):
+            raise AttributeError(name)
+        return getattr(self._store, name)
+
+
+class OneWalk:
+    """The store without ``walk_candidates``, so the stage walks once and cuts the candidates in Python."""
+
+    def __init__(self, store):
+        self._store = store
+
+    async def walk_from_seeds(self, *args, **kwargs):
+        return await self._store.walk_from_seeds(*args, **kwargs)
+
+    def __getattr__(self, name):
+        if name == "walk_candidates":
             raise AttributeError(name)
         return getattr(self._store, name)
 
@@ -145,24 +163,80 @@ async def check_links(store, seed: int, *, dangling: bool):
     assert await store.walk_links([]) == []
 
 
+def _same_candidates(one, other):
+    assert [c["node"].model_dump(exclude={"last_reinforced_at"}) for c in one] == [
+        c["node"].model_dump(exclude={"last_reinforced_at"}) for c in other]
+    assert [(c["graph_proximity"], c.get("graph_seed_reach")) for c in one] == [
+        (c["graph_proximity"], c.get("graph_seed_reach")) for c in other]
+
+
 async def check_candidates(store, seed: int):
     rng = random.Random(seed)
     user, nodes = await random_graph(store, rng, dangling=False)
     analysis = QueryAnalysis(query="what links the seeds", intent=QueryIntent.SEMANTIC, entities=["Seed"],
                              retrieval_mode=RetrievalMode.DEFAULT)
-    for cap in (8, 150):
+    for cap in (0, 8, 150):
         config = PackingConfig(graph_max_candidates=cap)
-        for options in ({}, {"scope": [Scope.PERSONAL]}, {"time_from": T0 + timedelta(days=3)},
-                        {"time_to": T0 + timedelta(days=4)}):
-            one = await _generate_graph_candidates(analysis, store, user, config, seed_reach=True, **options)
-            each = await _generate_graph_candidates(analysis, PerSeed(store), user, config, seed_reach=True,
-                                                    **options)
-            assert [c["node"].model_dump(exclude={"last_reinforced_at"}) for c in one] == [
-                c["node"].model_dump(exclude={"last_reinforced_at"}) for c in each]
-            assert [(c["graph_proximity"], c["graph_seed_reach"]) for c in one] == [
-                (c["graph_proximity"], c["graph_seed_reach"]) for c in each]
-            assert all(isinstance(c["node"], MemoryNode) for c in one)
-            assert len(one) <= cap
+        for options in ({}, {"scope": [Scope.PERSONAL]}, {"scope": [Scope.PERSONAL, Scope.PROJECT]},
+                        {"time_from": T0 + timedelta(days=3)}, {"time_to": T0 + timedelta(days=4)},
+                        {"time_from": T0 + timedelta(days=2), "time_to": T0 + timedelta(days=6)},
+                        {"time_from": (T0 + timedelta(days=3)).astimezone(timezone(timedelta(hours=-6)))}):
+            for seed_reach in (True, False):
+                store_query = await _generate_graph_candidates(
+                    analysis, store, user, config, seed_reach=seed_reach, **options)
+                one_walk = await _generate_graph_candidates(
+                    analysis, OneWalk(store), user, config, seed_reach=seed_reach, **options)
+                each = await _generate_graph_candidates(
+                    analysis, PerSeed(store), user, config, seed_reach=seed_reach, **options)
+                _same_candidates(store_query, each)
+                _same_candidates(one_walk, each)
+                assert all(isinstance(c["node"], MemoryNode) for c in store_query)
+                assert len(store_query) <= cap
+
+
+async def check_summaries(store):
+    """The store's query leaves out the summaries ``is_unindexed_summary`` leaves out, and only those."""
+    from prme.index_policy import is_unindexed_summary
+
+    user = f"walk-{uuid4()}"
+    seed = MemoryNode(user_id=user, node_type=NodeType.ENTITY, content="Digest")
+    await store.create_node(seed)
+    legacy = {"summarization_level": "daily", "summary_format": "source-excerpts-v1", "period_key": "2026-01-01"}
+    shapes = [None, {}, dict(SUMMARY_HIDDEN), dict(legacy), {**legacy, "consolidation_key": "k"},
+              {**legacy, "summary_publication_kind": "another_kind"}, {**legacy, "summary_publication_kind": None},
+              {**legacy, **SUMMARY_HIDDEN}, {"summary_publication_kind": "another_kind"}]
+    summaries = [MemoryNode(user_id=user, node_type=NodeType.SUMMARY, content=f"summary {i}", metadata=metadata)
+                 for i, metadata in enumerate(shapes)]
+    for node in summaries:
+        await store.create_node(node)
+        await store.create_edge(MemoryEdge(source_id=seed.id, target_id=node.id, edge_type=EdgeType.MENTIONS,
+                                           user_id=user))
+    analysis = QueryAnalysis(query="digest", intent=QueryIntent.SEMANTIC, entities=["Digest"],
+                             retrieval_mode=RetrievalMode.DEFAULT)
+    store_query = await _generate_graph_candidates(analysis, store, user, PackingConfig())
+    assert {str(c["node"].id) for c in store_query} == {
+        str(node.id) for node in summaries if not is_unindexed_summary(node.node_type, node.metadata)}
+    _same_candidates(store_query, await _generate_graph_candidates(analysis, PerSeed(store), user, PackingConfig()))
+
+
+async def check_equal_candidates(store):
+    """Candidates with the same confidence and creation time keep the id order Python gives strings."""
+    user = f"walk-{uuid4()}"
+    seed = MemoryNode(user_id=user, node_type=NodeType.ENTITY, content="Tie")
+    await store.create_node(seed)
+    same = [MemoryNode(user_id=user, node_type=NodeType.FACT, content=f"tie {i}", confidence=.5, created_at=T0)
+            for i in range(40)]
+    for node in same:
+        await store.create_node(node)
+        await store.create_edge(MemoryEdge(source_id=seed.id, target_id=node.id, edge_type=EdgeType.MENTIONS,
+                                           user_id=user))
+    analysis = QueryAnalysis(query="tie", intent=QueryIntent.SEMANTIC, entities=["Tie"],
+                             retrieval_mode=RetrievalMode.DEFAULT)
+    for cap in (7, 40):
+        config = PackingConfig(graph_max_candidates=cap)
+        store_query = await _generate_graph_candidates(analysis, store, user, config)
+        assert [str(c["node"].id) for c in store_query] == sorted(str(node.id) for node in same)[:cap]
+        _same_candidates(store_query, await _generate_graph_candidates(analysis, PerSeed(store), user, config))
 
 
 @pytest.mark.parametrize("seed", [1, 2, 3, 4])
@@ -178,6 +252,41 @@ async def test_the_walk_links_are_the_edges_a_walk_steps_along(isolated_graph_st
 @pytest.mark.parametrize("seed", [1, 2, 3])
 async def test_the_candidate_stage_gives_the_same_candidates_with_one_walk(isolated_graph_store, seed):
     await check_candidates(isolated_graph_store, seed)
+
+
+async def test_equal_candidates_keep_the_id_order(isolated_graph_store):
+    await check_equal_candidates(isolated_graph_store)
+
+
+async def test_the_query_leaves_out_the_summaries_the_stage_leaves_out(isolated_graph_store):
+    await check_summaries(isolated_graph_store)
+
+
+async def test_the_stage_reads_the_candidates_in_one_query(isolated_graph_store):
+    calls = []
+
+    class Watching(OneWalk):
+        async def walk_from_seeds(self, *args, **kwargs):
+            calls.append("walk_from_seeds")
+            return await self._store.walk_from_seeds(*args, **kwargs)
+
+        async def walk_candidates(self, *args, **kwargs):
+            calls.append("walk_candidates")
+            return await self._store.walk_candidates(*args, **kwargs)
+
+    user, _nodes = await random_graph(isolated_graph_store, random.Random(5), dangling=False)
+    analysis = QueryAnalysis(query="seeds", intent=QueryIntent.SEMANTIC, entities=["Seed"],
+                             retrieval_mode=RetrievalMode.DEFAULT)
+    await _generate_graph_candidates(analysis, Watching(isolated_graph_store), user, PackingConfig(), seed_reach=True)
+    assert calls == ["walk_candidates"]
+    # A time bound with no time zone keeps the walk cut in Python, so it behaves as before: here the
+    # comparison with a stored time that has a time zone raises, and the stage reports a backend failure.
+    calls.clear()
+    naive = datetime(2026, 1, 4)
+    with pytest.raises(TypeError):
+        await _generate_graph_candidates(analysis, Watching(isolated_graph_store), user, PackingConfig(),
+                                         time_from=naive)
+    assert calls == ["walk_from_seeds"]
 
 
 async def test_a_seed_is_reached_only_from_another_seed(isolated_graph_store):

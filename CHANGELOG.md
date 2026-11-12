@@ -191,6 +191,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   protected store read through its admitted-only view, keeps the full scan.
   PostgreSQL keeps the full scan. No setting changes, retrieval results are unchanged, and `DERIVATION_VERSION` does not move,
   because the change alters how the lookup finds stored records and not what a source derives.
+- The graph candidate stage of `retrieve()` reads its candidates in one query on DuckDB and PostgreSQL
+  (`walk_candidates`, `src/prme/storage/seed_walk.py`). The query runs the same walk and also does the work the
+  stage did in Python on every reached node: it leaves out an unindexed hierarchical summary, a node outside the
+  requested scopes and a node outside the time window, orders the rest by the stage's sort key and marks the first
+  `packing.graph_max_candidates`. It returns five narrow columns per node instead of a full walked node, and the stage
+  reads full records only for the kept candidates. The candidates, their proximities, the seed reach counts and the
+  packed contexts are the same as before. The receipt's `source_files_sha256` changes, because the hash covers the
+  candidate module; receipts made before the change still replay. A store without the method, such as the privacy
+  read view, and a time bound without a time zone take the earlier path. No setting changes, and stored memories are
+  not rewritten (`benchmarks/results/research/2026-11-12/GRAPH-CANDIDATE-CUT.md`).
 
 ## [0.17.0a7] - 2026-11-10
 

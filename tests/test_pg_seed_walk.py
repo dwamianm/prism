@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from tests.test_seed_walk import check_candidates, check_links, check_walk
+from tests.test_seed_walk import check_candidates, check_equal_candidates, check_links, check_summaries, check_walk
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("PRME_TEST_DATABASE_URL"), reason="PRME_TEST_DATABASE_URL not set",
@@ -41,3 +41,11 @@ async def test_the_walk_links_are_the_edges_a_walk_steps_along(pg_store, seed):
 @pytest.mark.parametrize("seed", [1, 2, 3])
 async def test_the_candidate_stage_gives_the_same_candidates_with_one_walk(pg_store, seed):
     await check_candidates(pg_store, seed)
+
+
+async def test_equal_candidates_keep_the_id_order(pg_store):
+    await check_equal_candidates(pg_store)
+
+
+async def test_the_query_leaves_out_the_summaries_the_stage_leaves_out(pg_store):
+    await check_summaries(pg_store)

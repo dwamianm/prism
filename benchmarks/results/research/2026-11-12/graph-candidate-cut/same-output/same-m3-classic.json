@@ -1,0 +1,263 @@
+{
+ "label": "same-m3-classic",
+ "pack": "m3",
+ "set": {
+  "memory_mode": "classic"
+ },
+ "rounds": 1,
+ "questions": 20,
+ "pairs": 20,
+ "prme": {
+  "main": "/tmp/task24/main/src/prme/__init__.py",
+  "change": "/Users/dwamianm/Sites/prism-graph-candidates/src/prme/__init__.py"
+ },
+ "load_1m": {
+  "min": 10.02,
+  "median": 10.43,
+  "max": 10.47
+ },
+ "same_of_20": {
+  "ranked": 20,
+  "packed": 20,
+  "context_sha256": 20,
+  "receipt_sha256": 0,
+  "tokens_used": 20,
+  "candidates_generated": 20,
+  "stored_receipt_sha256": 0,
+  "stored_receipt_masked_sha256": 20,
+  "stored_log_fields_sha256": 20,
+  "replay_ok": 20
+ },
+ "replay_ok": {
+  "main": 20,
+  "change": 20
+ },
+ "source_files_changed": [
+  "candidates"
+ ],
+ "median_paired_saving_ms": 131.1,
+ "candidates_generated_main": [
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 0,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  }
+ ],
+ "main": {
+  "p50_ms": 464.5,
+  "p95_ms": 625.4,
+  "mean_ms": 393.1,
+  "reads": 20
+ },
+ "change": {
+  "p50_ms": 257.9,
+  "p95_ms": 459.5,
+  "mean_ms": 291.1,
+  "reads": 20
+ },
+ "loads": [
+  10.46,
+  10.02,
+  10.02,
+  10.02,
+  10.02,
+  10.02,
+  10.34,
+  10.34,
+  10.34,
+  10.34,
+  10.47,
+  10.47,
+  10.47,
+  10.47,
+  10.47,
+  10.43,
+  10.43,
+  10.43,
+  10.43,
+  10.43
+ ],
+ "paired_saving_ms": [
+  124.23,
+  10.92,
+  138.81,
+  124.01,
+  -44.07,
+  166.15,
+  152.73,
+  169.13,
+  169.93,
+  63.33,
+  281.86,
+  217.31,
+  138.02,
+  -75.77,
+  172.28,
+  18.48,
+  45.46,
+  195.89,
+  -46.41,
+  18.62
+ ],
+ "ms": {
+  "main": [
+   625.27,
+   153.94,
+   532.99,
+   499.43,
+   144.38,
+   519.27,
+   561.88,
+   538.04,
+   627.29,
+   242.08,
+   498.9,
+   423.54,
+   539.94,
+   161.04,
+   430.13,
+   236.7,
+   202.25,
+   540.1,
+   108.44,
+   276.66
+  ],
+  "change": [
+   501.04,
+   143.02,
+   394.18,
+   375.42,
+   188.45,
+   353.12,
+   409.15,
+   368.91,
+   457.36,
+   178.75,
+   217.04,
+   206.23,
+   401.92,
+   236.81,
+   257.85,
+   218.23,
+   156.79,
+   344.21,
+   154.85,
+   258.04
+  ]
+ }
+}
