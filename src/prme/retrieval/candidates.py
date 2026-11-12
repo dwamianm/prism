@@ -116,6 +116,7 @@ _SEED_STOPWORDS = frozenset({
     "those", "through", "was", "were", "what", "when", "where", "which", "who", "whom",
     "whose", "why", "will", "with", "would", "yes", "you", "your",
 })
+SEED_STOPWORDS = _SEED_STOPWORDS
 _SEED_WORD_RE = re.compile(r"\w+")
 # A long question cannot multiply the entity lookup.
 _MAX_SEED_TERMS = 32

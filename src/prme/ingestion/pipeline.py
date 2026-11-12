@@ -31,6 +31,8 @@ from prme._temporal import DATEPARSER_LOCK as _DATEPARSER_LOCK
 import structlog
 
 from prme.epistemic.inference import OWNER_ROLES, infer_source_type
+from prme.ingestion.assertions import fact_text as stated_fact_text
+from prme.ingestion.assertions import is_rendered, is_structured
 from prme.ingestion.entity_merge import EntityMerger
 from prme.ingestion.errors import ExtractionError, MaterializationError, extraction_failure_code
 from prme.ingestion.graph_writer import GraphWriter, WriteQueueGraphWriter
@@ -1093,7 +1095,14 @@ class IngestionPipeline:
         batch (``through`` bounds the turns it may carry).
         """
         saved = await self._event_store.get_extraction(str(event.id), user_id=event.user_id)
-        if saved is None and self._batch_target_tokens > 0:
+        if saved is None and is_structured(event.metadata):
+            # Caller-stated assertions (ingest(assertions=...)): built from the event, never asked of a model.
+            record = self._structured_record(event)
+            saved = await self._write_queue.submit(
+                lambda: self._event_store.record_extraction(record, claim=claim),
+                label=f"extraction.record:{event.id}",
+            )
+        elif saved is None and self._batch_target_tokens > 0:
             saved = await self._extract_in_batch(event, claim=claim, through=through)
         elif saved is None:
             record = await self._extract_turn(event)
@@ -1103,6 +1112,30 @@ class IngestionPipeline:
             )
         saved.verify_source(event.user_id, event.scope.value, event.content_hash)
         return ExtractionResult.model_validate(saved.result)
+
+    def _structured_record(self, event: Event) -> ExtractionRecord:
+        """The extraction record of a source with caller-stated assertions, built with no model call.
+
+        The assertions were checked before the event was admitted, and :func:`structured_result` checks them again
+        against the content and the speaker as they were admitted (each end as it was found: the text, the speaker,
+        the owner's memory or a closure), so it replaces the text grounding a model's output gets: an end found in
+        memory is not in the text by design. A mismatch fails the source rather than losing a claim silently.
+        Pronoun repair, corrections and resolved text do not apply.
+        """
+        from prme.ingestion.assertions import STRUCTURED_MODEL, STRUCTURED_PROVIDER, structured_result
+
+        try:
+            grounded = structured_result(event.content, event.metadata or {})
+        except ValueError as exc:
+            raise ExtractionError(f"Stored assertions are invalid: {exc}", event_id=str(event.id),
+                                  reason_code="AssertionError") from None
+        return ExtractionRecord(
+            event_id=event.id, user_id=event.user_id, scope=event.scope,
+            content_hash=event.content_hash,
+            provider=STRUCTURED_PROVIDER, model=STRUCTURED_MODEL,
+            grounding_policy=_GROUNDING_POLICY,
+            result=grounded.model_dump(mode="json"),
+        )
 
     async def _extract_in_batch(self, head: Event, *, claim: ExtractionClaim | None,
                                 through: int | None) -> ExtractionRecord:
@@ -1159,7 +1192,8 @@ class IngestionPipeline:
                 break
             event = await self._event_store.get(event_id)
             if (event is None or event.user_id != head.user_id or event.scope != head.scope
-                    or event.session_id != head.session_id):
+                    or event.session_id != head.session_id or is_structured(event.metadata)):
+                # A source with caller-stated assertions is never sent to the model.
                 continue
             if await self._event_store.get_extraction(event_id, user_id=head.user_id) is not None:
                 continue
@@ -1692,6 +1726,10 @@ class IngestionPipeline:
         planned_claims: set[tuple] = set()
         planned_fact_ids: set[str] = set()
         claim_texts: set[str] = set()
+        # A stated claim's text is its source's sentence and the fields that sentence does not show, or its
+        # rendered sentence when the caller gave no content (ingest(assertions=...)).
+        stated = is_structured(event.metadata)
+        rendered = stated and is_rendered(event.content, event.metadata)
         for fact, from_relationship in claims:
             fact_scope = scope
 
@@ -1725,7 +1763,7 @@ class IngestionPipeline:
             sentences = (
                 claim_sentences(fact_content, fact.subject, fact.object, speaker=grounding_speaker,
                                 first_person_forms=first_person_forms)
-                if sentence_text and resolution is None else None
+                if sentence_text and resolution is None and not stated else None
             )
 
             subject_entity_id, subject_link_status = entity_refs.resolve(fact.subject, fact.subject_entity_type)
@@ -1755,7 +1793,9 @@ class IngestionPipeline:
             # (enable_typed_extraction, #400). A relation it left out, or one outside the vocabulary, is dropped
             # with its role and status: the claim keeps its open predicate, and the drop is counted here.
             typed_fields: dict = {}
-            if self._typed_claims:
+            # A caller who states a fact states its relation, so a structured source keeps it whatever
+            # enable_typed_extraction says (ingest(assertions=...)).
+            if self._typed_claims or is_structured(event.metadata):
                 from prme.ingestion.extraction import admit_relation
 
                 relation, typed_role, typed_status = admit_relation(fact)
@@ -1800,14 +1840,19 @@ class IngestionPipeline:
                     "source_text": fact.quantity.source_text,
                     "grounding": "object_decimal_v1",
                 }
-            if resolution is not None:
+            if stated:
+                # The source's sentence that names the object, with the role and the time it does not show, so word
+                # search, meaning search and the reader see them; the source's own text stays its evidence quote.
+                fact_content = stated_fact_text(fact, fact_content, rendered=rendered)
+                fact_metadata["grounding_method"] = "stated_fields_v1" if rendered else "stated_sentence_v1"
+            elif resolution is not None:
                 fact_metadata["resolution"] = resolution
                 fact_content = fact.resolved_text
                 if repaired:
                     fact_metadata["resolved_from_context"] = resolved_from_context(resolution)
             elif sentences is not None:
                 fact_content = sentences
-            if name_claims and speaker is not None:
+            if name_claims and speaker is not None and not stated:
                 # The speaker's name written into the text, or labeling the sentence when it cannot be
                 # rewritten safely (enable_named_claim_text). The evidence quote stays verbatim.
                 named = named_claim_text(fact_content, speaker)
@@ -1825,7 +1870,7 @@ class IngestionPipeline:
                     fact_metadata["grounding_method"] = "claim_statement_v1"
                 else:
                     claim_texts.add(fact_content)
-            if sentence_text and distinct_text and resolution is None:
+            if sentence_text and distinct_text and resolution is None and not stated:
                 if fact_content in claim_texts:
                     # Another claim of this message already has this text.
                     fact_content = _claim_statement(fact, statement_speaker)
@@ -2340,7 +2385,8 @@ class IngestionPipeline:
             if requests >= limit:
                 break
             event = await self._event_store.get(event_id)
-            if event is None:
+            if event is None or is_structured(event.metadata):
+                # Caller-stated assertions make no request.
                 continue
             tokens = count_tokens(event.content)
             used = open_requests.get(event.session_id) if event.session_id else None

@@ -75,6 +75,8 @@ class RouteWalk:
     nodes: dict[str, MemoryNode] = field(default_factory=dict)
     claims: list[dict] = field(default_factory=list)
     rows: int = 0
+    # Claim node id to the entity it was read on, for the ledger (prme.retrieval.beliefs). Not in the receipt.
+    pivots: dict[str, str] = field(default_factory=dict)
 
 
 def _uuid_list(ids: list[str]) -> str:
@@ -277,7 +279,31 @@ def _typed(metadata: dict) -> ClaimRelation | None:
         if (normalized is not None and normalized.relation == relation and normalized.role == role
                 and normalized.role_end is not None):
             role_end = normalized.role_end
+        elif _role_names_subject(role, metadata):
+            role_end = "subject"
     return ClaimRelation(relation, role, role_end)
+
+
+def _role_names_subject(role: str, metadata: dict) -> bool:
+    """Whether the claim's quoted words put the role on its subject ("My sister Priya ..." with subject Priya).
+
+    The typed prompt asks for the role of the relation's far end, and a model still writes ``Priya kin_of I`` with
+    the role ``sister`` for those words, where the sister is the subject. The quote decides only when it puts the
+    role next to the subject's name and not next to the object's.
+    """
+    quote = metadata.get("evidence_quote")
+    subject, target = metadata.get("subject"), metadata.get("object")
+    if not isinstance(quote, str) or not isinstance(subject, str) or not subject.strip():
+        return False
+
+    def beside(name: object) -> bool:
+        if not isinstance(name, str) or not name.strip():
+            return False
+        word, person = re.escape(role), re.escape(name.strip())
+        return bool(re.search(rf"(?<!\w){word}[,]?\s+{person}(?!\w)|(?<!\w){person}\s+(?:is|was)\s+(?:\w+\s+){{0,2}}{word}(?!\w)",
+                              quote, re.IGNORECASE))
+
+    return beside(subject) and not beside(target)
 
 
 def _parse(rows: list[tuple]) -> tuple[dict[str, _Claim], dict[str, str]]:
@@ -428,12 +454,91 @@ async def walk_route(
     )[:ROUTE_MAX_CANDIDATES]  # past the cap, equal route scores are cut by node id
     result.scores = dict(scored)
     result.nodes = {node_id: admitted[node_id] for node_id, _score in scored}
+    result.pivots = {claim_id: matched[claim_id][2] for claim_id in levels if claim_id in result.scores}
     result.claims = [
         {"node_id": claim_id, "step": matched[claim_id][0], "relation": matched[claim_id][1],
          **({"role": claims[claim_id].relation.role} if claims[claim_id].relation.role else {})}
         for claim_id in sorted(levels) if claim_id in result.scores
     ]
     return result
+
+
+async def catalog_walk(
+    graph_store: GraphStore,
+    *,
+    user_id: str,
+    seed_ids: list[str],
+    semantic: dict[str, float],
+    floor: float,
+    scopes: list[Scope] | None = None,
+) -> RouteWalk | None:
+    """The claims at the address the question matches best, for a question no word routes (``enable_belief_state``).
+
+    The catalog is the claims on the question's seed entities, read with the walk's statement. ``semantic`` is the
+    question's cosine similarity to each candidate, and the claim of the catalog it matches best names the address:
+    the entity it was read on and its relation, or ``has:`` and its predicate for a literal attribute or a
+    predicate outside the vocabulary. The walk holds every claim of the catalog at that address, as one step.
+
+    Returns None when no claim of the catalog reaches ``floor``, so a question that is not about the seeds' claims
+    is left to the text ranking.
+    """
+    seeds = list(dict.fromkeys(seed_ids))[:MAX_SEEDS]
+    if not seeds or not semantic:
+        return None
+    rows = await _fetch(graph_store, walk_statement(seeds, steps=1, scopes=scopes), user_id)
+    claims, _names = _parse(rows)
+    ends: dict[str, str] = {}
+    for claim_id, claim in claims.items():
+        if claim.retired:
+            continue
+        # The seed must be the claim's subject or object: a text mention only names it.
+        pivot = next((seed for seed in sorted(claim.pivots.get(0, set())) if _far(claim, seed) is not None), None)
+        if pivot is not None:
+            ends[claim_id] = pivot
+    matched = [claim_id for claim_id in ends if semantic.get(claim_id, 0.0) >= floor]
+    if not matched:
+        return None
+    nodes = await graph_store.get_nodes(sorted(ends))
+    admitted = {
+        str(node.id): node for node in nodes
+        if node.user_id == user_id and node.lifecycle_state.value not in _RETIRED
+        and (not scopes or node.scope in scopes) and node.node_type != NodeType.ENTITY
+    }
+
+    def address(claim_id: str) -> tuple[str, str, str | None]:
+        relation = claims[claim_id].relation
+        if relation is not None:
+            return ends[claim_id], relation.relation, relation.role
+        predicate = (admitted[claim_id].metadata or {}).get("predicate")
+        return ends[claim_id], ATTRIBUTE_PREFIX + attribute_key(predicate if isinstance(predicate, str) else ""), None
+
+    matched = [claim_id for claim_id in matched if claim_id in admitted]
+    if not matched:
+        return None
+    best = min(matched, key=lambda claim_id: (-semantic[claim_id], claim_id))
+    wanted = address(best)
+    members = sorted(claim_id for claim_id in admitted if address(claim_id)[:2] == wanted[:2])[:ROUTE_MAX_CANDIDATES]
+    result = RouteWalk(rows=len(rows))
+    result.scores = {claim_id: (2, 0) for claim_id in members}
+    result.nodes = {claim_id: admitted[claim_id] for claim_id in members}
+    result.pivots = {claim_id: ends[claim_id] for claim_id in members}
+    result.claims = [
+        {"node_id": claim_id, "step": 0, "relation": wanted[1],
+         **({"role": address(claim_id)[2]} if address(claim_id)[2] else {})}
+        for claim_id in members
+    ]
+    return result
+
+
+# The relation of a claim outside the vocabulary, or of a literal attribute: this prefix and its predicate's words.
+ATTRIBUTE_PREFIX = "has:"
+_COPULAS = frozenset({"is", "are", "was", "were", "be", "has", "have", "had", "of", "the", "a", "an", "not"})
+
+
+def attribute_key(predicate: str) -> str:
+    """A predicate's words without copulas, joined by ``_``: ``is_diet`` and ``diet`` are one attribute."""
+    words = [word for word in re.findall(r"[a-z0-9]+", predicate.casefold()) if word not in _COPULAS]
+    return "_".join(words) or "value"
 
 
 ROUTE_PATH = "ROUTE"

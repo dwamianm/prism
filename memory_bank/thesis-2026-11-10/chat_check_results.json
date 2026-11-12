@@ -1,0 +1,598 @@
+{
+ "store": {
+  "path": "store",
+  "write_seconds": 2.2,
+  "nodes": {
+   "note": 24
+  },
+  "questions_with_an_answer": 13,
+  "all_answers_in_top3": 6,
+  "all_answers_in_context": 13,
+  "stale_above_answer": 2,
+  "mean_tokens": 896,
+  "derived_sample": [],
+  "rows": [
+   {
+    "question": "What does Sam do for work now?",
+    "answer_ranks": {
+     "pediatric clinic": 15
+    },
+    "stale_ranks": {
+     "St. Mary": 4
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": true,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "The new job is great. I get home at 5:30 pm now.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "Longest run is now 19 km."
+    ]
+   },
+   {
+    "question": "Is Sam vegetarian?",
+    "answer_ranks": {
+     "fish": 2
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes."
+    ]
+   },
+   {
+    "question": "What food restrictions should I respect when cooking for Sam's household?",
+    "answer_ranks": {
+     "peanut": 2,
+     "meat": 5
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 944,
+    "top3": [
+     "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "Please always give me quantities in metric units. I never know what a cup is."
+    ]
+   },
+   {
+    "question": "What pet does Sam have?",
+    "answer_ranks": {
+     "beagle": 7
+    },
+    "stale_ranks": {
+     "thinking about getting a dog": 10
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Please always give me quantities in metric units. I never know what a cup is.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday."
+    ]
+   },
+   {
+    "question": "Where does Sam's sister live?",
+    "answer_ranks": {
+     "Toronto": 10
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "Got it. I'd suggest a lentil curry on Monday and a mushroom risotto on Wednesday.",
+     "Then for Friday I recommend rice noodles with tofu."
+    ]
+   },
+   {
+    "question": "How should I format ingredient amounts?",
+    "answer_ranks": {
+     "metric": 3
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "Please always give me quantities in metric units. I never know what a cup is."
+    ]
+   },
+   {
+    "question": "How much has Sam spent on running gear in total?",
+    "answer_ranks": {
+     "140": 16,
+     "60 euros": 1,
+     "85": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 914,
+    "top3": [
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+     "Longest run is now 19 km."
+    ]
+   },
+   {
+    "question": "How far can Sam run at the moment?",
+    "answer_ranks": {
+     "19 km": 1
+    },
+    "stale_ranks": {
+     "is 9 km": 5,
+     "16 km": 15
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Longest run is now 19 km.",
+     "Miso chewed through my old running shoes, ha.",
+     "The new job is great. I get home at 5:30 pm now."
+    ]
+   },
+   {
+    "question": "When is the race and where?",
+    "answer_ranks": {
+     "November 22": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 944,
+    "top3": [
+     "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+     "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only.",
+     "Longest run is now 19 km."
+    ]
+   },
+   {
+    "question": "What did you recommend for the Friday dinner?",
+    "answer_ranks": {
+     "rice noodles": 11
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Hi, I'm planning meals for the week. I'm vegetarian, by the way.",
+     "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    ]
+   },
+   {
+    "question": "What time does Sam usually eat dinner?",
+    "answer_ranks": {
+     "5:30": 14
+    },
+    "stale_ranks": {
+     "6 am": 4
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": true,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore. Still no meat.",
+     "Did 16 km on Sunday. Knee was fine this time."
+    ]
+   },
+   {
+    "question": "Who is Alex?",
+    "answer_ranks": {
+     "partner": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "The new job is great. I get home at 5:30 pm now.",
+     "Longest run is now 19 km."
+    ]
+   },
+   {
+    "question": "Does Sam own a cat?",
+    "answer_ranks": {},
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+     "Big news: I quit the hospital. I start at a pediatric clinic on November 2, day shifts only."
+    ]
+   },
+   {
+    "question": "What happened to Sam's old running shoes?",
+    "answer_ranks": {
+     "chewed": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 24,
+    "tokens": 885,
+    "top3": [
+     "Miso chewed through my old running shoes, ha.",
+     "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+     "My longest run so far is 9 km. My knee hurt a bit after it."
+    ]
+   }
+  ]
+ },
+ "ingest": {
+  "path": "ingest",
+  "write_seconds": 19.3,
+  "nodes": {
+   "fact": 26,
+   "entity": 35,
+   "decision": 1,
+   "preference": 4
+  },
+  "questions_with_an_answer": 13,
+  "all_answers_in_top3": 6,
+  "all_answers_in_context": 13,
+  "stale_above_answer": 1,
+  "mean_tokens": 1024,
+  "derived_sample": [
+   "decision: I'll keep peanuts out of every recipe.",
+   "entity: 16 km",
+   "entity: Alex",
+   "entity: Brooks Ghost",
+   "entity: Friday dinners",
+   "entity: I",
+   "entity: Lisbon",
+   "entity: Longest run",
+   "entity: Miso",
+   "entity: Miso",
+   "entity: November 2",
+   "entity: November 22",
+   "entity: Priya",
+   "entity: Sam",
+   "entity: St. Mary's hospital",
+   "entity: Sunday",
+   "entity: Toronto",
+   "entity: beagle",
+   "entity: dog",
+   "entity: fish",
+   "entity: greyhound",
+   "entity: half marathon",
+   "entity: hospital",
+   "entity: knee",
+   "entity: lentil curry",
+   "entity: meat",
+   "entity: mushroom risotto",
+   "entity: new job",
+   "entity: nurse",
+   "entity: old running shoes",
+   "entity: peanuts",
+   "entity: pediatric clinic",
+   "entity: race belt",
+   "entity: rice noodles with tofu",
+   "entity: running gels",
+   "entity: socks",
+   "fact: Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+   "fact: Big news: I quit the hospital.",
+   "fact: Brooks Ghost cost 140 euros.",
+   "fact: Hi, I'm planning meals for the week.",
+   "fact: I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+   "fact: I get home at 5:30 pm now.",
+   "fact: I never know what a cup is.",
+   "fact: I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+   "fact: I start at a pediatric clinic on November 2, day shifts only.",
+   "fact: I work as a nurse at St.",
+   "fact: I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+   "fact: I've started training for a half marathon.",
+   "fact: It is not true that Priya dietary restriction gluten.",
+   "fact: It is not true that Sam diet strictly vegetarian.",
+   "fact: Knee was fine this time.",
+   "fact: Longest run is now 19 km.",
+   "fact: Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+   "fact: Miso chewed through my old running shoes, ha.",
+   "fact: My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+   "fact: My sister Priya is visiting on Friday and she can't eat gluten.",
+   "fact: Priya moved to Toronto last week, so no more Friday dinners with her.",
+   "fact: Priya visiting on Friday.",
+   "fact: Sam dinner time about 6 am.",
+   "fact: Sam shift schedule day shifts only.",
+   "fact: Sam spent 85 euros on a race belt and socks.",
+   "fact: The new job is great.",
+   "preference: I'm vegetarian, by the way.",
+   "preference: Oh and I'm thinking about getting a dog, maybe a greyhound, but I haven't decided.",
+   "preference: Please always give me quantities in metric units.",
+   "preference: Sam considering breed greyhound."
+  ],
+  "rows": [
+   {
+    "question": "What does Sam do for work now?",
+    "answer_ranks": {
+     "pediatric clinic": 1
+    },
+    "stale_ranks": {
+     "St. Mary": 6
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 34,
+    "tokens": 825,
+    "top3": [
+     "I start at a pediatric clinic on November 2, day shifts only.",
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "Longest run is now 19 km."
+    ]
+   },
+   {
+    "question": "Is Sam vegetarian?",
+    "answer_ranks": {
+     "fish": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+     "I'm vegetarian, by the way.",
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    ]
+   },
+   {
+    "question": "What food restrictions should I respect when cooking for Sam's household?",
+    "answer_ranks": {
+     "peanut": 2,
+     "meat": 20
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1087,
+    "top3": [
+     "Hi, I'm planning meals for the week.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "My sister Priya is visiting on Friday and she can't eat gluten."
+    ]
+   },
+   {
+    "question": "What pet does Sam have?",
+    "answer_ranks": {
+     "beagle": 22
+    },
+    "stale_ranks": {
+     "thinking about getting a dog": 55
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "I start at a pediatric clinic on November 2, day shifts only.",
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+    ]
+   },
+   {
+    "question": "Where does Sam's sister live?",
+    "answer_ranks": {
+     "Toronto": 31
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "My sister Priya is visiting on Friday and she can't eat gluten.",
+     "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten.",
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    ]
+   },
+   {
+    "question": "How should I format ingredient amounts?",
+    "answer_ranks": {
+     "metric": 15
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Hi, I'm planning meals for the week.",
+     "I never know what a cup is.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+    ]
+   },
+   {
+    "question": "How much has Sam spent on running gear in total?",
+    "answer_ranks": {
+     "140": 35,
+     "60 euros": 1,
+     "85": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1057,
+    "top3": [
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "I start at a pediatric clinic on November 2, day shifts only.",
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am."
+    ]
+   },
+   {
+    "question": "How far can Sam run at the moment?",
+    "answer_ranks": {
+     "19 km": 1
+    },
+    "stale_ranks": {
+     "is 9 km": 10,
+     "16 km": 30
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Longest run is now 19 km.",
+     "I start at a pediatric clinic on November 2, day shifts only.",
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks."
+    ]
+   },
+   {
+    "question": "When is the race and where?",
+    "answer_ranks": {
+     "November 22": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1087,
+    "top3": [
+     "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+     "Longest run is now 19 km.",
+     "I spent 60 euros on running gels and another 85 euros on a race belt and socks."
+    ]
+   },
+   {
+    "question": "What did you recommend for the Friday dinner?",
+    "answer_ranks": {
+     "rice noodles": 17
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Hi, I'm planning meals for the week.",
+     "Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "My sister Priya is visiting on Friday and she can't eat gluten."
+    ]
+   },
+   {
+    "question": "What time does Sam usually eat dinner?",
+    "answer_ranks": {
+     "5:30": 43
+    },
+    "stale_ranks": {
+     "6 am": 1
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": true,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "I start at a pediatric clinic on November 2, day shifts only.",
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore."
+    ]
+   },
+   {
+    "question": "Who is Alex?",
+    "answer_ranks": {
+     "partner": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "The new job is great.",
+     "My partner Alex is allergic to peanuts, so keep that in mind for recipes."
+    ]
+   },
+   {
+    "question": "Does Sam own a cat?",
+    "answer_ranks": {},
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Also I've started eating fish again, so I'm not strictly vegetarian anymore.",
+     "I work as a nurse at St. Mary's hospital, mostly night shifts, so dinner for me is at about 6 am.",
+     "I start at a pediatric clinic on November 2, day shifts only."
+    ]
+   },
+   {
+    "question": "What happened to Sam's old running shoes?",
+    "answer_ranks": {
+     "chewed": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 32,
+    "tokens": 1028,
+    "top3": [
+     "Miso chewed through my old running shoes, ha.",
+     "I bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+     "Longest run is now 19 km."
+    ]
+   }
+  ]
+ }
+}

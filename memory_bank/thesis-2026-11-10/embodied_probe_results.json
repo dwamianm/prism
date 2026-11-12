@@ -1,0 +1,205 @@
+{
+ "seed": 20261110,
+ "S1_state_churn": [
+  {
+   "updates": 2,
+   "spacing": "0:10:00",
+   "questions": 20,
+   "newest_ranked_first": 9,
+   "newest_is_first_context_line_for_object": 9,
+   "newest_ranked_first_pct": 45.0
+  },
+  {
+   "updates": 5,
+   "spacing": "0:10:00",
+   "questions": 20,
+   "newest_ranked_first": 7,
+   "newest_is_first_context_line_for_object": 7,
+   "newest_ranked_first_pct": 35.0
+  },
+  {
+   "updates": 12,
+   "spacing": "0:10:00",
+   "questions": 20,
+   "newest_ranked_first": 2,
+   "newest_is_first_context_line_for_object": 2,
+   "newest_ranked_first_pct": 10.0
+  },
+  {
+   "updates": 2,
+   "spacing": "3 days, 0:00:00",
+   "questions": 20,
+   "newest_ranked_first": 20,
+   "newest_is_first_context_line_for_object": 20,
+   "newest_ranked_first_pct": 100.0
+  },
+  {
+   "updates": 5,
+   "spacing": "3 days, 0:00:00",
+   "questions": 20,
+   "newest_ranked_first": 18,
+   "newest_is_first_context_line_for_object": 18,
+   "newest_ranked_first_pct": 90.0
+  },
+  {
+   "updates": 12,
+   "spacing": "3 days, 0:00:00",
+   "questions": 20,
+   "newest_ranked_first": 12,
+   "newest_is_first_context_line_for_object": 12,
+   "newest_ranked_first_pct": 60.0
+  }
+ ],
+ "S3_counting": [
+  {
+   "events": 3,
+   "in_context": 3,
+   "all_in_context": true,
+   "aggregation_coverage": "status='context_limited' exhaustive=False candidate_count=600 selected_count=600 context_count=135 limitations=('semantic_matching', 'token_budget') candidate_l",
+   "tokens_used": 3979
+  },
+  {
+   "events": 8,
+   "in_context": 8,
+   "all_in_context": true,
+   "aggregation_coverage": "status='context_limited' exhaustive=False candidate_count=600 selected_count=600 context_count=134 limitations=('semantic_matching', 'token_budget') candidate_l",
+   "tokens_used": 3983
+  },
+  {
+   "events": 20,
+   "in_context": 20,
+   "all_in_context": true,
+   "aggregation_coverage": "status='context_limited' exhaustive=False candidate_count=600 selected_count=600 context_count=131 limitations=('semantic_matching', 'token_budget') candidate_l",
+   "tokens_used": 3983
+  },
+  {
+   "events": 50,
+   "in_context": 50,
+   "all_in_context": true,
+   "aggregation_coverage": "status='context_limited' exhaustive=False candidate_count=600 selected_count=600 context_count=123 limitations=('semantic_matching', 'candidate_limit', 'token_b",
+   "tokens_used": 3974
+  }
+ ],
+ "S4_time_window": {
+  "records_in_window": 20,
+  "natural_language": {
+   "top10_in_window": 2,
+   "window_records_in_context": 13,
+   "results": 480
+  },
+  "explicit_filter": {
+   "top10_in_window": 10,
+   "window_records_in_context": 20,
+   "results": 21
+  }
+ },
+ "S5_two_hops": {
+  "questions": 20,
+  "both_hops_in_top5": 0,
+  "only_first_hop_in_top5": 20,
+  "both_hops_in_context": 20
+ },
+ "S6_abstention": {
+  "seen_top_semantic": [
+   0.694,
+   0.677,
+   0.709,
+   0.628,
+   0.667,
+   0.656,
+   0.693,
+   0.693,
+   0.724,
+   0.771
+  ],
+  "unseen_top_semantic": [
+   0.562,
+   0.529,
+   0.517,
+   0.588,
+   0.523,
+   0.563,
+   0.556,
+   0.571,
+   0.602,
+   0.6
+  ],
+  "seen_top_composite": [
+   0.9986,
+   0.9987,
+   0.9987,
+   0.9987,
+   0.9988,
+   0.9988,
+   0.9988,
+   0.9989,
+   0.9989,
+   0.9989
+  ],
+  "unseen_top_composite": [
+   0.9295,
+   0.9295,
+   0.9296,
+   0.9295,
+   0.9295,
+   0.9295,
+   0.9295,
+   0.9295,
+   0.9295,
+   0.9296
+  ],
+  "seen_records_packed": [
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128
+  ],
+  "unseen_records_packed": [
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128,
+   128
+  ],
+  "composite_separates": true,
+  "semantic_separates": true
+ },
+ "S8_determinism": {
+  "questions": 3,
+  "identical_twice": 3
+ },
+ "S2_flood": {
+  "memories": 3000,
+  "rare_events": 8,
+  "count_question_events": 12,
+  "count_question_events_in_context": 12,
+  "count_question_records_packed": 132,
+  "rare_in_top5": 4,
+  "rare_in_context": 5,
+  "context_lines_that_are_routine_pct": 97.8,
+  "store_per_second": 6.7,
+  "store_p50_ms": 135.8,
+  "store_p95_ms": 274.3,
+  "retrieve_p50_ms": 187.3,
+  "retrieve_max_ms": 249.6
+ },
+ "S7_fast_path": {
+  "memories": 3000,
+  "accept_per_second": 1662.9,
+  "index_per_second": 174.8,
+  "process_result": "processed=500 pending=0 failed=0",
+  "first_retrieve_ms": 197.3
+ },
+ "seconds": 1056.5
+}

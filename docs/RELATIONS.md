@@ -56,7 +56,16 @@ predicate is not normalized: typed extraction (`enable_typed_extraction`, `PRME_
 relation, role and status the extractor stated, and the graph oracle writes the same fields on the link. A relation
 outside the vocabulary, and `has` (a literal attribute), are read through the normalizer instead. The extractor's
 status is stored for the graph, but the claim's lifecycle, not that label, decides whether a routed question may read
-it; the graph oracle's own `superseded` status on a link still retires that claim.
+it; the graph oracle's own `superseded` status on a link still retires that claim. With the belief ledger (below) the
+status also decides where a claim is placed.
+
+**The role's end on a typed claim.** A typed role qualifies one end of the claim: the prompt asks for the role of the
+relation's far end, so by default the role is on the object (`Sam kin_of Priya`, role sister: Priya is the sister).
+When the open predicate normalizes to the same relation and role, its words decide instead (`is_sister_of` puts the
+sister at the subject). Otherwise the claim's quote decides when it puts the role beside the subject's name and not
+beside the object's: "My sister Priya is visiting" with `Priya kin_of I` and the role sister puts the role on Priya,
+the subject, which is how a model often writes it. A quote with the role beside both names, or beside neither,
+leaves the role on the object.
 `python -m benchmarks.diagnostics.relation_coverage <build or pack>` reports how many of a pack's claims map, by
 relation, and the unmapped predicates by count.
 
@@ -73,6 +82,7 @@ A concept word stands for the relations of one step. The built-in ones:
 | home | `lives_in` |
 | job | `works_at` |
 | allergies | `allergic_to` |
+| pet | `owns` |
 
 `retrieve(concepts=...)` adds or replaces concepts for one request: a word maps to a list of `"relation"` or
 `"relation:role"` items, such as `{"beneficiaries": ["partner_of", "kin_of:child"]}`. An unknown relation, an
@@ -80,7 +90,12 @@ empty list or a word with a space raises `ValueError`, with the option on or off
 
 `route_question()` reads the question's words: a people word routes to its relation and role, a concept word to
 its relations, and any other word whose stem is a derived cue to the cued relations ("lives", "allergic"),
-`prefers` with negative polarity when the question says dislike, avoid or hate. When a people or concept word
+`prefers` with negative polarity when the question says dislike, avoid or hate. A word the predicate normalizer
+maps to a relation (its word table: dog, pet, trip, hates, manages and the others) routes to that relation as
+well, with the word's polarity and role, so the words that store a relation also ask for it. A word that asks for a
+name ("called", "named", "name", "names") says nothing about the relation and is skipped: "called" stems to "call",
+which `involved_in`'s definition holds ("on call"), so "What is the dog called?" would otherwise ask for
+`involved_in`. "Who is on call?" still routes there. When a people or concept word
 belongs to someone ("Dana's sister", "my sister") and the question asks for more ("Where does Dana's sister
 live?", "Who is my sister's husband?"), the route is two steps: the possessed words, then the rest. Otherwise it is
 one step. A question about
@@ -128,6 +143,157 @@ off, receipts included, and a configured `rrf_route_weight` is recorded only on 
 fails is logged and leaves the ranking as with the option off; the response metadata and the receipt's parameters
 record it as `backend_failures.ROUTE`.
 
+The routing version recorded in receipts (`ROUTING_VERSION`) is 3: version 2 added the pet concept and the rule for
+the role's end of a typed claim, either of which can change a route or its candidates, and version 3 skips the
+words that ask for a name and routes the normalizer's own words.
+
+## The belief ledger
+
+`enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`), off by default, reads the claims a routed question reaches as a
+small ledger and says which one holds at the question's time (`src/prme/retrieval/beliefs.py`; finding 2.2 B of
+`memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md`). Routing finds the claims at an address, an entity and a
+relation such as Sam and `works_at`, but rank fusion counts them as one more list, so "I work as a nurse at St.
+Mary's hospital" can rank above "I start at a pediatric clinic on November 2". The option turns relation routing on,
+and `memory_mode="address_first"` (`PRME_MEMORY_MODE`) turns on both, with four other read-time settings
+(`documentation/configuration.md`). The mode acts only when a question is asked: it does not turn on typed extraction
+or corrections, makes no model call and rewrites no stored memory. Without typed extraction a claim has no typed
+status, so the ledger reads it as `current` until a later claim at its address closes it or takes its place (below);
+stated facts (`ingest(assertions=...)`) and claims stored with `enable_typed_extraction` carry a status. Typed
+extraction and corrections were part of the mode until 2026-11-11 and were taken out after the fast probes and the
+mid tier showed losses with them
+(`benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`).
+
+**Addresses.** The claims of the route's last step are grouped by the entity they were read on, their relation and,
+except at a relation that holds one value, their role: Priya the sister and Priya the mother are two addresses, and a
+nurse and a pediatric nurse at `works_at` are one. A relation holds one value when a newer value replaces the older
+one: `works_at`, `lives_in`, `partner_of`, `located_in` and a literal attribute (`has:` with its predicate's words).
+Every other relation holds a set (pets, allergies, relatives, preferences), where a new value adds to the old ones.
+
+**States.** A claim first records its own state: `negated` for negative polarity; `ended` for the status past or
+superseded, or a validity end that has passed; `planned` for the status planned with a date still ahead; otherwise
+`current` (current, done, a plan whose date has come, and an untyped claim). Then, inside an address, in time order:
+
+- a claim that is `ended` or `negated` closes every `current` claim stated before it that names the same value
+  (one object phrase's words contain the other's, so "the greyhound" and "a greyhound" are one value), and at a
+  relation that holds one value an `ended` claim closes every claim stated before it, since "I quit" need not name
+  the place;
+- at a relation that holds one value, the newest claim that still holds is `current` and the older ones `earlier`;
+  claims stated at that same time are all `current`.
+
+For a question about now the ledger lists `current` (newest first), `planned` (soonest first), `earlier`, `ended` and
+`negated` (newest first); the receipt records that list, and placement (below) keeps the retrieval order inside one
+state. A question that is not about now (`is_current_state_question`) and asks for history
+("when", "before", "use to", "every", "how long") reads it in time order. The names the ledger's claims use are
+taken out of the question before either check, so "Where is the first aid kit now?" asks about now: "first" there
+names the kit. Claims stated at one time are ordered by their text, and by node id only when the text is the same
+too, so a rebuild of the same log gives the same ledger: a node id is new on every build, and the claims of one turn
+have no recorded order, so the end one of them states does not close another.
+
+**Placement.** The ledger only reorders. The claims of the ledger that are among the results trade the places
+they already hold. For a question about now the state decides the order between states (`current`, `planned`,
+`earlier`, `ended`, `negated`), and inside one state the order retrieval gave the claims stands: the ledger knows
+state, not relevance, and at an address that holds a set (Dana `involved_in` a half marathon and a Portland trip) the
+newer claim is not more true than the other. A question about history places them in time order. The first claim
+in that order takes the best ranked member's place, the second the next member's place, and so on. Each takes the score of its new place, with a `belief` adjustment whose coefficient is that score
+over its own replayed score, so the receipt replays the score. When two members' scores are equal, the later claim
+takes the nearest float below, so the placed order holds. Every other candidate keeps its score and
+its rank, so a list question whose answer is another record ("Which cities will they visit?") keeps that record
+where it was. A claim of the ledger the search did not return, or that an earlier stage left out (a folded claim
+statement, a claim a filter dropped), is not added. Each member carries the `BELIEF` path, which packing reserves,
+and its `belief_state`, which the reader format shows as a tag. Until `BELIEF_VERSION` 2 the claims of a routed
+question led the results, which cost LoCoMo evidence in the top 25 on the mid tier. Version 2 still lifted the
+group and added claims; version 3 only reorders. Version 3 put the newest claim first inside one state, which moved
+the half marathon answer on the chat-v1 probe from rank 2 to rank 4; version 4 keeps the retrieval order there.
+
+**The catalog.** A question no word routes ("What is Sam up to these days?") can still be about an address. Its
+catalog is the claims on the entities it names (and the owner's, for a first-person question), read with the walk's
+statement; a seed must be the claim's subject or object, not a text mention. The claim of the catalog that the
+question matches best by meaning names the address, when that claim is among the 10 best semantic matches of the
+whole pool (`CATALOG_SEMANTIC_RANK`); otherwise the question is left to the text ranking. Every claim of the catalog
+at that address is read as one ledger, and its claims among the results are reordered in their own places, as for
+a routed question, so a claim that holds now is never below one that ended, and an address the question was not
+about gains no rank. A count or list question is not looked up this way.
+
+**Receipts and what stays the same.** A retrieval that placed a claim records `execution.features.belief_state`:
+the ledger version (`BELIEF_VERSION`, 4), the source (`route` or `catalog`) and each claim with its state, relation
+and role. Nothing is written and no model is called; the ledger is computed from the stored claims each time, so a
+correction, a re-ingest or a rebuild changes the next answer and no stored memory is rewritten. A retrieval that
+places no claim, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts
+included. A catalog walk that fails is logged, leaves the ranking as it was, and is recorded as
+`backend_failures.BELIEF`.
+
+## Stated facts (`assertions=`)
+
+A structured source, such as a robot's perception stack or a form, states its facts instead of asking a model to
+find them (`src/prme/ingestion/assertions.py`):
+
+```python
+await engine.ingest(
+    "The red mug is on the kitchen counter.", user_id="robot-1", role="system",
+    assertions=[{"subject": "red mug", "subject_type": "product", "relation": "located_in",
+                 "object": "kitchen counter", "object_type": "location", "status": "current"}],
+)
+```
+
+Each assertion becomes the claim typed extraction would make from a sentence saying it: the subject and object
+entities, a fact node with its relation, role and status (written whatever `enable_typed_extraction` says), the
+`HAS_FACT` and `MENTIONS` links and the derivation plan, so the walk and the belief ledger read it with no special
+case. The claim's text is the source's sentence that names its object (the shortest run of the content's
+sentences that does, or the whole content when none does), followed, in one parenthesis, by only the fields that
+sentence does not show: the role and the time ("Two weeks in at Brightpath and I already like my team. (as
+analytics manager; since 2026-05-04)"). So word search, meaning search and the reader see the turn's own words and
+the title and date the caller stated. Claims of one sentence share its text: claim merge reads the claim's fields
+(predicate, object, polarity, stated date, object entity), never its text, so they stay separate claims, and the
+reader's `fold_repeated_text` folds a claim into its turn only when the turn's text holds the claim's whole text,
+so a claim whose parenthesis adds a role or a date stays in the context beside its turn. When the caller gives no
+content, the content and each claim's text are a sentence rendered from the fields ("Dana works at Brightpath as
+analytics manager (since 2026-05-04)."). The source's own text stays the stored message and the claim's
+`evidence_quote`. No model is called. The source never joins a model batch, and pronoun repair,
+corrections and resolved claim text do not apply to it. `ingest_batch()` takes an `"assertions"` key per message,
+and `MemoryClient.ingest()` takes the same argument.
+
+**Validation.** Every assertion is checked before anything is admitted, and a failure raises `ValueError` naming
+the assertion (`assertions[1]: ...`; in a batch, `messages[2]: assertions[0]: ...`, and no message of the batch is
+admitted):
+
+- `subject`, `subject_type`, `relation` and `object` are required; no other key is accepted.
+- `relation` is a relation of the vocabulary above. A literal value uses `has`, with the attribute's name as
+  `predicate` and no `object_type`; any other relation needs an `object_type`, and takes no `predicate`.
+- `subject_type` and `object_type` are one of person, organization, location, product, concept and event.
+- `status`, when given, is one of planned, current, done, past and superseded; `polarity` is positive (the
+  default) or negative; `role` is a short lower-case word or phrase.
+- `time`, when given, is when the fact starts to hold or happened: an ISO date (`2026-05-04`) or an ISO datetime
+  with its offset (`2026-05-04T09:30:00-06:00`). It becomes the claim's stated time (`event_time` and
+  `valid_from`, and `resolved_date` in its metadata), as a resolved date of an extracted fact does. Without it the
+  claim takes the source's time.
+- A leading article (a, an, the) is dropped from the subject and object names, so "the red mug" and "red mug" are
+  one entity.
+- Each subject and object must be something the source can be about. It is accepted when the content mentions it,
+  with or without the article (`text`); when it is the source's `speaker` and the content says I, me, my, mine,
+  myself, we, us or our (`speaker`); or when it names an entity, with the same name and type, that the owner's
+  memory already holds in the source's scope, found as ingestion reuses an entity (`memory`: "your deductible" in
+  an assistant turn, Jordan in "We chose Tokyo", a pronoun for someone named before). A literal value (`has`) must
+  be in the content, unless it repeats the value of a live claim at the same subject and attribute (`closure`:
+  the old diet stated again with status past by the turn that ends it). How each end was found is kept with the
+  assertion (`found`). When the content is omitted (None or blank), the claim sentences are stored instead.
+- Assertions are refused under a privacy policy, and the metadata key `prme_assertions_v1`, where they are kept, is
+  reserved.
+
+**Re-derivation.** The validated assertions are kept in the event's metadata, so the log alone rebuilds them. A
+rebuild checks `text` and `speaker` again from the content and the stored speaker, and takes `memory` and
+`closure` as recorded, since they were read from the graph at admission: it accepts exactly what admission
+accepted, whatever the graph holds by then. The assertion version (`ASSERTION_VERSION`) is 2.
+`reingest()` derives such a source again from them, never through a model, under settings of its own that leave out
+the extraction provider, model and request, so a change of extraction model leaves it current.
+
+**Repeats.** With `enable_claim_merge` (on by default) an exactly repeated assertion merges into one current claim
+that cites every observation. Each repeat still writes an event, a raw note and a superseded copy of the claim.
+
+**Write rate.** 4.6 stated facts a second at 400 observations through `ingest_batch()` with the product defaults, on
+a laptop on 2026-11-10, about 200 ms each. That time is the materialization path every extracted claim takes (a
+lexical index staging per source, two entity lookups that scan the owner's entities, the graph commit, the
+embeddings), not the assertions. It is not yet fit for a sensor stream.
+
 ## Limits
 
 - The derived cues include ordinary words ("call", "like", "take", "part"), so a question can be routed by a word
@@ -141,3 +307,10 @@ record it as `backend_failures.ROUTE`.
   family claim can fall outside the window and the walk reaches nothing.
 - Under rank fusion `min_score` is a floor on semantic similarity, so a candidate only the walk found (semantic
   similarity 0) is removed by any positive `min_score`, as a graph-only candidate is.
+- The ledger compares values by their words: two object phrases name the same value when one's words contain the
+  other's, so "the hospital" and "St. Mary's hospital" are one value, and two different hospitals written as "the
+  hospital" are too.
+- Which relations hold one value is a fixed list. A person with two jobs at once gets one `current` employer and one
+  `earlier`.
+- A state is only as good as the extracted status and polarity: a claim typed `current` that the source meant as
+  past stays `current` until a later claim closes it.

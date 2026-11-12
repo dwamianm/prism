@@ -1,0 +1,415 @@
+{
+ "ingest": {
+  "path": "ingest",
+  "profiles_built": 4,
+  "questions_with_a_summary_in_top3": 10,
+  "cat_question_records": 40,
+  "write_seconds": 27.6,
+  "nodes": {
+   "summary": 4,
+   "fact": 27,
+   "entity": 36,
+   "decision": 2,
+   "preference": 3
+  },
+  "questions_with_an_answer": 13,
+  "all_answers_in_top3": 7,
+  "all_answers_in_context": 13,
+  "stale_above_answer": 1,
+  "mean_tokens": 2988,
+  "derived_sample": [
+   "decision: I'll keep peanuts out of every recipe.",
+   "decision: Understood, I'll include fish in your plans from now on.",
+   "entity: Alex",
+   "entity: Brooks Ghost",
+   "entity: I",
+   "entity: I",
+   "entity: Lisbon",
+   "entity: Miso",
+   "entity: November 2",
+   "entity: November 22",
+   "entity: Priya",
+   "entity: Sam",
+   "entity: St. Mary's hospital",
+   "entity: Sunday",
+   "entity: Toronto",
+   "entity: beagle",
+   "entity: dog",
+   "entity: fish",
+   "entity: greyhound",
+   "entity: half marathon",
+   "entity: hospital",
+   "entity: knee",
+   "entity: lentil curry",
+   "entity: longest run",
+   "entity: meat",
+   "entity: metric units",
+   "entity: mushroom risotto",
+   "entity: new job",
+   "entity: night shifts",
+   "entity: nurse",
+   "entity: old running shoes",
+   "entity: peanuts",
+   "entity: pediatric clinic",
+   "entity: race belt",
+   "entity: rice noodles with tofu",
+   "entity: running gels",
+   "entity: socks",
+   "entity: we",
+   "fact: Alex allergic to peanuts.",
+   "fact: Also Sam has started eating fish again, so Sam is not strictly vegetarian anymore.",
+   "fact: Brooks Ghost cost 140 euros.",
+   "fact: Hi, Sam is planning meals for the week.",
+   "fact: It is not true that Miso breed greyhound.",
+   "fact: It is not true that Priya dietary restriction gluten.",
+   "fact: It is not true that Sam diet not strictly vegetarian.",
+   "fact: Knee was fine this time.",
+   "fact: Longest run is now 19 km.",
+   "fact: Miso chewed through Sam's old running shoes, ha.",
+   "fact: Not a greyhound though, a beagle called Miso.",
+   "fact: Priya moved to Toronto last week, so no more Friday dinners with her.",
+   "fact: Priya visiting Sam.",
+   "fact: Sam bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+   "fact: Sam has started training for a half marathon.",
+   "fact: Sam has started training for a half marathon. The race is on November 22 in Lisbon.",
+   "fact: Sam shift pattern day shifts only.",
+   "fact: Sam spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+   "fact: Sam spent 85 euros on a race belt and socks.",
+   "fact: Sam's partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+   "fact: Sam's sister Priya is visiting on Friday and she can't eat gluten.",
+   "fact: Sam: Big news: I quit the hospital.",
+   "fact: Sam: I get home at 5:30 pm now.",
+   "fact: Sam: I never know what a cup is.",
+   "fact: Sam: I start at a pediatric clinic on November 2, day shifts only.",
+   "fact: The new job is great.",
+   "fact: We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+   "preference: Oh and Sam is thinking about getting a dog, maybe a greyhound, but Sam hasn't decided.",
+   "preference: Please always give Sam quantities in metric units.",
+   "preference: Sam considering breed greyhound.",
+   "summary: [Knowledge Profile: Alex]\nSource mentions; entity association is inferred.\n\n[source=dfd2dc9d-5485-488e-8dc5-f59be66d752b",
+   "summary: [Knowledge Profile: Miso]\nSource mentions; entity association is inferred.\n\n[source=1265fc73-3829-44dd-97d9-8f2d14f1d0f4",
+   "summary: [Knowledge Profile: Priya]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec642ac884",
+   "summary: [Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec642ac8848;"
+  ],
+  "rows": [
+   {
+    "question": "What does Sam do for work now?",
+    "answer_ranks": {
+     "pediatric clinic": 2
+    },
+    "stale_ranks": {
+     "St. Mary": 9
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2915,
+    "top3": [
+     "Sam: Big news: I quit the hospital.",
+     "Sam: I start at a pediatric clinic on November 2, day shifts only.",
+     "Sam: I get home at 5:30 pm now."
+    ],
+    "top3_kinds": [
+     "fact",
+     "fact",
+     "fact"
+    ]
+   },
+   {
+    "question": "Is Sam vegetarian?",
+    "answer_ranks": {
+     "fish": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Also Sam has started eating fish again, so Sam is not strictly vegetarian anymore.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sam: I never know what a cup is."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "What food restrictions should I respect when cooking for Sam's household?",
+    "answer_ranks": {
+     "peanut": 5,
+     "meat": 34
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 3042,
+    "top3": [
+     "Sam's sister Priya is visiting on Friday and she can't eat gluten.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Hi, Sam is planning meals for the week."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "What pet does Sam have?",
+    "answer_ranks": {
+     "beagle": 22
+    },
+    "stale_ranks": {
+     "thinking about getting a dog": 5
+    },
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": true,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Understood, I'll include fish in your plans from now on.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sam: I get home at 5:30 pm now."
+    ],
+    "top3_kinds": [
+     "decision",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "Where does Sam's sister live?",
+    "answer_ranks": {
+     "Toronto": 5
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Sam's sister Priya is visiting on Friday and she can't eat gluten.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sounds good. My sister Priya is visiting on Friday and she can't eat gluten."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "note"
+    ]
+   },
+   {
+    "question": "How should I format ingredient amounts?",
+    "answer_ranks": {
+     "metric": 9
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "I'll keep peanuts out of every recipe.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sam: I never know what a cup is."
+    ],
+    "top3_kinds": [
+     "decision",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "How much has Sam spent on running gear in total?",
+    "answer_ranks": {
+     "140": 20,
+     "60 euros": 1,
+     "85": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 3012,
+    "top3": [
+     "Sam spent 60 euros on running gels and another 85 euros on a race belt and socks.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sam has started training for a half marathon. The race is on November 22 in Lisbon."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "How far can Sam run at the moment?",
+    "answer_ranks": {
+     "19 km": 3
+    },
+    "stale_ranks": {
+     "is 9 km": 7,
+     "16 km": 40
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Sam has started training for a half marathon. The race is on November 22 in Lisbon.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Longest run is now 19 km."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "When is the race and where?",
+    "answer_ranks": {
+     "November 22": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 3042,
+    "top3": [
+     "Sam has started training for a half marathon. The race is on November 22 in Lisbon.",
+     "I've started training for a half marathon. The race is on November 22 in Lisbon.",
+     "Longest run is now 19 km."
+    ],
+    "top3_kinds": [
+     "fact",
+     "note",
+     "fact"
+    ]
+   },
+   {
+    "question": "What did you recommend for the Friday dinner?",
+    "answer_ranks": {
+     "rice noodles": 14
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Hi, Sam is planning meals for the week.",
+     "Priya moved to Toronto last week, so no more Friday dinners with her.",
+     "Sam: I never know what a cup is."
+    ],
+    "top3_kinds": [
+     "fact",
+     "fact",
+     "fact"
+    ]
+   },
+   {
+    "question": "What time does Sam usually eat dinner?",
+    "answer_ranks": {
+     "5:30": 1
+    },
+    "stale_ranks": {
+     "6 am": 7
+    },
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "Sam: I get home at 5:30 pm now.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Also Sam has started eating fish again, so Sam is not strictly vegetarian anymore."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   },
+   {
+    "question": "Who is Alex?",
+    "answer_ranks": {
+     "partner": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 39,
+    "tokens": 2979,
+    "top3": [
+     "Sam's partner Alex is allergic to peanuts, so keep that in mind for recipes.",
+     "Sam has started training for a half marathon. The race is on November 22 in Lisbon.",
+     "The new job is great."
+    ],
+    "top3_kinds": [
+     "fact",
+     "fact",
+     "fact"
+    ]
+   },
+   {
+    "question": "Does Sam own a cat?",
+    "answer_ranks": {},
+    "stale_ranks": {},
+    "all_answers_in_top3": false,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 40,
+    "tokens": 2983,
+    "top3": [
+     "We adopted a dog after all! Not a greyhound though, a beagle called Miso.",
+     "Sam bought new shoes yesterday, Brooks Ghost, they cost 140 euros.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec"
+    ],
+    "top3_kinds": [
+     "fact",
+     "fact",
+     "summary"
+    ]
+   },
+   {
+    "question": "What happened to Sam's old running shoes?",
+    "answer_ranks": {
+     "chewed": 1
+    },
+    "stale_ranks": {},
+    "all_answers_in_top3": true,
+    "all_answers_in_context": true,
+    "stale_above_answer": false,
+    "records_packed": 39,
+    "tokens": 2979,
+    "top3": [
+     "Miso chewed through Sam's old running shoes, ha.",
+     "[Knowledge Profile: Sam]\nSource mentions; entity association is inferred.\n\n[source=36f7b4f0-7d8b-4921-9df9-9ec",
+     "Sam bought new shoes yesterday, Brooks Ghost, they cost 140 euros."
+    ],
+    "top3_kinds": [
+     "fact",
+     "summary",
+     "fact"
+    ]
+   }
+  ]
+ }
+}

@@ -882,7 +882,8 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
-                relation_routing=config.enable_relation_routing,
+                relation_routing=config.enable_relation_routing or config.enable_belief_state,
+                belief_state=config.enable_belief_state,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1076,7 +1077,8 @@ class MemoryEngine:
                 query_intent_order=config.query_intent_order,
                 superseded_source_suppression=config.enable_superseded_source_suppression,
                 owner_profile_context=config.enable_owner_profile_context,
-                relation_routing=config.enable_relation_routing,
+                relation_routing=config.enable_relation_routing or config.enable_belief_state,
+                belief_state=config.enable_belief_state,
                 temporal_relation_config=config.temporal_relation,
             )
 
@@ -1872,7 +1874,7 @@ class MemoryEngine:
 
     async def ingest(
         self,
-        content: str,
+        content: str | None,
         *,
         user_id: str,
         role: str = "user",
@@ -1884,6 +1886,7 @@ class MemoryEngine:
         wait_for_extraction: bool = False,
         scope: Scope = Scope.PERSONAL,
         policy: PrivacyPolicy | None = None,
+        assertions: Sequence[Mapping[str, Any]] | None = None,
     ) -> str:
         """Ingest a message with LLM-powered extraction and materialization.
 
@@ -1911,11 +1914,33 @@ class MemoryEngine:
             event_time: Timezone-aware source time. Relative dates in extracted
                 facts use this clock; omitted uses ingestion time.
             wait_for_extraction: If True, block until extraction completes.
+            assertions: Facts the caller states, so no model extracts this
+                source: each a mapping with ``subject``, ``subject_type``,
+                ``relation`` (the relation vocabulary), ``object`` and
+                ``object_type``, and optional ``status``, ``polarity`` and
+                ``role``; a literal value uses the relation ``has`` with a
+                ``predicate`` and no ``object_type``. Each becomes the typed
+                claim typed extraction would make
+                (:mod:`prme.ingestion.assertions`). Checked before anything
+                is admitted: a malformed assertion, or one whose subject or
+                object ``content`` does not mention, raises ``ValueError``.
+                With assertions, ``content`` may be None or blank, and a
+                sentence per assertion is stored instead. Not available
+                under a privacy policy.
 
         Returns:
             String UUID of the persisted event.
         """
         await self._require_embedding_writable()
+        if assertions is not None:
+            content, metadata = await self._prepare_assertions(content, assertions, metadata, policy=policy,
+                                                               user_id=user_id, scope=scope, speaker=speaker)
+        else:
+            from prme.ingestion.assertions import attach_assertions
+
+            if content is None:
+                raise ValueError("content is required without assertions")
+            attach_assertions(metadata, None)  # refuses the reserved metadata key
         if self._privacy.selected(policy):
             message = {"content": content, "role": role, "speaker": speaker, "first_person_owner": first_person_owner, "metadata": metadata, "event_time": event_time}
             return (await self._privacy.ingest_many([message], user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy))[0]
@@ -1972,7 +1997,10 @@ class MemoryEngine:
         Delegates to the IngestionPipeline for sequential batch
         processing. Each message dict must have 'content' and 'role'
         keys, with optional 'speaker', 'first_person_owner', 'metadata' and timezone-aware
-        'event_time'.
+        'event_time'. A message may also carry 'assertions', the facts its
+        caller states, as ``ingest(assertions=...)`` takes them; its
+        'content' may then be None or blank. Every message's assertions are
+        checked before the first message is admitted.
 
         If no pipeline is configured, falls back to sequential store().
 
@@ -1987,12 +2015,32 @@ class MemoryEngine:
             List of event ID strings, one per message.
         """
         await self._require_embedding_writable()
+        # Check every message's assertions before the first one is admitted (ingest(assertions=...)).
+        messages = list(messages)
+        from prme.ingestion.assertions import attach_assertions
+
+        for index, msg in enumerate(messages):
+            if msg.get("assertions") is None:
+                try:
+                    attach_assertions(msg.get("metadata"), None)  # refuses the reserved metadata key
+                except ValueError as exc:
+                    raise ValueError(f"messages[{index}]: {exc}") from exc
+                if "assertions" in msg:
+                    messages[index] = {key: value for key, value in msg.items() if key != "assertions"}
+                continue
+            try:
+                content, metadata = await self._prepare_assertions(
+                    msg.get("content"), msg["assertions"], msg.get("metadata"), policy=policy, user_id=user_id,
+                    scope=scope, speaker=msg.get("speaker"))
+            except ValueError as exc:
+                raise ValueError(f"messages[{index}]: {exc}") from exc
+            messages[index] = {**{key: value for key, value in msg.items() if key != "assertions"},
+                               "content": content, "metadata": metadata}
         if self._privacy.selected(policy):
             return await self._privacy.ingest_many(messages, user_id=user_id, scope=scope, session_id=session_id, wait_for_extraction=wait_for_extraction, policy=policy)
         from prme.models.owner_reference import attach_owner_reference
 
         # Check every message's attribution before the first one is admitted.
-        messages = list(messages)
         attribution_metadata = []
         for index, msg in enumerate(messages):
             try:
@@ -2030,6 +2078,36 @@ class MemoryEngine:
             wait_for_extraction=wait_for_extraction,
             scope=scope,
         )
+
+    async def _prepare_assertions(self, content: str | None, assertions, metadata: dict | None, *,
+                                  policy: PrivacyPolicy | None, user_id: str, scope: Scope,
+                                  speaker: str | None) -> tuple[str, dict]:
+        """Check a source's caller-stated assertions and attach them to its metadata (ingest(assertions=...)).
+
+        An end the content and the speaker do not settle is looked up in the owner's memory in ``scope``
+        (:func:`prme.ingestion.assertions.read_held`); nothing is written before the check passes.
+        """
+        from prme.ingestion.assertions import (
+            Held, attach_assertions, checked_assertions, prepare_assertions, read_held,
+        )
+        from prme.models.speaker import normalize_speaker
+
+        if self._privacy.selected(policy):
+            raise ValueError("assertions are not available under a privacy policy; ingest the source without them")
+        if self._pipeline is None:
+            raise ValueError("assertions need an ingestion pipeline, and this engine has none")
+        if isinstance(assertions, (str, bytes, Mapping)) or not isinstance(assertions, Sequence):
+            raise ValueError("assertions must be a list of mappings")
+        checked = checked_assertions(assertions)
+        speaker = normalize_speaker(speaker)
+        # Content the caller omits is rendered from the assertions and names every end, so nothing is looked up.
+        held = Held()
+        if content is not None and content.strip():
+            held = await read_held(checked, content, graph_store=self._graph_store,
+                                   entity_merger=self._pipeline._entity_merger, user_id=user_id, scope=scope,
+                                   speaker=speaker)
+        content, prepared = prepare_assertions(content, checked, speaker=speaker, held=held)
+        return content, attach_assertions(metadata, prepared)
 
     # --- Fast Ingestion (issue #25) ---
 

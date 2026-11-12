@@ -659,6 +659,32 @@ def _event_time_tie_breaks(candidates: list[RetrievalCandidate], ranked: list[bo
     return [0.0 if rank is None else (rank - 1) / count for rank in _competition_ranks(times)]
 
 
+def _order_recency(candidates: list[RetrievalCandidate], semantic_ranks: list[int | None]) -> list[float]:
+    """Recency on the question's own time scale (``ScoringWeights.rrf_recency_order``).
+
+    Read among the best semantic matches only (``RRF_RECENCY_ORDER_SEMANTIC_TOP``), so "newest" means the newest
+    record about what the question asks. The time those matches span, from the oldest to the newest stated time,
+    is the scale: a match has ``exp(-RRF_RECENCY_ORDER_DECAY x its age as a fraction of the span)``, 1.0 for the
+    newest and under 0.01 for the oldest, whether the span is an hour or a year. Every other candidate has 0, and
+    so do all when the matches share one time.
+    """
+    from prme.retrieval.config import RRF_RECENCY_ORDER_DECAY, RRF_RECENCY_ORDER_SEMANTIC_TOP
+
+    top = [index for index, rank in enumerate(semantic_ranks)
+           if rank is not None and rank <= RRF_RECENCY_ORDER_SEMANTIC_TOP]
+    recency = [0.0] * len(candidates)
+    if not top:
+        return recency
+    times = {index: _stated_time(candidates[index]) for index in top}
+    newest, oldest = max(times.values()), min(times.values())
+    span = (newest - oldest).total_seconds()
+    if span <= 0:
+        return recency
+    for index, when in times.items():
+        recency[index] = math.exp(-RRF_RECENCY_ORDER_DECAY * (newest - when).total_seconds() / span)
+    return recency
+
+
 def _rank_fused_scores(
     candidates: list[RetrievalCandidate],
     weights: ScoringWeights,
@@ -733,9 +759,12 @@ def _rank_fused_scores(
     recency: list[float] | None = None
     recency_factors: list[float | None] = [None] * len(candidates)
     if weights.rrf_recency_boost is not None and current_state and candidates:
-        newest = max(_stated_time(candidate) for candidate in candidates)
-        recency = [_current_state_recency(candidate, newest, weights.recency_lambda)
-                   for candidate in candidates]
+        if weights.rrf_recency_order:
+            recency = _order_recency(candidates, semantic_ranks)
+        else:
+            newest = max(_stated_time(candidate) for candidate in candidates)
+            recency = [_current_state_recency(candidate, newest, weights.recency_lambda)
+                       for candidate in candidates]
         recency_factors = list(_pool_relative(
             [1.0 + weights.rrf_recency_boost * value for value in recency], ranked,
         ))

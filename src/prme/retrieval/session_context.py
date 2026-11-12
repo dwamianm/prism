@@ -93,6 +93,14 @@ async def expand_session_context(
     if window <= 0 or not scored:
         return scored
 
+    # The score a neighbor may not reach (session_context_direct_first): just below the N-th best candidate
+    # before expansion. With fewer than N candidates nothing is capped.
+    direct_cap: float | None = None
+    if config.session_context_direct_first is not None:
+        ordered = sorted((candidate.composite_score for candidate in scored), reverse=True)
+        if len(ordered) >= config.session_context_direct_first:
+            direct_cap = ordered[config.session_context_direct_first - 1] * (1.0 - 1e-6)
+
     # Keep one candidate per node. Adjacent nodes that primary generation
     # already found still need the session signal; broad vector/lexical pools
     # commonly contain every session node before packing.
@@ -183,6 +191,9 @@ async def expand_session_context(
         )
         # Less a seed count graph term, which only the trigger's own links earned.
         inherited, provenance = inherited_score(trigger)
+        if direct_cap is not None and inherited > 0 and inherited * decay > direct_cap:
+            # The capped coefficient is what the receipt records, so the score replays.
+            decay = direct_cap / inherited
         context_score = inherited * decay
         # A neighbor keeps its trigger's relevance even when its own score
         # stays higher; min_score gates it under rank fusion.

@@ -48,6 +48,7 @@ from uuid import UUID
 
 import structlog
 
+from prme.ingestion.assertions import is_structured
 from prme.ingestion.errors import ExtractionError, ReingestBusyError
 from prme.ingestion.graph_writer import WriteQueueGraphWriter
 from prme.ingestion.pipeline import BatchRun
@@ -167,6 +168,35 @@ def derivation_settings(pipeline: IngestionPipeline) -> dict:
     return settings
 
 
+def structured_settings(pipeline: IngestionPipeline) -> dict:
+    """What decides the records of a source with caller-stated assertions (``ingest(assertions=...)``).
+
+    No model derives such a source, so its settings leave out the provider, the model and the request, and a
+    change of extraction model leaves it current. They keep what turns the assertions into records: the
+    derivation version, the assertion version, the grounding checks and the options that plan and link claims.
+    """
+    from prme.ingestion.assertions import ASSERTION_VERSION, STRUCTURED_PROVIDER
+    from prme.ingestion.pipeline import _GROUNDING_POLICY
+
+    model = extraction_settings(pipeline)
+    settings = {key: value for key, value in derivation_settings(pipeline).items() if key not in model}
+    settings.update({
+        "derivation_version": DERIVATION_VERSION, "provider": STRUCTURED_PROVIDER, "assertions": ASSERTION_VERSION,
+        "grounding_policy": _GROUNDING_POLICY, "claim_fixes": pipeline._claim_fixes,
+        "speaker_grounding": pipeline._speaker_grounding,
+    })
+    return settings
+
+
+def _structured_key() -> str:
+    """The extraction key of a source with assertions: its output depends on the assertion rule alone."""
+    from prme.ingestion.assertions import ASSERTION_VERSION, STRUCTURED_PROVIDER
+    from prme.ingestion.pipeline import _GROUNDING_POLICY
+
+    return _digest({"provider": STRUCTURED_PROVIDER, "assertions": ASSERTION_VERSION,
+                    "grounding_policy": _GROUNDING_POLICY})
+
+
 def _position(ref: SourceRef) -> tuple:
     return (ref.effective, ref.stamp, ref.event_id)
 
@@ -273,6 +303,9 @@ class Reingester:
         await self._check(user_id, scope)
         extraction_key = _digest(extraction_settings(pipeline))
         fingerprint = _digest(derivation_settings(pipeline))
+        # A source with caller-stated assertions has settings of its own (structured_settings); its marker names
+        # them, never the model's, so a source is current when its marker names either.
+        structured = (_digest(structured_settings(pipeline)), _structured_key())
 
         refs: list[SourceRef] = []
         page_after: SourceRef | None = None
@@ -291,6 +324,7 @@ class Reingester:
             await self._check(user_id, scope)
             ids = [ref.event_id for ref in sources[start:start + _SCAN_PAGE]]
             current |= await repo.current(ids, fingerprint)
+            current |= await repo.current(ids, structured[0])
         pending = [ref for ref in sources if ref.event_id not in current]
         ahead = [ref for ref in pending if after is None or _position(ref) > _position(after)]
         selected = ahead if limit is None else ahead[:limit]
@@ -300,7 +334,7 @@ class Reingester:
             await self._plan_only(user_id, selected, extraction_key, counts)
             counts["attempted"] = len(selected)
         else:
-            await self._derive_all(user_id, selected, extraction_key, fingerprint, counts)
+            await self._derive_all(user_id, selected, extraction_key, fingerprint, counts, structured=structured)
         attempted = selected[:counts["attempted"]]
         after_attempted = ahead[len(attempted):]
         await self._check(user_id, scope)
@@ -332,12 +366,13 @@ class Reingester:
             saved = await repo.saved_extractions([str(event.id) for event in events], user_id=user_id,
                                                  extraction_key=extraction_key)
             await self._check(user_id, events=events)
-            asked = [event for event in events if str(event.id) not in saved]
+            # A source with caller-stated assertions is derived again with no model call.
+            asked = [event for event in events if str(event.id) not in saved and not is_structured(event.metadata)]
             counts["calls"] += len(request_groups(asked, self._pipeline._batch_target_tokens))
             counts["tokens"] += sum(count_tokens(event.content) for event in asked)
 
     async def _derive_all(self, user_id: str, selected: list[SourceRef], extraction_key: str, fingerprint: str,
-                          counts: dict) -> None:
+                          counts: dict, *, structured: tuple[str, str] | None = None) -> None:
         from prme.retrieval.tokenization import count_tokens
 
         pipeline = self._pipeline
@@ -351,9 +386,13 @@ class Reingester:
                 window = selected[start:start + WINDOW]
                 events = await self._events(user_id, window)
                 by_id = {str(event.id): event for event in events}
-                saved = await repo.saved_extractions(list(by_id), user_id=user_id, extraction_key=extraction_key)
+                # Sources with caller-stated assertions are built from their own metadata, never asked of a model.
+                stated = {event_id for event_id, event in by_id.items() if is_structured(event.metadata)}
+                saved = await repo.saved_extractions([event_id for event_id in by_id if event_id not in stated],
+                                                     user_id=user_id, extraction_key=extraction_key)
                 await self._check(user_id, events=events)
-                groups = request_groups([event for event in events if str(event.id) not in saved],
+                groups = request_groups([event for event in events
+                                         if str(event.id) not in saved and str(event.id) not in stated],
                                         pipeline._batch_target_tokens)
                 group_of = {str(event.id): index for index, group in enumerate(groups) for event in group}
                 asked: set[int] = set()
@@ -362,6 +401,19 @@ class Reingester:
                     event = by_id.get(ref.event_id)
                     if event is None:
                         counts["failed"] += 1
+                        continue
+                    if ref.event_id in stated:
+                        try:
+                            await self._derive(event, pipeline._structured_record(event), *(
+                                structured or (_digest(structured_settings(pipeline)), _structured_key())))
+                        except PrivacyDenied:
+                            raise
+                        except Exception as exc:
+                            logger.error("reingest.source_failed", event_id=ref.event_id,
+                                         error_type=type(exc).__name__)
+                            counts["failed"] += 1
+                        else:
+                            counts["processed"] += 1
                         continue
                     if ref.event_id not in saved and group_of[ref.event_id] not in asked:
                         asked.add(group_of[ref.event_id])

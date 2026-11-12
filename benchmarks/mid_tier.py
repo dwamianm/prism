@@ -812,8 +812,10 @@ async def build_stage(benchmark: str, label: str, units: list[str], *, build_fn,
 
 
 # Settings that act when memories are retrieved and packed, so packs built without them still measure them.
+# Relation routing and the belief ledger act only when a question is asked (they read the stored claims and write
+# nothing), so they may be set on reused packs too.
 REUSABLE_SETTINGS = frozenset({"packing", "scoring", "enable_reranker", "reranker_policy", "reranker_prior_weight",
-                               "reranker_top_k"})
+                               "reranker_top_k", "enable_relation_routing", "enable_belief_state"})
 
 
 def check_reusable(overrides: dict) -> None:

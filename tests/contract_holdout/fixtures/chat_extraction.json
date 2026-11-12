@@ -1,0 +1,1627 @@
+{
+ "note": "What the extraction model returned for this chat through ingest_batch() with the product defaults and memory_mode='address_first'. Replayed by test_chat_ingest.py; recorded by tests/contract/fixtures/record_chat_extraction.py.",
+ "recorded": {
+  "at": "2026-11-11T06:45:59+00:00",
+  "memory_mode": "address_first",
+  "enable_extraction_corrections": true,
+  "provider": "ollama",
+  "model": "deepseek-v4.1-flash:cloud",
+  "ollama_version": "0.40.16",
+  "model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+  "commit": "fb050a50170681ec12da53633f3ab1ad04de969c",
+  "src_has_uncommitted_changes": true,
+  "claims_derived": 21,
+  "claims_with_a_relation": 16,
+  "retired": [
+   "I drinks about four coffees a day",
+   "Marcus lives_in Leeds",
+   "hardest climb grade V2",
+   "I wake_up_at 7 am on weekdays",
+   "I climbed V4"
+  ],
+  "retired_outside_the_key": []
+ },
+ "calls": [
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "Morning! I want help planning workouts and meals. I drink about four coffees a day, for context.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 2,
+     "role": "assistant",
+     "content": "Thanks. For workouts I'd start with the beginner bouldering class at Crux Gym on Tuesdays.",
+     "speaker": null
+    },
+    {
+     "index": 3,
+     "role": "user",
+     "content": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "From now on, please answer me in short bullet points, never long paragraphs.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 5,
+     "role": "user",
+     "content": "My brother Marcus lives in Leeds, near our parents. Also, I don't eat pork.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 6,
+     "role": "assistant",
+     "content": "Got it, short bullets from here on.",
+     "speaker": null
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "coffees",
+        "entity_type": "concept",
+        "description": "Coffee drinks Elena consumes daily",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "drinks",
+        "object": "about four coffees a day",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I drink about four coffees a day, for context.",
+        "confidence": 0.85,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "wants_help_with",
+        "object": "planning workouts and meals",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I want help planning workouts and meals.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "preference",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "beginner bouldering class",
+        "entity_type": "event",
+        "description": "Class at Crux Gym on Tuesdays",
+        "scope": "personal"
+       },
+       {
+        "name": "Crux Gym",
+        "entity_type": "organization",
+        "description": "Gym offering the beginner bouldering class",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "beginner bouldering class",
+        "predicate": "held_at",
+        "object": "Crux Gym",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "For workouts I'd start with the beginner bouldering class at Crux Gym on Tuesdays.",
+        "confidence": 0.8,
+        "temporal_ref": "Tuesdays",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "asserted",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "located_in",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "Halvorsen & Partners",
+        "entity_type": "organization",
+        "description": "Accounting firm where Elena works",
+        "scope": "personal"
+       },
+       {
+        "name": "accountant",
+        "entity_type": "concept",
+        "description": "Elena's job role",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "works_at",
+        "object": "Halvorsen & Partners",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "works_at",
+        "role": "accountant",
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "role",
+        "object": "accountant",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "prefers_response_format",
+        "object": "short bullet points",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "From now on, please answer me in short bullet points, never long paragraphs.",
+        "confidence": 0.95,
+        "temporal_ref": "From now on",
+        "fact_type": "preference",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "dislikes_response_format",
+        "object": "long paragraphs",
+        "quantity": null,
+        "polarity": "negative",
+        "evidence_quote": "From now on, please answer me in short bullet points, never long paragraphs.",
+        "confidence": 0.9,
+        "temporal_ref": "From now on",
+        "fact_type": "preference",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "Marcus",
+        "entity_type": "person",
+        "description": "Elena's brother",
+        "scope": "personal"
+       },
+       {
+        "name": "Leeds",
+        "entity_type": "location",
+        "description": "City where Marcus lives",
+        "scope": "personal"
+       },
+       {
+        "name": "our parents",
+        "entity_type": "person",
+        "description": "Elena and Marcus's parents",
+        "scope": "personal"
+       },
+       {
+        "name": "pork",
+        "entity_type": "concept",
+        "description": "Food Elena does not eat",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Marcus",
+        "predicate": "lives_in",
+        "object": "Leeds",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "My brother Marcus lives in Leeds, near our parents.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "lives_in",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Marcus",
+        "predicate": "kin_of",
+        "object": "I",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "My brother Marcus lives in Leeds, near our parents.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "kin_of",
+        "role": "brother",
+        "status": "current"
+       },
+       {
+        "subject": "Marcus",
+        "predicate": "lives_near",
+        "object": "our parents",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "My brother Marcus lives in Leeds, near our parents.",
+        "confidence": 0.8,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": null,
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "eats",
+        "object": "pork",
+        "quantity": null,
+        "polarity": "negative",
+        "evidence_quote": "Also, I don't eat pork.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "preference",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "Marcus",
+        "source_entity_type": "person",
+        "target_entity": "I",
+        "target_entity_type": null,
+        "relationship_type": "kin_of",
+        "polarity": "positive",
+        "evidence_quote": "My brother Marcus lives in Leeds, near our parents.",
+        "epistemic_type": "observed",
+        "condition": null,
+        "confidence": 0.95
+       }
+      ]
+     },
+     {
+      "turn": 6,
+      "entities": [],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "committed_to",
+        "object": "short bullets from here on",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "Got it, short bullets from here on.",
+        "confidence": 0.85,
+        "temporal_ref": "from here on",
+        "fact_type": "decision",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "relation": null,
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "beginner bouldering class held_at Crux Gym",
+     "text": "For workouts I'd start with the beginner bouldering class at Crux Gym on Tuesdays."
+    },
+    {
+     "label": "m2",
+     "claim": "I drinks about four coffees a day",
+     "text": "I drink about four coffees a day, for context."
+    },
+    {
+     "label": "m3",
+     "claim": "I wants_help_with planning workouts and meals",
+     "text": "I want help planning workouts and meals."
+    },
+    {
+     "label": "m4",
+     "claim": "I prefers_response_format short bullet points",
+     "text": "From now on, please answer me in short bullet points, never long paragraphs."
+    },
+    {
+     "label": "m5",
+     "claim": "Marcus lives_in Leeds",
+     "text": "My brother Marcus lives in Leeds, near our parents."
+    },
+    {
+     "label": "m6",
+     "claim": "I not eats pork",
+     "text": "Also, I don't eat pork."
+    },
+    {
+     "label": "m7",
+     "claim": "I role accountant",
+     "text": "Elena role accountant."
+    },
+    {
+     "label": "m8",
+     "claim": "Marcus lives_near our parents",
+     "text": "Marcus lives near our parents."
+    },
+    {
+     "label": "m9",
+     "claim": "I not dislikes_response_format long paragraphs",
+     "text": "It is not true that Elena dislikes response format long paragraphs."
+    },
+    {
+     "label": "m10",
+     "claim": "I works_at Halvorsen & Partners",
+     "text": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "I bought climbing shoes for 95 pounds today.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "content": "I'm considering adopting a rabbit, or maybe a guinea pig, still deciding.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "content": "Rabbits need a lot of space; a guinea pig pair might suit a flat better.",
+     "speaker": null
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "My hardest climb so far is a V2.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 5,
+     "role": "user",
+     "content": "I wake up at 7 am on weekdays. And I signed up for a bouldering competition in Sheffield on December 6.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "Also got a chalk bag, 18 pounds.",
+     "speaker": "Elena"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "climbing shoes",
+        "entity_type": "product",
+        "description": "Shoes Elena bought for climbing",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "bought",
+        "object": "climbing shoes for 95 pounds",
+        "quantity": {
+         "value": 95,
+         "unit": "pounds",
+         "source_text": "95 pounds"
+        },
+        "polarity": "positive",
+        "evidence_quote": "I bought climbing shoes for 95 pounds today.",
+        "confidence": 0.95,
+        "temporal_ref": "today",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "rabbit",
+        "entity_type": "concept",
+        "description": "Pet Elena is considering adopting",
+        "scope": "personal"
+       },
+       {
+        "name": "guinea pig",
+        "entity_type": "concept",
+        "description": "Alternative pet Elena is considering",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "considering_adopting",
+        "object": "rabbit",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I'm considering adopting a rabbit, or maybe a guinea pig, still deciding.",
+        "confidence": 0.8,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "hypothetical",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "planned"
+       },
+       {
+        "subject": "I",
+        "predicate": "considering_adopting",
+        "object": "guinea pig",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I'm considering adopting a rabbit, or maybe a guinea pig, still deciding.",
+        "confidence": 0.7,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "hypothetical",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [],
+      "facts": [],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "hardest climb",
+        "entity_type": "concept",
+        "description": "Elena's hardest climb grade so far",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "hardest climb",
+        "predicate": "grade",
+        "object": "V2",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "My hardest climb so far is a V2.",
+        "confidence": 0.9,
+        "temporal_ref": "so far",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "bouldering competition in Sheffield",
+        "entity_type": "event",
+        "description": "Competition Elena signed up for on December 6",
+        "scope": "personal"
+       },
+       {
+        "name": "Sheffield",
+        "entity_type": "location",
+        "description": "City where the bouldering competition is held",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "wake_up_at",
+        "object": "7 am on weekdays",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "I wake up at 7 am on weekdays.",
+        "confidence": 0.9,
+        "temporal_ref": "on weekdays",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "I",
+        "predicate": "signed_up_for",
+        "object": "bouldering competition in Sheffield",
+        "quantity": null,
+        "polarity": "positive",
+        "evidence_quote": "And I signed up for a bouldering competition in Sheffield on December 6.",
+        "confidence": 0.9,
+        "temporal_ref": "on December 6",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "involved_in",
+        "role": "signed up",
+        "status": "done"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "bouldering competition in Sheffield",
+        "source_entity_type": "event",
+        "target_entity": "Sheffield",
+        "target_entity_type": "location",
+        "relationship_type": "held_in",
+        "polarity": "positive",
+        "evidence_quote": "And I signed up for a bouldering competition in Sheffield on December 6.",
+        "epistemic_type": "observed",
+        "condition": null,
+        "confidence": 0.85
+       }
+      ]
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "chalk bag",
+        "entity_type": "product",
+        "description": "Climbing chalk bag Elena got",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "got",
+        "object": "chalk bag, 18 pounds",
+        "quantity": {
+         "value": 18,
+         "unit": "pounds",
+         "source_text": "18 pounds"
+        },
+        "polarity": "positive",
+        "evidence_quote": "Also got a chalk bag, 18 pounds.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "I role accountant",
+     "text": "Elena role accountant."
+    },
+    {
+     "label": "m2",
+     "claim": "I wants_help_with planning workouts and meals",
+     "text": "I want help planning workouts and meals."
+    },
+    {
+     "label": "m3",
+     "claim": "I wake_up_at 7 am on weekdays",
+     "text": "I wake up at 7 am on weekdays."
+    },
+    {
+     "label": "m4",
+     "claim": "I works_at Halvorsen & Partners",
+     "text": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6."
+    },
+    {
+     "label": "m5",
+     "claim": "I bought climbing shoes for 95 pounds",
+     "text": "I bought climbing shoes for 95 pounds today."
+    },
+    {
+     "label": "m6",
+     "claim": "I drinks about four coffees a day",
+     "text": "I drink about four coffees a day, for context."
+    },
+    {
+     "label": "m7",
+     "claim": "I prefers_response_format short bullet points",
+     "text": "From now on, please answer me in short bullet points, never long paragraphs."
+    },
+    {
+     "label": "m8",
+     "claim": "I not dislikes_response_format long paragraphs",
+     "text": "It is not true that Elena dislikes response format long paragraphs."
+    },
+    {
+     "label": "m9",
+     "claim": "Marcus lives_near our parents",
+     "text": "Marcus lives near our parents."
+    },
+    {
+     "label": "m10",
+     "claim": "Marcus lives_in Leeds",
+     "text": "My brother Marcus lives in Leeds, near our parents."
+    },
+    {
+     "label": "m11",
+     "claim": "Marcus kin_of I",
+     "text": "Marcus kin of Elena."
+    },
+    {
+     "label": "m12",
+     "claim": "hardest climb grade V2",
+     "text": "My hardest climb so far is a V2."
+    },
+    {
+     "label": "m13",
+     "claim": "beginner bouldering class held_at Crux Gym",
+     "text": "For workouts I'd start with the beginner bouldering class at Crux Gym on Tuesdays."
+    },
+    {
+     "label": "m14",
+     "claim": "bouldering competition in Sheffield held_in Sheffield",
+     "text": "Bouldering competition in Sheffield held in Sheffield."
+    },
+    {
+     "label": "m15",
+     "claim": "I not eats pork",
+     "text": "Also, I don't eat pork."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "Huge change: I handed in my notice. Next month I join a bakery as an apprentice baker.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "content": "I've cut coffee completely, I'm on green tea now.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 3,
+     "role": "assistant",
+     "content": "Great, I'll stop suggesting coffee breaks.",
+     "speaker": null
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "Marcus took a job in Edinburgh and moved there last weekend.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 5,
+     "role": "user",
+     "content": "I finally climbed a V4 yesterday.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "We got two guinea pigs in the end, Pepper and Biscuit. No rabbit.",
+     "speaker": "Elena"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "bakery",
+        "entity_type": "organization",
+        "description": "Place where Elena will work as an apprentice baker",
+        "scope": "personal"
+       },
+       {
+        "name": "apprentice baker",
+        "entity_type": "concept",
+        "description": "Role Elena will take on at a bakery",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "handed_in_notice",
+        "object": "notice",
+        "polarity": "positive",
+        "evidence_quote": "Huge change: I handed in my notice.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "I",
+        "predicate": "joins_as",
+        "object": "apprentice baker at a bakery",
+        "polarity": "positive",
+        "evidence_quote": "Next month I join a bakery as an apprentice baker.",
+        "confidence": 0.9,
+        "temporal_ref": "Next month",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "asserted",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "works_at",
+        "role": "apprentice baker",
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "coffee",
+        "entity_type": "concept",
+        "description": "Drink Elena has cut out completely",
+        "scope": "personal"
+       },
+       {
+        "name": "green tea",
+        "entity_type": "concept",
+        "description": "Drink Elena is now on",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "drinks",
+        "object": "coffee",
+        "polarity": "negative",
+        "evidence_quote": "I've cut coffee completely, I'm on green tea now.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "coffee",
+        "replaces_memory": "m6",
+        "relation": "prefers",
+        "role": null,
+        "status": "past"
+       },
+       {
+        "subject": "I",
+        "predicate": "drinks",
+        "object": "green tea",
+        "polarity": "positive",
+        "evidence_quote": "I've cut coffee completely, I'm on green tea now.",
+        "confidence": 0.9,
+        "temporal_ref": "now",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "prefers",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "coffee breaks",
+        "entity_type": "concept",
+        "description": "Suggestions the assistant will stop making",
+        "scope": "agent"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "will_stop_suggesting",
+        "object": "coffee breaks",
+        "polarity": "negative",
+        "evidence_quote": "Great, I'll stop suggesting coffee breaks.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "decision",
+        "scope": "agent",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "Marcus",
+        "entity_type": "person",
+        "description": "Elena's brother",
+        "scope": "personal"
+       },
+       {
+        "name": "Edinburgh",
+        "entity_type": "location",
+        "description": "City where Marcus took a job and moved",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Marcus",
+        "predicate": "took_job_in",
+        "object": "Edinburgh",
+        "polarity": "positive",
+        "evidence_quote": "Marcus took a job in Edinburgh and moved there last weekend.",
+        "confidence": 0.95,
+        "temporal_ref": "last weekend",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "asserted",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "works_at",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Marcus",
+        "predicate": "lives_in",
+        "object": "Edinburgh",
+        "polarity": "positive",
+        "evidence_quote": "Marcus took a job in Edinburgh and moved there last weekend.",
+        "confidence": 0.95,
+        "temporal_ref": "last weekend",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "asserted",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "Leeds",
+        "replaces_memory": "m10",
+        "relation": "lives_in",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "V4",
+        "entity_type": "concept",
+        "description": "Climbing grade Elena finally climbed",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "climbed",
+        "object": "V4",
+        "polarity": "positive",
+        "evidence_quote": "I finally climbed a V4 yesterday.",
+        "confidence": 0.95,
+        "temporal_ref": "yesterday",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "V2",
+        "replaces_memory": "m12",
+        "relation": null,
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "Pepper",
+        "entity_type": "concept",
+        "description": "One of Elena's two guinea pigs",
+        "scope": "personal"
+       },
+       {
+        "name": "Biscuit",
+        "entity_type": "concept",
+        "description": "One of Elena's two guinea pigs",
+        "scope": "personal"
+       },
+       {
+        "name": "guinea pigs",
+        "entity_type": "concept",
+        "description": "Pets Elena got",
+        "scope": "personal"
+       },
+       {
+        "name": "rabbit",
+        "entity_type": "concept",
+        "description": "Pet Elena did not get",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "we",
+        "predicate": "got",
+        "object": "two guinea pigs, Pepper and Biscuit",
+        "quantity": {
+         "value": 2,
+         "unit": "1",
+         "source_text": "two"
+        },
+        "polarity": "positive",
+        "evidence_quote": "We got two guinea pigs in the end, Pepper and Biscuit.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       },
+       {
+        "subject": "we",
+        "predicate": "got",
+        "object": "rabbit",
+        "polarity": "negative",
+        "evidence_quote": "No rabbit.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "past"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "extract_batch",
+   "options": {
+    "typed": true
+   },
+   "memories": [
+    {
+     "label": "m1",
+     "claim": "I wake_up_at 7 am on weekdays",
+     "text": "I wake up at 7 am on weekdays."
+    },
+    {
+     "label": "m2",
+     "claim": "I handed_in_notice notice",
+     "text": "Huge change: I handed in my notice."
+    },
+    {
+     "label": "m3",
+     "claim": "I works_at Halvorsen & Partners",
+     "text": "I'm an accountant at Halvorsen & Partners, so my evenings are free after 6."
+    },
+    {
+     "label": "m4",
+     "claim": "I not will_stop_suggesting coffee breaks",
+     "text": "Great, I'll stop suggesting coffee breaks."
+    },
+    {
+     "label": "m5",
+     "claim": "I climbed V4",
+     "text": "I finally climbed a V4 yesterday."
+    },
+    {
+     "label": "m6",
+     "claim": "I bought climbing shoes for 95 pounds",
+     "text": "I bought climbing shoes for 95 pounds today."
+    },
+    {
+     "label": "m7",
+     "claim": "beginner bouldering class held_at Crux Gym",
+     "text": "For workouts I'd start with the beginner bouldering class at Crux Gym on Tuesdays."
+    },
+    {
+     "label": "m8",
+     "claim": "I wants_help_with planning workouts and meals",
+     "text": "I want help planning workouts and meals."
+    },
+    {
+     "label": "m9",
+     "claim": "bouldering competition in Sheffield held_in Sheffield",
+     "text": "Bouldering competition in Sheffield held in Sheffield."
+    },
+    {
+     "label": "m10",
+     "claim": "I not eats pork",
+     "text": "Also, I don't eat pork."
+    },
+    {
+     "label": "m11",
+     "claim": "Marcus lives_near our parents",
+     "text": "Marcus lives near our parents."
+    },
+    {
+     "label": "m12",
+     "claim": "I not dislikes_response_format long paragraphs",
+     "text": "It is not true that Elena dislikes response format long paragraphs."
+    },
+    {
+     "label": "m13",
+     "claim": "I prefers_response_format short bullet points",
+     "text": "From now on, please answer me in short bullet points, never long paragraphs."
+    },
+    {
+     "label": "m14",
+     "claim": "Marcus took_job_in Edinburgh",
+     "text": "Marcus took a job in Edinburgh and moved there last weekend."
+    }
+   ],
+   "turns": [
+    {
+     "index": 1,
+     "role": "user",
+     "content": "Baker hours mean I get up at 4:30 am now.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 2,
+     "role": "user",
+     "content": "I also bought a harness for 60 pounds.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 3,
+     "role": "user",
+     "content": "My best climb is now a V5.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 4,
+     "role": "user",
+     "content": "My flatmate Kai is lactose intolerant, so no milk in shared recipes.",
+     "speaker": "Elena"
+    },
+    {
+     "index": 5,
+     "role": "assistant",
+     "content": "Understood, I'll leave dairy out of shared recipes.",
+     "speaker": null
+    },
+    {
+     "index": 6,
+     "role": "user",
+     "content": "Pepper escaped and hid behind the fridge for an hour.",
+     "speaker": "Elena"
+    }
+   ],
+   "response": {
+    "turns": [
+     {
+      "turn": 1,
+      "entities": [
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Speaker (Elena) who now gets up at 4:30 am due to baker hours",
+        "scope": "personal"
+       },
+       {
+        "name": "Baker hours",
+        "entity_type": "concept",
+        "description": "Work schedule that causes the earlier wake-up time",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "wake_up_at",
+        "object": "4:30 am",
+        "polarity": "positive",
+        "evidence_quote": "Baker hours mean I get up at 4:30 am now.",
+        "confidence": 0.95,
+        "temporal_ref": "now",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "7 am",
+        "replaces_memory": "m1",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 2,
+      "entities": [
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Speaker (Elena) who bought a harness",
+        "scope": "personal"
+       },
+       {
+        "name": "harness",
+        "entity_type": "product",
+        "description": "Climbing harness bought for 60 pounds",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "bought",
+        "object": "a harness for 60 pounds",
+        "quantity": {
+         "value": 60,
+         "unit": "pounds",
+         "source_text": "60 pounds"
+        },
+        "polarity": "positive",
+        "evidence_quote": "I also bought a harness for 60 pounds.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "owns",
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 3,
+      "entities": [
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Speaker (Elena) whose best climb is now a V5",
+        "scope": "personal"
+       },
+       {
+        "name": "best climb",
+        "entity_type": "concept",
+        "description": "Elena's highest climbing grade achieved",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "best climb",
+        "predicate": "is",
+        "object": "a V5",
+        "polarity": "positive",
+        "evidence_quote": "My best climb is now a V5.",
+        "confidence": 0.95,
+        "temporal_ref": "now",
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "update",
+        "replaces_object": "V4",
+        "replaces_memory": "m5",
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 4,
+      "entities": [
+       {
+        "name": "Kai",
+        "entity_type": "person",
+        "description": "Elena's flatmate who is lactose intolerant",
+        "scope": "personal"
+       },
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Speaker (Elena) who shares recipes with Kai",
+        "scope": "personal"
+       },
+       {
+        "name": "milk",
+        "entity_type": "product",
+        "description": "Dairy ingredient excluded from shared recipes",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Kai",
+        "predicate": "is",
+        "object": "lactose intolerant",
+        "polarity": "positive",
+        "evidence_quote": "My flatmate Kai is lactose intolerant, so no milk in shared recipes.",
+        "confidence": 0.95,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": "has",
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "Kai",
+        "predicate": "flatmate_of",
+        "object": "I",
+        "polarity": "positive",
+        "evidence_quote": "My flatmate Kai is lactose intolerant, so no milk in shared recipes.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "current"
+       },
+       {
+        "subject": "shared recipes",
+        "predicate": "contains",
+        "object": "no milk",
+        "polarity": "negative",
+        "evidence_quote": "My flatmate Kai is lactose intolerant, so no milk in shared recipes.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "decision",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "current"
+       }
+      ],
+      "relationships": [
+       {
+        "source_entity": "Kai",
+        "source_entity_type": "person",
+        "target_entity": "I",
+        "target_entity_type": "person",
+        "relationship_type": "flatmate_of",
+        "polarity": "positive",
+        "evidence_quote": "My flatmate Kai is lactose intolerant, so no milk in shared recipes.",
+        "epistemic_type": "observed",
+        "condition": null,
+        "confidence": 0.9
+       }
+      ]
+     },
+     {
+      "turn": 5,
+      "entities": [
+       {
+        "name": "I",
+        "entity_type": "person",
+        "description": "Assistant committing to leave dairy out of shared recipes",
+        "scope": "personal"
+       },
+       {
+        "name": "dairy",
+        "entity_type": "product",
+        "description": "Ingredient the assistant will exclude from shared recipes",
+        "scope": "personal"
+       },
+       {
+        "name": "shared recipes",
+        "entity_type": "concept",
+        "description": "Recipes shared between Elena and Kai",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "I",
+        "predicate": "will_leave_out_of",
+        "object": "dairy out of shared recipes",
+        "polarity": "positive",
+        "evidence_quote": "Understood, I'll leave dairy out of shared recipes.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "decision",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "planned"
+       }
+      ],
+      "relationships": []
+     },
+     {
+      "turn": 6,
+      "entities": [
+       {
+        "name": "Pepper",
+        "entity_type": "person",
+        "description": "Pet that escaped and hid behind the fridge",
+        "scope": "personal"
+       },
+       {
+        "name": "fridge",
+        "entity_type": "product",
+        "description": "Appliance Pepper hid behind",
+        "scope": "personal"
+       }
+      ],
+      "facts": [
+       {
+        "subject": "Pepper",
+        "predicate": "escaped_and_hid_behind",
+        "object": "the fridge for an hour",
+        "polarity": "positive",
+        "evidence_quote": "Pepper escaped and hid behind the fridge for an hour.",
+        "confidence": 0.9,
+        "temporal_ref": null,
+        "fact_type": "fact",
+        "scope": "personal",
+        "epistemic_type": "observed",
+        "condition": null,
+        "temporal_intent": "assertion",
+        "replaces_object": null,
+        "replaces_memory": null,
+        "relation": null,
+        "role": null,
+        "status": "done"
+       }
+      ],
+      "relationships": []
+     }
+    ]
+   }
+  }
+ ]
+}

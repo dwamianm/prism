@@ -519,7 +519,7 @@ class MemoryClient:
 
     def ingest(
         self,
-        content: str,
+        content: str | None,
         *,
         user_id: str,
         role: str = "user",
@@ -530,8 +530,13 @@ class MemoryClient:
         event_time: datetime | None = None,
         scope: Scope = Scope.PERSONAL,
         policy: PrivacyPolicy | None = None,
+        assertions: list[dict] | None = None,
     ) -> str:
-        """Ingest with extraction; event_time is the timezone-aware source clock."""
+        """Ingest with extraction; event_time is the timezone-aware source clock.
+
+        ``assertions`` states the source's facts so no model extracts it; see
+        ``MemoryEngine.ingest``.
+        """
         return self._run(
             self._engine.ingest(
                 content,
@@ -544,6 +549,7 @@ class MemoryClient:
                 event_time=event_time,
                 wait_for_extraction=True,
                 scope=scope,
+                assertions=assertions,
             )
         )
 
@@ -556,7 +562,10 @@ class MemoryClient:
         scope: Scope = Scope.PERSONAL,
         policy: PrivacyPolicy | None = None,
     ) -> list[str]:
-        """Ingest a batch of messages. Returns list of event UUIDs."""
+        """Ingest a batch of messages. Returns list of event UUIDs.
+
+        A message may carry ``assertions``, as ``ingest`` takes them.
+        """
         return self._run(
             self._engine.ingest_batch(
                 messages,

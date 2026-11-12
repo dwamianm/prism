@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Address-first memory, read-time half, behind one switch that is off by default: `memory_mode`
+  (`PRME_MEMORY_MODE`), `classic` unless set (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first`
+  turns on relation routing (`enable_relation_routing`) and the settings below, and nothing else. Each acts only when
+  a question is asked: the mode changes nothing at write time, makes no model call, and rewrites no stored memory,
+  so the same pack can be read with it on or off, and turning it on reads no memory as stale for `reingest()`. A
+  setting the configuration gives itself is kept, and each can be used alone.
+  - `enable_belief_state` (`PRME_ENABLE_BELIEF_STATE`): the claims a routed question reaches are read as a ledger.
+    Each claim gets a state (current, planned, earlier, ended or negated) from its typed status, its polarity, its
+    stated time and the later claims at the same address, and for a question about now the claim that holds now
+    comes first among them. The claims among the results trade the places they already hold, so they read in ledger
+    order, and every other result keeps its rank. Version 2 still lifted the group and added claims; version 3 only
+    reorders. In version 4 (`BELIEF_VERSION` 4) the state orders the claims for a question about now, and claims in
+    one state keep the order retrieval gave them instead of newest first. A question no word routes can find its
+    address in a catalog of the claims on the entities it names. The reader format shows the state as a tag and the
+    receipt records the ledger. See [the belief ledger](docs/RELATIONS.md#the-belief-ledger).
+  - `packing.session_context_direct_first` (`PRME_PACKING__SESSION_CONTEXT_DIRECT_FIRST`): session neighbors are
+    capped below the N-th best direct match; `address_first` sets 10.
+  - `packing.clock_window_filter` (`PRME_PACKING__CLOCK_WINDOW_FILTER`): a clock window the question states
+    ("between 15:00 and 16:00 on November 3") becomes its event-time filter.
+  - `packing.collapse_identical_text` (`PRME_PACKING__COLLAPSE_IDENTICAL_TEXT`): records with identical text are shown
+    once, with how many there are and the time they span.
+  - `scoring.rrf_recency_order` (`PRME_SCORING__RRF_RECENCY_ORDER`): under rank fusion, recency on a current-state
+    question is read on the question's own time scale, so memories minutes apart are ordered as clearly as
+    memories months apart.
+
+  Every one of these options is off by default. With the defaults, the contract scorecard below gives the same
+  result on each of its checks as on 0.17.0a6. Relation routing gains the concept `pet` (`owns`), a rule that reads
+  a typed role on the claim's subject when the quote puts it there, and the two rules under Fixed below, so
+  `ROUTING_VERSION` is 3.
+
+  Evidence (2026-11-11, benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md, and for ledger version 4
+  PERFECT-EXTRACTION-AND-ROUTER.md in the same folder). On the fast probes over cached extraction (no model call),
+  off against the mode, the answers in the top 3 and the top 5 were 7 and 7 against 7 and 7 of 7 on `defects-v1`,
+  14 and 15 against 15 and 16 of 18 on `chat-v1`, and 10 and 11 against 11 and 12 of 12 on `member-v1`; the user
+  claims on the named owner did not change (12, 35 and 7). With `ROUTING_VERSION` 3 and ledger version 4 the counts
+  are the same. On the mid tier, the mode's settings with ledger version 4 on the defaults' own packs against the
+  defaults (LoCoMo, 1,536 questions with evidence; intervals over questions, then over conversations): all evidence
+  packed +0.8 points (+0.5 to +1.3; +0.3 to +1.6; 13 gained, 0 lost), evidence recall +0.6 (+0.3 to +0.9; +0.2 to
+  +1.2), projected accuracy +0.6 (+0.3 to +0.9; +0.2 to +1.1), all evidence among the candidates unchanged, and
+  evidence in the top 25 -0.2 points (-0.5 to -0.0; -0.4 to -0.1; 0 gained, 6 lost). Relation routing's route list
+  loses those 6 questions on its own; with ledger version 2 that row was -0.7 (16 lost). LongMemEval-S (12
+  questions) did not move. On the offline evidence gate of 2026-11-10 (at fb050a50, each option alone against the
+  defaults), `session_context_direct_first`, `clock_window_filter` and `collapse_identical_text` changed no measure,
+  and `rrf_recency_order` moved LoCoMo all evidence packed by +0.1 points (2 wins, 0 losses). With the whole mode and
+  ledger version 4, the gate's first table has no interval entirely below zero.
+
+  What was taken out, and why. The mode first also turned on typed extraction (`enable_typed_extraction`),
+  corrections (`enable_extraction_corrections`) and the second round (`packing.second_round`). With them, on
+  2026-11-11, it put 4 and 5 of 7 defect answers in the top 3 on two live builds (7 with the mode off) and 10 and 11
+  of 18 chat answers (14 off), and on the mid tier, built through `ingest()` with the mode (1,180 extraction calls),
+  it lost 3.1 points of LoCoMo evidence in the top 25 (95% interval -4.2 to -1.9 over questions, -4.5 to -1.6 over
+  conversations). The ledger then led the results; placed where its claims already stand, the same packs still
+  lost 3.2 points there (-4.2 to -2.2; -4.2 to -2.0), and the whole mode on the cached address-first extraction
+  still put 4 of 7 defect answers in the top 3 and 12 of 18 chat answers, while the read-time settings alone on the
+  defaults' packs lost 0.7 with ledger version 2 and passed the three probes. Most of the loss therefore comes with
+  what typed extraction and corrections store. The second round alone moved 4 chat answers down one place each.
+  All three stay as separate options, off by default, and nothing they stored before is rewritten.
+- `packing.second_round` (`PRME_PACKING__SECOND_ROUND`), an option of its own and not part of `address_first`: one
+  more word search for what the best result names, whose best two matches are placed below the third result. On the
+  offline evidence gate of 2026-11-10 it moved LoCoMo projected accuracy by -0.2 points (95% interval -0.4 to +0.1)
+  and left LongMemEval-S unchanged; alone, it lost answers on the chat and member probes on 2026-11-11.
+- Stated facts: `MemoryEngine.ingest(content, assertions=[...])`, the same per message in `ingest_batch()`, and
+  `MemoryClient.ingest()`. A caller that knows a fact states it (subject, relation of the vocabulary, object, types,
+  and optional status, polarity, role and `time`, or `has` with a predicate for a literal value), and ingestion
+  writes the claim typed extraction would make, with no model call. Assertions are checked before anything is
+  admitted and a bad one raises `ValueError` naming it. A subject or object must be mentioned by the content, be the
+  source's speaker when the content says I, me, my, we, us or our, or name an entity the owner's memory already
+  holds (same name and type, same scope); a literal value must be in the content unless it repeats a live claim's
+  value at the same subject and attribute. How each end was found is kept with the assertion, so a rebuild from
+  the log accepts exactly what admission accepted. `time` (an ISO date, or a datetime with its offset) becomes the
+  claim's stated time. A stated claim's text is the source's sentence that names its object, with only the role
+  and the time that sentence does not show in one parenthesis ("Two weeks in at Brightpath and I already like my
+  team. (as analytics manager; since 2026-05-04)"), and the source's text stays its evidence. When the content is
+  omitted it is rendered from the assertions ("Dana works at Brightpath as analytics manager (since
+  2026-05-04).") and each claim keeps its rendered sentence. `ASSERTION_VERSION` is 2. `reingest()` re-derives such a source from its own
+  metadata under settings of its own.
+  The write rate is 4.6 facts a second at 400 observations, the cost of the materialization path every extracted
+  claim takes; it is not yet fit for a sensor stream. Model-derived records are unchanged and `DERIVATION_VERSION`
+  stays 2. See [stated facts](docs/RELATIONS.md#stated-facts-assertions).
+- `tests/contract` and `tests/contract_holdout`: a scorecard of memory mechanisms with known answers (the newest
+  place of a moved object, rare events in a flood, time windows, two hops, unknown objects, determinism, and a chat
+  through `store()` and through `ingest()` replaying a recorded extraction, with which claims its corrections
+  retire), with no model call and no network. `uv run pytest tests/contract -q`; `--memory-mode address_first` runs
+  it under the switch, and `--stated` adds the moves written as stated facts.
+
+### Fixed
+
+- Relation routing (`enable_relation_routing`, on in `memory_mode="address_first"`) reads two more rules, so
+  `ROUTING_VERSION` is 3. A word that asks for a name ("called", "named", "name", "names") says nothing about the
+  relation and is skipped: "What kind of dog does Dana have, and what is it called?" was routed to `involved_in`,
+  because "called" stems to "call", a cue taken from that relation's definition ("on call"). "Who is on call?" still
+  routes to `involved_in`. A question word that the predicate normalizer maps to a relation (`_PREDICATE_WORDS`:
+  dog, pet, trip, hates, manages and the others) now routes to that relation too, with the word's polarity and
+  role, so the words that store a relation also ask for it; the dog question now routes to `owns`. The relation
+  definitions are unchanged, so extraction's prompt is unchanged. The route of 77 of 495 questions across the probes
+  and the graph oracle's question sets changes (`benchmarks/results/research/2026-11-11/PERFECT-EXTRACTION-AND-ROUTER.md`).
+
 ## [0.17.0a7] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull

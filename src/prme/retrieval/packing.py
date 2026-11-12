@@ -630,6 +630,7 @@ def pack_context(
             or "EVIDENCE_CONTEXT" in candidate.paths
             or "CURRENT_STATE" in candidate.paths
             or "OWNER_PROFILE" in candidate.paths
+            or "BELIEF" in candidate.paths
         ):
             # Episode routing and evidence projection are already bounded, and
             # so are the newest observations of a current-state question and
@@ -1002,6 +1003,12 @@ def _render_reader_entry(
     if newest and seen_at is not None:
         parts.append("[newest]")
     tags = _reader_tags(node)
+    if candidate.belief_state is not None:
+        # Whether the claim holds at the question's time (enable_belief_state).
+        tags.insert(0, candidate.belief_state)
+    if candidate.repeat_note is not None:
+        # The records with this text that the line stands for (collapse_identical_text).
+        tags.append(candidate.repeat_note)
     if tags:
         parts.append(f"[{', '.join(tags)}]")
     speaker = _reader_speaker(node, text)

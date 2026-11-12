@@ -145,6 +145,30 @@ def test_a_question_about_dislikes_asks_for_negative_preferences():
     assert route_question("What does Alex dislike?") == ((RelationStep("prefers", polarity="negative"),),)
 
 
+@pytest.mark.parametrize("question", ["What kind of dog does Dana have, and what is it called?",
+                                      "What is the dog named?", "What are the names of Dana's pets?"])
+def test_a_word_that_asks_for_a_name_says_nothing_about_the_relation(question):
+    # "called" stems to "call", a cue of involved_in ("on call"); a name word is skipped, so the dog decides.
+    assert route_question(question) == ((RelationStep("owns"),),)
+
+
+def test_on_call_still_asks_for_involvement():
+    assert route_question("Who is on call?") == ((RelationStep("involved_in"),),)
+    assert route_question("What is it called?") is None
+
+
+@pytest.mark.parametrize("question, word, step", [
+    # Each word maps to its relation in the predicate normalizer (_PREDICATE_WORDS) and is no derived cue.
+    ("What dog does Dana have?", "dog", RelationStep("owns")),
+    ("What does Alex hate?", "hates", RelationStep("prefers", polarity="negative")),
+    ("Who manages Dana?", "manages", RelationStep("manager_of", ("manager",))),
+    ("Where did Maya go on her trip?", "trip", RelationStep("visits")),
+])
+def test_a_word_that_stores_a_relation_also_asks_for_it(question, word, step):
+    assert route_question(question) == ((step,),)
+    assert normalize_predicate(word).relation == step.relation
+
+
 @pytest.mark.parametrize("question", [
     UNROUTED, "What did I tell you about my health?", "When did Dana start the new job?",
     "How long has Dana lived in Denver?", "", "?",
@@ -158,8 +182,8 @@ def test_a_concept_extension_adds_a_word_and_can_replace_a_built_in_one():
     extension = {"beneficiaries": ["partner_of", "kin_of:child"], "home": ["visits"]}
     assert route_question("Who are Maya's beneficiaries?", extension) == ((CHILD, RelationStep("partner_of")),)
     assert route_question("Where is Maya's home?", extension) == ((RelationStep("visits"),),)
-    assert set(concept_map()) == {"dependent", "family", "spouse", "child", "home", "job", "allergy"}
-    assert len(CORE_CONCEPTS) == 7
+    assert set(concept_map()) == {"dependent", "family", "spouse", "child", "home", "job", "allergy", "pet"}
+    assert len(CORE_CONCEPTS) == 8
     assert normalize_concepts(extension) == {"beneficiaries": ["kin_of:child", "partner_of"], "home": ["visits"]}
     assert normalize_concepts({}) is None
 
