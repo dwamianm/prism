@@ -63,6 +63,12 @@ class EventStore:
             "SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='privacy_format'"
         ).fetchone())
         self._conn_lock = conn_lock if conn_lock is not None else asyncio.Lock()
+        # The stored privacy marker column, if this store has it. A store this build wrote
+        # does; the protected format declares its own events columns and does not, and it
+        # does not need it, because every event it holds carries the marker.
+        self._marked = (not self._protected) and "has_privacy_marker" in {
+            row[1] for row in conn.execute("PRAGMA table_info('events')").fetchall()
+        }
         self.extraction_work = ExtractionWorkRepository(conn=conn, conn_lock=self._conn_lock)
         self.reingest = ReingestRepository(self.extraction_work)
 
@@ -88,8 +94,17 @@ class EventStore:
     def insert_sql(self):
         columns = [name.strip() for name in _EVENT_COLUMNS.split(",")
                    if not (self._protected and name.strip() == "content_hash")]
+        if self._marked:
+            columns.append("has_privacy_marker")
         placeholders = ["?" for index, name in enumerate(columns, 1)]
         return "INSERT INTO events (" + ",".join(columns) + ") VALUES (" + ",".join(placeholders) + ")"
+
+    def _insert_row(self, event):
+        values = self._insert_values(event)
+        if self._marked:
+            from prme.storage.assertion_keys import privacy_marker
+            values = [*values, privacy_marker(event.metadata)]
+        return values
 
     async def get_derivation_receipt(self, event_id: str, *, user_id: str) -> DerivationReceipt | None:
         """Read verified completion through the immutable source owner's scope."""
@@ -403,7 +418,7 @@ class EventStore:
                 )
             self._conn.executemany(
                 self.insert_sql,
-                [self._insert_values(event) for event in events],
+                [self._insert_row(event) for event in events],
             )
             if defer_materialization:
                 self._conn.executemany(
@@ -610,7 +625,7 @@ class EventStore:
         """Insert an event into the events table (sync)."""
         self._conn.execute(
             self.insert_sql,
-            self._insert_values(event),
+            self._insert_row(event),
         )
 
     @staticmethod

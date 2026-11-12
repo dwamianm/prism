@@ -842,6 +842,57 @@ class DuckPGQGraphStore:
         async with self._conn_lock:
             return await run_to_completion(read)
 
+    async def scan_assertions(
+        self, *, user_id: str, scope: Scope, node_types: tuple[NodeType, ...],
+        subject_key: str, predicate_key: str,
+    ) -> tuple[list[MemoryNode], int, int] | None:
+        """Read one owner's claims at one stored address, with the two scan counts.
+
+        Returns the rows at that address, the number of queryable rows of those node types,
+        and how many of them carry no address at all. A caller counts
+        ``selector_mismatch`` as the total minus the unkeyed minus what it got back, so the
+        two numbers reproduce the counts the full scan reports without reading it.
+
+        Returns None when this store has no address columns, which is a pack that predates
+        them and has not been opened since. The caller then keeps the full scan.
+        """
+        from prme.storage.assertion_keys import (
+            PREDICATE_COLUMN, SUBJECT_COLUMN, assertion_columns,
+        )
+        if not assertion_columns(self._conn):
+            return None
+        states = [state.value for state in LifecycleState]
+        types = [node_type.value for node_type in node_types]
+        type_slots = ",".join("?" for _ in types)
+        state_slots = ",".join("?" for _ in states)
+        # No index serves this read: the supported DuckDB chose a sequential scan with or
+        # without one, and an index on a column ``update_node`` rewrites would turn that
+        # update into a delete and an insert that skips an in-flight ``updated_at`` claim
+        # (the reason ``idx_nodes_lifecycle`` is absent from ``schema.py``). The saving is
+        # comparing two short stored strings instead of decoding JSON for every row.
+        page_sql = (
+            f"SELECT * FROM nodes WHERE user_id = ? AND scope = ? "
+            f"AND node_type IN ({type_slots}) "
+            f"AND {SUBJECT_COLUMN} = ? AND {PREDICATE_COLUMN} = ? "
+            f"AND lifecycle_state IN ({state_slots}) ORDER BY id ASC"
+        )
+        page_params = [user_id, scope.value, *types, subject_key, predicate_key, *states]
+        count_sql = (
+            f"SELECT count(*), count(*) FILTER "
+            f"(WHERE {SUBJECT_COLUMN} IS NULL OR {PREDICATE_COLUMN} IS NULL) "
+            f"FROM nodes WHERE user_id = ? AND scope = ? AND node_type IN ({type_slots}) "
+            f"AND lifecycle_state IN ({state_slots})"
+        )
+        count_params = [user_id, scope.value, *types, *states]
+
+        def read():
+            nodes = [self._row_to_node(row) for row in self._conn.execute(page_sql, page_params).fetchall()]
+            total, unkeyed = self._conn.execute(count_sql, count_params).fetchone()
+            return self._owned_view_sync(nodes, user_id), int(total), int(unkeyed)
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
     async def retire_consolidated(self, source_id: str, summary_id: str, **policy: Any) -> bool:
         """Retire only current, eligible sources covered by an active summary."""
         from prme.storage.consolidation_retirement import retire_duckdb
@@ -1255,7 +1306,17 @@ class DuckPGQGraphStore:
         logger.debug("graph.delete_edge", extra={"edge_id": edge_id})
 
     def _create_node_sync(self, node: MemoryNode) -> None:
-        """Insert a node into the nodes table (sync)."""
+        """Insert a node into the nodes table (sync).
+
+        The claim address and the privacy marker go in this statement, not a second one:
+        DuckDB rewrites a row on UPDATE as a delete plus an insert, so a later write costs a
+        row rewrite and two index updates, while the same statement costs one more triple of
+        values.
+        """
+        from prme.storage.assertion_keys import (
+            PREDICATE_COLUMN, PRIVACY_COLUMN, SUBJECT_COLUMN, key_values,
+        )
+
         evidence_json = (
             json.dumps([str(ref) for ref in node.evidence_refs])
             if node.evidence_refs
@@ -1264,18 +1325,20 @@ class DuckPGQGraphStore:
         metadata_json = (
             json.dumps(node.metadata) if node.metadata is not None else None
         )
+        subject_key, predicate_key, marked = key_values(node)
 
         self._conn.execute(
-            """
+            f"""
             INSERT INTO nodes (
                 id, node_type, user_id, session_id, scope, content,
                 metadata, confidence, salience, lifecycle_state,
                 valid_from, valid_to, superseded_by, evidence_refs,
                 created_at, updated_at, epistemic_type, source_type,
                 decay_profile, last_reinforced_at, reinforcement_boost,
-                salience_base, confidence_base, pinned, ttl_days, event_time
+                salience_base, confidence_base, pinned, ttl_days, event_time,
+                {SUBJECT_COLUMN}, {PREDICATE_COLUMN}, {PRIVACY_COLUMN}
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                      ?, ?, ?, ?, ?, ?, ?, ?)
+                      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 str(node.id),
@@ -1304,6 +1367,9 @@ class DuckPGQGraphStore:
                 node.pinned,
                 node.ttl_days,
                 node.event_time,
+                subject_key,
+                predicate_key,
+                marked,
             ],
         )
 
@@ -1374,6 +1440,28 @@ class DuckPGQGraphStore:
                 params.append(value)
             else:
                 params.append(value)
+
+        if "metadata" in valid_updates:
+            # A rewritten subject or predicate moves a claim to another address, and a
+            # rewritten metadata may gain or lose the privacy marker. Both stored columns
+            # are derived from ``metadata``, so they are rewritten in the same statement
+            # that changes it and can never describe an older value.
+            from prme.retrieval.aggregation import _assertion_values, normalize_assertion_value
+            from prme.storage.assertion_keys import (
+                PREDICATE_COLUMN, PRIVACY_COLUMN, SUBJECT_COLUMN, privacy_marker,
+            )
+            metadata_value = valid_updates["metadata"]
+            values = _assertion_values(MemoryNode.model_construct(metadata=metadata_value))
+            keys = (None, None) if values is None else (
+                normalize_assertion_value("subject", values["subject"]),
+                normalize_assertion_value("predicate", values["predicate"]),
+            )
+            set_parts.extend([
+                f"{SUBJECT_COLUMN} = ?",
+                f"{PREDICATE_COLUMN} = ?",
+                f"{PRIVACY_COLUMN} = ?",
+            ])
+            params.extend([keys[0], keys[1], privacy_marker(metadata_value)])
 
         set_clause = ", ".join(set_parts)
         params.append(node_id)

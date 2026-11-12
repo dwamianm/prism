@@ -173,6 +173,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ordered by node id, so their order no longer depends on the order a walk returned them in. A store without the
   method, such as the privacy read view, walks from each seed as before. No setting changes, and stored memories
   are not rewritten (`benchmarks/results/research/2026-11-12/BOUNDED-GRAPH-WALK.md`).
+- `get_assertion_state` reads one address instead of every fact, decision and preference of the owner. Each node row
+  now stores its normalized subject and predicate (`assertion_subject_key`, `assertion_predicate_key`) and whether its
+  metadata carries the privacy key (`has_privacy_marker`; events carry the marker too, except in a protected store,
+  whose events table keeps its 11 columns). All three are written in Python in the same INSERT as the row, by the
+  same `normalize_assertion_value` the scan compares with, and rewritten when a node's metadata changes. The privacy
+  range check reads the stored marker instead of decoding the metadata JSON of every row. The columns carry no index:
+  the supported DuckDB (1.4.4) chose a sequential scan for this read with or without one, and an index on a column
+  that `update_node` rewrites turns that update into a delete and an insert that skips an in-flight `updated_at`
+  conflict claim, the reason `idx_nodes_lifecycle` is absent. Over 20,500 stated facts on one laptop the lookup took
+  7.8 and 9.1 ms at the median for addresses of 23 and 39 claims, with p95 under 10.2 ms, at a load average near 2,
+  and 9.6 to 12.5 ms at the median with p95 under 16.5 ms at a load average of 5 to 10, where the scan took 860 to
+  1,120 ms; it returns the same serialized
+  `AssertionState` as the scan on 315 addresses. A pack built before this change gains and fills the columns when it
+  is opened, after every older column migration and with a checkpoint right after the `ALTER` (DuckDB 1.4.4 cannot
+  replay that `ALTER` from the write-ahead log after an abrupt exit), with no rebuild; a store without them, or a
+  protected store read through its admitted-only view, keeps the full scan.
+  PostgreSQL keeps the full scan. No setting changes, retrieval results are unchanged, and `DERIVATION_VERSION` does not move,
+  because the change alters how the lookup finds stored records and not what a source derives.
 
 ## [0.17.0a7] - 2026-11-10
 
