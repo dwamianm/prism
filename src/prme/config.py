@@ -744,6 +744,13 @@ class OrganizerConfig(_ProjectSettings):
     }
 
 
+# read_profile="robot" (task 22, 2026-11-12): fewer candidates and two graph
+# hops, from a sweep on 20,500 stated facts and 20,000 benchmark-shaped
+# memories; 40 results keep the receipt under 100 KB.
+ROBOT_READ_PACKING = {"vector_k": 60, "lexical_k": 60, "graph_max_candidates": 40, "graph_max_hops": 2}
+ROBOT_READ_RESULT_LIMIT = 40
+
+
 class PRMEConfig(_ProjectSettings):
     """Root configuration for PRME.
 
@@ -1418,6 +1425,40 @@ class PRMEConfig(_ProjectSettings):
             "on the mid tier of 2026-11-11."
         ),
     )
+    result_limit: int | None = Field(
+        default=None, ge=0,
+        # Unset, left out of dumps, so a configuration recorded before the
+        # setting existed still compares equal.
+        exclude_if=lambda value: value is None,
+        description=(
+            "Results retrieve() returns before context packing when the "
+            "caller passes no limit. Unset (the default) keeps every result "
+            "the score floors admit, up to about 1,000 on a large store, and "
+            "the receipt records each one. A limit the caller passes wins. "
+            "read_profile='robot' sets it to 40. The limit also bounds the "
+            "packed context, so fewer records reach the reader."
+        ),
+    )
+    read_profile: Literal["default", "robot"] = Field(
+        default="default",
+        # The default is left out of dumps, so a configuration recorded
+        # before the setting existed still compares equal.
+        exclude_if=lambda value: value == "default",
+        description=(
+            "[HYPOTHESIS] One switch for a fast, small read on a large store "
+            "(a robot that reads often). 'default' changes nothing. 'robot' "
+            "sets, unless the configuration sets them itself: "
+            "packing.vector_k=60, packing.lexical_k=60, "
+            "packing.graph_max_candidates=40, packing.graph_max_hops=2 and "
+            "result_limit=40. Fewer candidates and two graph hops instead of "
+            "three cut the read's time; the result limit cuts the receipt "
+            "from about 1.5 MB to under 100 KB, and the receipt still "
+            "replays. Each is an existing setting and can be set alone. "
+            "Ranking code is unchanged. Nothing acts at write time, no model "
+            "is called and no stored memory is rewritten. The packed context "
+            "holds at most 40 records."
+        ),
+    )
     enable_belief_state: bool = Field(
         default=False,
         description=(
@@ -1798,6 +1839,22 @@ class PRMEConfig(_ProjectSettings):
     @model_validator(mode="after")
     def _apply_memory_mode(self) -> PRMEConfig:
         return apply_memory_mode(self)
+
+    @model_validator(mode="after")
+    def _apply_read_profile(self) -> PRMEConfig:
+        if self.read_profile != "robot":
+            return self
+        # Existing settings only, each kept when the configuration sets it itself.
+        packing = {
+            name: value
+            for name, value in ROBOT_READ_PACKING.items()
+            if name not in self.packing.model_fields_set
+        }
+        if packing:
+            self.packing = self.packing.model_copy(update=packing)
+        if "result_limit" not in self.model_fields_set:
+            self.result_limit = ROBOT_READ_RESULT_LIMIT
+        return self
 
     @model_validator(mode="after")
     def _validate_reranker_prior_weight(self) -> PRMEConfig:

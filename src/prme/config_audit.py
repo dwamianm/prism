@@ -317,6 +317,11 @@ _ACTIVATION_GATES: dict[str, tuple[str, str, Callable[[Any], bool]]] = {
         "memory_mode is address_first",
         lambda value: value == "address_first",
     ),
+    "read_profile": (
+        "read_profile",
+        "read_profile is robot",
+        lambda value: value == "robot",
+    ),
     "enable_belief_state": (
         "enable_belief_state",
         "enable_belief_state is true",

@@ -90,6 +90,7 @@ EXPECTED_HYPOTHESES = {
     "enable_owner_profile_context",
     "enable_relation_routing",
     "memory_mode",
+    "read_profile",
     "enable_belief_state",
     "enable_typed_extraction",
     "novelty_high_threshold",
