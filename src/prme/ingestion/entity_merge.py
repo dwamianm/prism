@@ -59,6 +59,47 @@ class EntityMerger:
                           scope=scope, metadata=expected, evidence_refs=[UUID(evidence_event_id)])
         return await self._graph_writer.create_node(node), True
 
+    async def find_entity(self, name: str, entity_type: str, user_id: str, *, scope: Scope = Scope.PERSONAL,
+                          evidence_event_id: str | None = None) -> str | None:
+        """The ID of this owner's entity with this name and type in ``scope``, or None.
+
+        The match :meth:`find_or_create_entity` reuses (name case-insensitive and stripped, exact type). A literal
+        "I" or "we" matches only the entity of its own source event (``evidence_event_id``).
+        """
+        # A ranked/limited query can miss older entities and fragment their
+        # fact history. Walk scoped, stable-ID pages until an exact match or
+        # exhaustion; keep Python normalization identical on both backends.
+        normalized_name = name.strip().lower()
+        unresolved = unresolved_personal_reference(name, entity_type)
+        after_id: str | None = None
+        while True:
+            existing_nodes = await self._graph_store.scan_nodes(
+                node_type=NodeType.ENTITY, user_id=user_id, scope=scope,
+                after_id=after_id, limit=256,
+            )
+            for node in existing_nodes:
+                node_name = node.content.strip().lower()
+                node_entity_type = (node.metadata or {}).get("entity_type")
+                if node_name == normalized_name and node_entity_type == entity_type:
+                    if unresolved and (evidence_event_id is None
+                            or node.metadata.get("identity_status") != "unresolved_reference"
+                            or node.metadata.get("reference_event_id") != evidence_event_id
+                            or node.evidence_refs != [UUID(evidence_event_id)]):
+                        # Literal "I" in two messages can refer to two quoted
+                        # speakers. An owner/scope is not a resolved referent.
+                        continue
+                    logger.debug(
+                        "Reusing existing entity",
+                        entity_id=str(node.id),
+                        name=name,
+                        entity_type=entity_type,
+                        user_id=user_id,
+                    )
+                    return str(node.id)
+            if len(existing_nodes) < 256:
+                return None
+            after_id = str(existing_nodes[-1].id)
+
     async def find_or_create_entity(
         self,
         name: str,
@@ -91,41 +132,13 @@ class EntityMerger:
             Tuple of (node_id, is_new). is_new is True if a new node
             was created, False if an existing match was reused.
         """
-        # A ranked/limited query can miss older entities and fragment their
-        # fact history. Walk scoped, stable-ID pages until an exact match or
-        # exhaustion; keep Python normalization identical on both backends.
-        normalized_name = name.strip().lower()
-        unresolved = unresolved_personal_reference(name, entity_type)
-        after_id: str | None = None
-        while True:
-            existing_nodes = await self._graph_store.scan_nodes(
-                node_type=NodeType.ENTITY, user_id=user_id, scope=scope,
-                after_id=after_id, limit=256,
-            )
-            for node in existing_nodes:
-                node_name = node.content.strip().lower()
-                node_entity_type = (node.metadata or {}).get("entity_type")
-                if node_name == normalized_name and node_entity_type == entity_type:
-                    if unresolved and (evidence_event_id is None
-                            or node.metadata.get("identity_status") != "unresolved_reference"
-                            or node.metadata.get("reference_event_id") != evidence_event_id
-                            or node.evidence_refs != [UUID(evidence_event_id)]):
-                        # Literal "I" in two messages can refer to two quoted
-                        # speakers. An owner/scope is not a resolved referent.
-                        continue
-                    logger.debug(
-                        "Reusing existing entity",
-                        entity_id=str(node.id),
-                        name=name,
-                        entity_type=entity_type,
-                        user_id=user_id,
-                    )
-                    return (str(node.id), False)
-            if len(existing_nodes) < 256:
-                break
-            after_id = str(existing_nodes[-1].id)
+        existing = await self.find_entity(name, entity_type, user_id, scope=scope,
+                                          evidence_event_id=evidence_event_id)
+        if existing is not None:
+            return (existing, False)
 
         # No match found -- create new entity
+        unresolved = unresolved_personal_reference(name, entity_type)
         evidence_refs: list[UUID] = []
         if evidence_event_id is not None:
             evidence_refs = [UUID(evidence_event_id)]

@@ -1933,7 +1933,8 @@ class MemoryEngine:
         """
         await self._require_embedding_writable()
         if assertions is not None:
-            content, metadata = self._prepare_assertions(content, assertions, metadata, policy=policy)
+            content, metadata = await self._prepare_assertions(content, assertions, metadata, policy=policy,
+                                                               user_id=user_id, scope=scope, speaker=speaker)
         else:
             from prme.ingestion.assertions import attach_assertions
 
@@ -2028,8 +2029,9 @@ class MemoryEngine:
                     messages[index] = {key: value for key, value in msg.items() if key != "assertions"}
                 continue
             try:
-                content, metadata = self._prepare_assertions(msg.get("content"), msg["assertions"],
-                                                             msg.get("metadata"), policy=policy)
+                content, metadata = await self._prepare_assertions(
+                    msg.get("content"), msg["assertions"], msg.get("metadata"), policy=policy, user_id=user_id,
+                    scope=scope, speaker=msg.get("speaker"))
             except ValueError as exc:
                 raise ValueError(f"messages[{index}]: {exc}") from exc
             messages[index] = {**{key: value for key, value in msg.items() if key != "assertions"},
@@ -2077,10 +2079,18 @@ class MemoryEngine:
             scope=scope,
         )
 
-    def _prepare_assertions(self, content: str | None, assertions, metadata: dict | None, *,
-                            policy: PrivacyPolicy | None) -> tuple[str, dict]:
-        """Check a source's caller-stated assertions and attach them to its metadata (ingest(assertions=...))."""
-        from prme.ingestion.assertions import attach_assertions, prepare_assertions
+    async def _prepare_assertions(self, content: str | None, assertions, metadata: dict | None, *,
+                                  policy: PrivacyPolicy | None, user_id: str, scope: Scope,
+                                  speaker: str | None) -> tuple[str, dict]:
+        """Check a source's caller-stated assertions and attach them to its metadata (ingest(assertions=...)).
+
+        An end the content and the speaker do not settle is looked up in the owner's memory in ``scope``
+        (:func:`prme.ingestion.assertions.read_held`); nothing is written before the check passes.
+        """
+        from prme.ingestion.assertions import (
+            Held, attach_assertions, checked_assertions, prepare_assertions, read_held,
+        )
+        from prme.models.speaker import normalize_speaker
 
         if self._privacy.selected(policy):
             raise ValueError("assertions are not available under a privacy policy; ingest the source without them")
@@ -2088,7 +2098,15 @@ class MemoryEngine:
             raise ValueError("assertions need an ingestion pipeline, and this engine has none")
         if isinstance(assertions, (str, bytes, Mapping)) or not isinstance(assertions, Sequence):
             raise ValueError("assertions must be a list of mappings")
-        content, prepared = prepare_assertions(content, assertions)
+        checked = checked_assertions(assertions)
+        speaker = normalize_speaker(speaker)
+        # Content the caller omits is rendered from the assertions and names every end, so nothing is looked up.
+        held = Held()
+        if content is not None and content.strip():
+            held = await read_held(checked, content, graph_store=self._graph_store,
+                                   entity_merger=self._pipeline._entity_merger, user_id=user_id, scope=scope,
+                                   speaker=speaker)
+        content, prepared = prepare_assertions(content, checked, speaker=speaker, held=held)
         return content, attach_assertions(metadata, prepared)
 
     # --- Fast Ingestion (issue #25) ---

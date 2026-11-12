@@ -47,32 +47,36 @@ XFAIL: dict[str, str] = {
 }
 
 # The S1 packs written through ingest(assertions=...), run with --stated. Set from two runs in the classic mode
-# on 2026-11-10; the stated claims carry no ledger there, so an older placement can still rank first.
+# on 2026-11-10; the stated claims carry no ledger there, so an older placement can still rank first. On
+# 2026-11-11 a stated claim's text became a sentence rendered from its fields, and the list was 17 ids. Decided
+# again later on 2026-11-11, when a stated claim's text became its turn's sentence (here the placement sentence
+# itself), from three runs that agreed: the list is the 24 ids of 2026-11-10 again. The older placement's claim
+# now has the same words as the newest one and ranks first on these ids.
 STATED = "thesis 2.2 B: without the ledger, an older stated placement outranks the newest"
 XFAIL.update({case_id: STATED for case_id in (
-    "stated-10min-2moves-wool-scarf",
-    "stated-10min-2moves-yoga-mat",
     "stated-10min-2moves-dog-leash",
     "stated-10min-2moves-sewing-kit",
     "stated-10min-2moves-water-bottle",
-    "stated-10min-5moves-sewing-kit",
+    "stated-10min-2moves-wool-scarf",
+    "stated-10min-2moves-yoga-mat",
+    "stated-10min-5moves-blue-notebook",
     "stated-10min-5moves-guitar-tuner",
     "stated-10min-5moves-red-mug",
     "stated-10min-5moves-screwdriver-set",
-    "stated-10min-5moves-blue-notebook",
-    "stated-10min-12moves-tape-measure",
-    "stated-10min-12moves-tv-remote",
+    "stated-10min-5moves-sewing-kit",
     "stated-10min-12moves-black-umbrella",
     "stated-10min-12moves-blue-notebook",
+    "stated-10min-12moves-tape-measure",
+    "stated-10min-12moves-tv-remote",
     "stated-10min-12moves-water-bottle",
-    "stated-3days-2moves-tape-measure",
     "stated-3days-2moves-first-aid-kit",
+    "stated-3days-2moves-tape-measure",
     "stated-3days-5moves-car-keys",
     "stated-3days-5moves-guitar-tuner",
-    "stated-3days-12moves-tv-remote",
-    "stated-3days-12moves-tape-measure",
     "stated-3days-12moves-car-keys",
     "stated-3days-12moves-screwdriver-set",
+    "stated-3days-12moves-tape-measure",
+    "stated-3days-12moves-tv-remote",
     "stated-3days-12moves-wool-scarf",
 )})
 

@@ -52,7 +52,7 @@ Every listed failure is a strict xfail, so neither a fix nor a regression can go
 | File | Scene | One id is | Known answer |
 |---|---|---|---|
 | `test_state_churn.py` | S1: 20 objects move 2, 5 or 12 times, 10 minutes or 3 days apart | an object in one (spacing, moves) pack; 6 objects sampled per pack with a fixed seed | the newest placement is `results[0]` |
-| `test_state_churn.py` (`--stated`) | S1 again, each move written with `ingest_batch()` and an assertion: the object `located_in` the place, status current | the same objects, ids `stated-...` | the newest placement is `results[0]` |
+| `test_state_churn.py` (`--stated`) | S1 again, each move written with `ingest_batch()` and an assertion: the object `located_in` the place, status current | the same objects, ids `stated-...` | the newest placement's sentence (its message, or its claim, whose text is the same sentence) is `results[0]` |
 | `test_flood.py` | S2: 400 observations, 8 rare events and 12 repeats of one event among routine lines | a rare event; plus one id for the whole context | the event is in the top 5; routine lines are under 50% of the context lines of the 8 questions |
 | `test_time_window.py` | S4: a sighting every 3 minutes for a day | the window named in words; the window passed as `event_time_from`/`event_time_to` | the top 10 are all inside the hour |
 | `test_two_hops.py` | S5: a person asks for an object, then the object is seen somewhere; 300 routine lines | a person (8 of 20) | the request and the placement are both in the top 5 |
@@ -88,7 +88,7 @@ Every listed failure is a strict xfail, so neither a fix nor a regression can go
 | Chat `ingest()`, no true claim retired | 1 | 1 / 0 | 1 / 0 / 0 / 0 | |
 | **Total** | **160** | **73 / 87** | **73 / 44 / 43 / 0** | |
 
-The classic results were the same in every run, and the same on 0.17.0a6 (29a0460d), before address-first memory
+The stated churn rows are from later on 2026-11-11, after a stated claim's text became its turn's sentence (here the placement sentence itself): the newest placement's sentence must be `results[0]`. In the classic mode the 24 ids of 2026-11-10 are `XFAIL` again, in three runs that agreed (the rendered text of earlier that day had left 17); in address_first all 36 stated ids pass. The classic results were the same in every run, and the same on 0.17.0a6 (29a0460d), before address-first memory
 existed. In the classic mode one key claim is retired with corrections off ("I'm vegetarian"), by the predicate
 supersedence that `ingest()` already runs.
 
