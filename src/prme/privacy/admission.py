@@ -201,6 +201,25 @@ class AdmissionCoordinator:
                 if records:
                     raise PrivacyDenied("privacy_provider_unavailable")
 
+    async def require_legacy_page(self, events=(), nodes=()) -> None:
+        """Research prototype (enable_batch_write_path): require_legacy_inputs with one read for the whole page.
+
+        The objects are checked in the same order with the same rule and the same denial codes; only the queries
+        are shared (PrivacyRepository.legacy_page). PostgreSQL keeps the per-object path.
+        """
+        if self.selected():
+            raise PrivacyDenied("privacy_provider_unavailable")
+        items = [(table, item) for table, objects in (("events", events), ("nodes", nodes)) for item in objects]
+        page = await self.repository.legacy_page([(table, item.id) for table, item in items])
+        if page is None:
+            await self.require_legacy_inputs(events, nodes)
+            return
+        for table, item in items:
+            if PRIVACY_KEY in (item.metadata or {}):
+                raise PrivacyDenied("privacy_provider_unavailable")
+            if await self.repository.records_in_page(page, table, item.id, owner=item.user_id):
+                raise PrivacyDenied("privacy_provider_unavailable")
+
     async def legacy_group_reads(self, user_id: str, scope: Scope, *, event: Event | None = None,
                                  effect_check: Callable[[], Awaitable[None]] | None = None):
         """Refuse protected group inputs before a helper can inspect/cache them."""

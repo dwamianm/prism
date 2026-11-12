@@ -1,0 +1,54 @@
+[
+ {
+  "path": "current",
+  "case": "claim-other-key",
+  "refused": [
+   "ExtractionError",
+   "MaterializationError",
+   "privacy_provider_unavailable"
+  ],
+  "fact_nodes_after": 1
+ },
+ {
+  "path": "batch",
+  "case": "claim-other-key",
+  "refused": null,
+  "fact_nodes_after": 2
+ },
+ {
+  "path": "current",
+  "case": "claim-same-key",
+  "refused": [
+   "ExtractionError",
+   "MaterializationError",
+   "privacy_provider_unavailable"
+  ],
+  "fact_nodes_after": 1
+ },
+ {
+  "path": "batch",
+  "case": "claim-same-key",
+  "refused": [
+   "ExtractionError",
+   "MaterializationError",
+   "privacy_provider_unavailable"
+  ],
+  "fact_nodes_after": 1
+ },
+ {
+  "path": "current",
+  "case": "entity-other-name",
+  "refused": [
+   "ExtractionError",
+   "MaterializationError",
+   "privacy_provider_unavailable"
+  ],
+  "fact_nodes_after": 1
+ },
+ {
+  "path": "batch",
+  "case": "entity-other-name",
+  "refused": null,
+  "fact_nodes_after": 2
+ }
+]

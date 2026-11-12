@@ -1,0 +1,519 @@
+{
+  "mode": "stream",
+  "path": "batch",
+  "settings": {
+    "enable_batch_write_path": true
+  },
+  "pack": "/Users/dwamianm/Sites/prism-write-rate/data/write-rate-2026-11/m4/current-a/4000/pack",
+  "stored_at_start": 4000,
+  "offer": {
+    "calls": "ingest_batch(10 facts, wait_for_extraction=False) every 50.0 ms",
+    "planned_facts_per_second": 200.0,
+    "planned_seconds": 10.0,
+    "facts": 2000
+  },
+  "offer_seconds": 23.576,
+  "offered_facts_per_second": 84.83,
+  "accept_latency_ms_per_call": {
+    "count": 200,
+    "p50": 50.02,
+    "p95": 425.97,
+    "max": 729.06,
+    "mean": 116.78
+  },
+  "accept_latency_ms_per_fact": {
+    "count": 200,
+    "p50": 5.0,
+    "p95": 42.6,
+    "max": 72.91,
+    "mean": 11.68
+  },
+  "calls_late_ms": {
+    "count": 200,
+    "p50": 6486.01,
+    "p95": 13609.97,
+    "max": 13623.55,
+    "mean": 6143.2
+  },
+  "settle_seconds": 120.0,
+  "run_seconds": 143.76,
+  "committed": 1000,
+  "not_committed_at_stop": 1000,
+  "commit_wait_s": {
+    "count": 1000,
+    "p50": 79.05,
+    "p95": 127.13,
+    "max": 131.4,
+    "mean": 77.65
+  },
+  "commit_wait_lower_bound_s_for_backlog": 132.2,
+  "committed_facts_per_second_after_offer_start": 6.96,
+  "samples": [
+    {
+      "offered_index": 0,
+      "object": "golden remote",
+      "rank": 1,
+      "results": 886,
+      "found_after_s": 3.761,
+      "committed_after_s": 1.745
+    },
+    {
+      "offered_index": 5,
+      "object": "old screwdriver",
+      "rank": 6,
+      "results": 947,
+      "found_after_s": 6.082,
+      "committed_after_s": 1.745
+    },
+    {
+      "offered_index": 10,
+      "object": "leather umbrella",
+      "rank": 5,
+      "results": 889,
+      "found_after_s": 8.874,
+      "committed_after_s": 6.854
+    },
+    {
+      "offered_index": 15,
+      "object": "round screwdriver",
+      "rank": 1,
+      "results": 924,
+      "found_after_s": 10.906,
+      "committed_after_s": 6.854
+    },
+    {
+      "offered_index": 20,
+      "object": "green charger",
+      "rank": 8,
+      "results": 907,
+      "found_after_s": 14.232,
+      "committed_after_s": 12.18
+    },
+    {
+      "offered_index": 25,
+      "object": "folded mug",
+      "rank": 3,
+      "results": 843,
+      "found_after_s": 16.226,
+      "committed_after_s": 12.18
+    },
+    {
+      "offered_index": 30,
+      "object": "small clipboard",
+      "rank": 5,
+      "results": 983,
+      "found_after_s": 19.973,
+      "committed_after_s": 17.603
+    },
+    {
+      "offered_index": 35,
+      "object": "white flashlight",
+      "rank": 2,
+      "results": 911,
+      "found_after_s": 22.23,
+      "committed_after_s": 17.603
+    },
+    {
+      "offered_index": 40,
+      "object": "metal screwdriver",
+      "rank": 9,
+      "results": 964,
+      "found_after_s": 25.613,
+      "committed_after_s": 23.46
+    },
+    {
+      "offered_index": 45,
+      "object": "blue umbrella",
+      "rank": 6,
+      "results": 860,
+      "found_after_s": 27.67,
+      "committed_after_s": 23.46
+    },
+    {
+      "offered_index": 200,
+      "object": "square clipboard",
+      "rank": 4,
+      "results": 908,
+      "found_after_s": 46.255,
+      "committed_after_s": 44.25
+    },
+    {
+      "offered_index": 400,
+      "object": "striped umbrella",
+      "rank": 11,
+      "results": 897,
+      "found_after_s": 69.117,
+      "committed_after_s": 66.866
+    },
+    {
+      "offered_index": 600,
+      "object": "old notebook",
+      "rank": 5,
+      "results": 875,
+      "found_after_s": 92.19,
+      "committed_after_s": 90.045
+    },
+    {
+      "offered_index": 800,
+      "object": "glass bowl",
+      "rank": 9,
+      "results": 943,
+      "found_after_s": 113.825,
+      "committed_after_s": 111.51
+    },
+    {
+      "offered_index": 1000,
+      "object": "round screwdriver",
+      "found": false,
+      "committed": false
+    },
+    {
+      "offered_index": 1200,
+      "object": "heavy bottle",
+      "found": false,
+      "committed": false
+    },
+    {
+      "offered_index": 1400,
+      "object": "glass box",
+      "found": false,
+      "committed": false
+    },
+    {
+      "offered_index": 1600,
+      "object": "leather umbrella",
+      "found": false,
+      "committed": false
+    },
+    {
+      "offered_index": 1800,
+      "object": "round umbrella",
+      "found": false,
+      "committed": false
+    }
+  ],
+  "backlog_curve": [
+    {
+      "t": 0.0,
+      "accepted": 0,
+      "committed": 0
+    },
+    {
+      "t": 1.81,
+      "accepted": 340,
+      "committed": 10
+    },
+    {
+      "t": 11.91,
+      "accepted": 1080,
+      "committed": 20
+    },
+    {
+      "t": 17.71,
+      "accepted": 1600,
+      "committed": 30
+    },
+    {
+      "t": 28.22,
+      "accepted": 2000,
+      "committed": 50
+    },
+    {
+      "t": 30.04,
+      "accepted": 2000,
+      "committed": 70
+    },
+    {
+      "t": 31.84,
+      "accepted": 2000,
+      "committed": 90
+    },
+    {
+      "t": 33.66,
+      "accepted": 2000,
+      "committed": 100
+    },
+    {
+      "t": 35.47,
+      "accepted": 2000,
+      "committed": 120
+    },
+    {
+      "t": 37.28,
+      "accepted": 2000,
+      "committed": 140
+    },
+    {
+      "t": 39.1,
+      "accepted": 2000,
+      "committed": 150
+    },
+    {
+      "t": 40.92,
+      "accepted": 2000,
+      "committed": 170
+    },
+    {
+      "t": 42.73,
+      "accepted": 2000,
+      "committed": 180
+    },
+    {
+      "t": 44.55,
+      "accepted": 2000,
+      "committed": 200
+    },
+    {
+      "t": 48.32,
+      "accepted": 2000,
+      "committed": 220
+    },
+    {
+      "t": 50.13,
+      "accepted": 2000,
+      "committed": 230
+    },
+    {
+      "t": 51.94,
+      "accepted": 2000,
+      "committed": 250
+    },
+    {
+      "t": 53.75,
+      "accepted": 2000,
+      "committed": 270
+    },
+    {
+      "t": 55.57,
+      "accepted": 2000,
+      "committed": 280
+    },
+    {
+      "t": 57.39,
+      "accepted": 2000,
+      "committed": 300
+    },
+    {
+      "t": 59.2,
+      "accepted": 2000,
+      "committed": 310
+    },
+    {
+      "t": 61.03,
+      "accepted": 2000,
+      "committed": 330
+    },
+    {
+      "t": 62.85,
+      "accepted": 2000,
+      "committed": 350
+    },
+    {
+      "t": 64.67,
+      "accepted": 2000,
+      "committed": 360
+    },
+    {
+      "t": 66.48,
+      "accepted": 2000,
+      "committed": 380
+    },
+    {
+      "t": 68.3,
+      "accepted": 2000,
+      "committed": 390
+    },
+    {
+      "t": 72.32,
+      "accepted": 2000,
+      "committed": 410
+    },
+    {
+      "t": 74.14,
+      "accepted": 2000,
+      "committed": 430
+    },
+    {
+      "t": 75.96,
+      "accepted": 2000,
+      "committed": 440
+    },
+    {
+      "t": 77.78,
+      "accepted": 2000,
+      "committed": 460
+    },
+    {
+      "t": 79.59,
+      "accepted": 2000,
+      "committed": 470
+    },
+    {
+      "t": 81.41,
+      "accepted": 2000,
+      "committed": 480
+    },
+    {
+      "t": 83.23,
+      "accepted": 2000,
+      "committed": 500
+    },
+    {
+      "t": 85.04,
+      "accepted": 2000,
+      "committed": 510
+    },
+    {
+      "t": 86.85,
+      "accepted": 2000,
+      "committed": 520
+    },
+    {
+      "t": 88.67,
+      "accepted": 2000,
+      "committed": 540
+    },
+    {
+      "t": 90.48,
+      "accepted": 2000,
+      "committed": 550
+    },
+    {
+      "t": 92.3,
+      "accepted": 2000,
+      "committed": 570
+    },
+    {
+      "t": 94.11,
+      "accepted": 2000,
+      "committed": 590
+    },
+    {
+      "t": 95.93,
+      "accepted": 2000,
+      "committed": 600
+    },
+    {
+      "t": 99.86,
+      "accepted": 2000,
+      "committed": 620
+    },
+    {
+      "t": 101.68,
+      "accepted": 2000,
+      "committed": 630
+    },
+    {
+      "t": 103.49,
+      "accepted": 2000,
+      "committed": 650
+    },
+    {
+      "t": 105.31,
+      "accepted": 2000,
+      "committed": 660
+    },
+    {
+      "t": 107.13,
+      "accepted": 2000,
+      "committed": 680
+    },
+    {
+      "t": 108.94,
+      "accepted": 2000,
+      "committed": 690
+    },
+    {
+      "t": 110.76,
+      "accepted": 2000,
+      "committed": 710
+    },
+    {
+      "t": 112.57,
+      "accepted": 2000,
+      "committed": 730
+    },
+    {
+      "t": 114.39,
+      "accepted": 2000,
+      "committed": 750
+    },
+    {
+      "t": 116.2,
+      "accepted": 2000,
+      "committed": 760
+    },
+    {
+      "t": 118.01,
+      "accepted": 2000,
+      "committed": 780
+    },
+    {
+      "t": 119.83,
+      "accepted": 2000,
+      "committed": 800
+    },
+    {
+      "t": 123.89,
+      "accepted": 2000,
+      "committed": 820
+    },
+    {
+      "t": 125.7,
+      "accepted": 2000,
+      "committed": 830
+    },
+    {
+      "t": 127.52,
+      "accepted": 2000,
+      "committed": 850
+    },
+    {
+      "t": 129.33,
+      "accepted": 2000,
+      "committed": 870
+    },
+    {
+      "t": 131.15,
+      "accepted": 2000,
+      "committed": 890
+    },
+    {
+      "t": 132.96,
+      "accepted": 2000,
+      "committed": 900
+    },
+    {
+      "t": 134.77,
+      "accepted": 2000,
+      "committed": 920
+    },
+    {
+      "t": 136.59,
+      "accepted": 2000,
+      "committed": 940
+    },
+    {
+      "t": 138.41,
+      "accepted": 2000,
+      "committed": 950
+    },
+    {
+      "t": 140.22,
+      "accepted": 2000,
+      "committed": 970
+    },
+    {
+      "t": 142.04,
+      "accepted": 2000,
+      "committed": 990
+    }
+  ],
+  "model_calls_missed": 0,
+  "searchable_within_1s": {
+    "samples_found": 14,
+    "samples_found_within_1s": 0,
+    "facts_committed_within_1s": 0,
+    "facts_offered": 2000
+  }
+}

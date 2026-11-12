@@ -20,7 +20,7 @@ class PlanningGraph:
     not make its future updates invalidate the plan.
     """
 
-    def __init__(self, graph: GraphStore, event: Event, *, legacy_check=None):
+    def __init__(self, graph: GraphStore, event: Event, *, legacy_check=None, check_pages: bool = False):
         self.graph = graph
         self.event = Event.model_validate_json(event.model_dump_json())
         self.nodes: dict[UUID, MemoryNode] = {}
@@ -30,6 +30,8 @@ class PlanningGraph:
         self._scan_page: dict[UUID, MemoryNode] = {}
         self._retired: set[UUID] = set()
         self.legacy_check = legacy_check
+        # Research prototype (enable_batch_write_path): get_nodes checks the nodes it reads as one page.
+        self._check_pages = check_pages
 
     def _snapshot(self, node: MemoryNode) -> MemoryNode:
         if (node.user_id, node.scope) != (self.event.user_id, self.event.scope):
@@ -86,13 +88,18 @@ class PlanningGraph:
             for node in await self.graph.get_nodes(missing[start:start + 200]):
                 if (node.user_id, node.scope) == (self.event.user_id, self.event.scope):
                     found[node.id] = node
+        if self._check_pages and self.legacy_check is not None:
+            unread = [found[key] for key in dict.fromkeys(UUID(node_id) for node_id in node_ids)
+                      if key in found and key not in self.nodes]
+            if unread:
+                await self.legacy_check(tuple(unread))
         result = []
         for key in dict.fromkeys(UUID(node_id) for node_id in node_ids):
             node = found.get(key)
             if node is None:
                 continue
             if key not in self.nodes:
-                if self.legacy_check is not None:
+                if self.legacy_check is not None and not self._check_pages:
                     await self.legacy_check((node,))
                 node = self._read.setdefault(key, self._snapshot(node))
             result.append(node.model_copy(deep=True))
@@ -145,6 +152,23 @@ class PlanningGraph:
         return [edge.model_copy(deep=True) for edge in durable + self.edges
                 if str(edge.source_id if source_id is not None else edge.target_id) == node_id
                 and edge.user_id == self.event.user_id and edge_type in (None, edge.edge_type)]
+
+    async def claim_targets(self, subject_id: str, predicate: str, obj: str) -> list[str] | None:
+        """Research prototype (enable_batch_write_path): the subject's HAS_FACT targets that can repeat a claim.
+
+        The durable targets come from the store's key filter (fact_targets_by_key), and every planned HAS_FACT
+        target of the subject is kept. None when the store has no such filter (PostgreSQL); the caller then reads
+        every target, as get_edges gives them.
+        """
+        lookup = getattr(self.graph, "fact_targets_by_key", None)
+        if lookup is None:
+            return None
+        if await self.get_node(subject_id) is None:
+            return []
+        durable = await lookup(subject_id, self.event.user_id, predicate, obj)
+        planned = [str(edge.target_id) for edge in self.edges
+                   if str(edge.source_id) == subject_id and edge.edge_type == EdgeType.HAS_FACT]
+        return sorted(set(durable) | set(planned))
 
     def is_retired(self, node_id: str) -> bool:
         """Whether this plan replaces the node."""

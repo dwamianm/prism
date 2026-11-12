@@ -1,0 +1,14 @@
+{
+  "statements_each": 2000,
+  "duckdb": "1.4.4",
+  "ms_per_statement": {
+    "select_constant": 0.042,
+    "point_lookup_by_key": 0.116,
+    "insert_one_row": 0.268
+  },
+  "statements_in_5_ms": {
+    "select_constant": 119,
+    "point_lookup_by_key": 43,
+    "insert_one_row": 18
+  }
+}

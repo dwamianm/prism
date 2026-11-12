@@ -179,6 +179,33 @@ class DuckPGQGraphStore:
         async with self._conn_lock:
             return await run_to_completion(read)
 
+    async def fact_targets_by_key(self, source_id: str, user_id: str, predicate: str, obj: str) -> list[str]:
+        """Research prototype (enable_batch_write_path): the HAS_FACT targets of ``source_id`` that can repeat a claim.
+
+        A superset of the targets claim_merge.claim_key can match on ``predicate`` and ``obj``, which are already
+        normalized: an active target (tentative or stable, no valid_to) whose predicate and object, lowered and
+        with each run of ASCII whitespace or ``_`` made one space, equal them. That is claim_key's normalization
+        for ASCII text. A value with any other character always passes, so NFKC never needs SQL. The caller still
+        checks the exact claim key on every target returned.
+        """
+        # Patterns are parameters, so no control character sits in the SQL text.
+        separators, other = "[\\t\\n\\v\\f\\r\\x1c-\\x1f _]+", "[^\\x01-\\x7f]"
+
+        def matches(field: str) -> str:
+            value = f"json_extract_string(n.metadata,'$.{field}')"
+            return f"(regexp_matches({value}, ?) OR trim(regexp_replace(lower({value}), ?, ' ', 'g')) = ?)"
+
+        query = (
+            "SELECT DISTINCT CAST(e.target_id AS VARCHAR) FROM edges e JOIN nodes n ON n.id = e.target_id "
+            "WHERE e.source_id = ? AND e.edge_type = ? AND e.user_id = ? "
+            "AND n.lifecycle_state IN ('tentative', 'stable') AND n.valid_to IS NULL "
+            f"AND {matches('predicate')} AND {matches('object')}"
+        )
+        params = [source_id, EdgeType.HAS_FACT.value, user_id, other, separators, predicate, other, separators, obj]
+        async with self._conn_lock:
+            rows = await run_to_completion(lambda: self._conn.execute(query, params).fetchall())
+        return [row[0] for row in rows]
+
     async def get_nodes(
         self,
         node_ids: list[str],

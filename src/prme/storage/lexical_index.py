@@ -231,11 +231,18 @@ class LexicalIndex:
         # once a deletion left such a marker (#247). A directory index keeps
         # its markers on disk, as any Tantivy index does.
         self._stale_markers = False
+        # Research prototype (enable_batch_write_path): the documents staged with ``deferred=True`` into the current
+        # writer, by node ID, so a retry inside the same batch finds them before the commit. The generation names
+        # the writer they wait in; once that writer is gone (committed or discarded), the committed index decides.
+        self._writer_generation = 0
+        self._deferred: dict[str, dict] = {}
+        self._deferred_generation = -1
 
     def _ensure_writer(self) -> "tantivy.IndexWriter":
         """Return the batch writer, creating it on the first add of a batch."""
         if self._writer is None:
             self._writer = self._index.writer(heap_size=_WRITER_HEAP, num_threads=_WRITER_THREADS)
+            self._writer_generation += 1
         return self._writer
 
     def _do_index(
@@ -509,13 +516,19 @@ class LexicalIndex:
             writer.wait_merging_threads()
         return added
 
-    async def stage(self, plan: DerivationPlan, *, fence: DuckDBStageFence | None = None) -> None:
+    async def stage(self, plan: DerivationPlan, *, fence: DuckDBStageFence | None = None,
+                    deferred: bool = False) -> None:
         """Commit missing prepared documents once, rejecting identity conflicts.
 
         The directory writer lock covers comparison and publication, so a
         retry never deletes another attempt's documents. Managed ingestion
         supplies a fence covering the work generation and native write; calls
         without one remain an unmanaged component API.
+
+        ``deferred`` (research prototype, enable_batch_write_path) adds the
+        missing documents to the writer with no commit; the batch's
+        :meth:`commit_deferred` commits them. Until then a search commits
+        them first, as it commits any buffered document.
         """
         plan = DerivationPlan.model_validate_json(plan.model_dump_json())
         if fence is not None:
@@ -526,15 +539,82 @@ class LexicalIndex:
             "user_id": [plan.user_id], "node_type": [nodes[doc.node_id].node_type.value],
             "scope": [nodes[doc.node_id].scope.value],
         } for doc in plan.lexical_documents)
+        do_stage = self._do_stage_deferred if deferred else self._do_stage
         async with self._write_lock:
             if fence is not None:
                 async with fence.conn_lock:
                     def guarded():
                         with fence.hold():
-                            self._do_stage(documents)
+                            do_stage(documents)
                     await run_to_completion(guarded)
             else:
-                await run_to_completion(self._do_stage, documents)
+                await run_to_completion(do_stage, documents)
+
+    def _do_stage_deferred(self, documents: tuple[dict, ...]) -> None:
+        """_do_stage with no commit: the same identity check, then the missing documents wait in the writer.
+
+        The check reads the committed index and the documents this writer already holds from earlier deferred
+        stages. Nothing is rolled back on a failure: the writer may hold earlier plans' documents, whose graph
+        commit already happened. Every document is checked before the first add, as in _do_stage.
+        """
+        if not documents:
+            return
+        if self._writer is None or self._deferred_generation != self._writer_generation:
+            self._deferred = {}
+        self._index.reload()
+        searcher = self._index.searcher()
+        missing = []
+        for fields in documents:
+            node_id = fields["node_id"][0]
+            existing = self._deferred.get(node_id)
+            if existing is None:
+                query = tantivy.Query.term_query(self._schema, "node_id", node_id)
+                found = searcher.search(query, limit=1)
+                if found.count > 1:
+                    raise ValueError("Prepared document conflicts with duplicate lexical identity")
+                if found.hits:
+                    existing = searcher.doc(found.hits[0][1])
+            if existing is not None:
+                if any(existing[name] != value for name, value in fields.items()):
+                    raise ValueError("Prepared document conflicts with existing lexical identity")
+            else:
+                missing.append(fields)
+        if not missing:
+            return  # No writer is opened, so no directory lock is held for nothing.
+        writer = self._ensure_writer()
+        if self._deferred_generation != self._writer_generation:
+            self._deferred, self._deferred_generation = {}, self._writer_generation
+        for fields in missing:
+            writer.add_document(tantivy.Document(**fields))
+            self._deferred[fields["node_id"][0]] = fields
+            self._uncommitted += 1
+            if self._oldest_uncommitted_at is None:
+                self._oldest_uncommitted_at = time.monotonic()
+
+    async def commit_deferred(self, evicted: Iterable[str] = ()) -> None:
+        """Research prototype (enable_batch_write_path): delete ``evicted`` and commit the batch, in one commit.
+
+        A delete removes the node's committed documents and the ones added before it in the writer, so the delete
+        of a document staged earlier in the same batch removes it too.
+        """
+        evicted = tuple(dict.fromkeys(evicted))
+
+        def commit():
+            if evicted:
+                writer = self._ensure_writer()
+                for node_id in evicted:
+                    writer.delete_documents_by_term("node_id", node_id)
+                    self._deferred.pop(node_id, None)
+                # A delete is pending work too: the commit below must not skip it.
+                self._uncommitted += len(evicted)
+                if self._oldest_uncommitted_at is None:
+                    self._oldest_uncommitted_at = time.monotonic()
+            self._commit_locked()
+            if any(self._marker_remains(node_id) for node_id in evicted):
+                self._stale_markers = True
+
+        async with self._write_lock:
+            await run_to_completion(commit)
 
     async def stage_profile(self, plan: ProfilePublication, *, fence=None) -> None:
         """Durably stage one prepared profile before graph publication.

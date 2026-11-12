@@ -1,0 +1,560 @@
+{
+  "mode": "stream",
+  "path": "prototype",
+  "settings": {
+    "enable_filtered_entity_lookup": true
+  },
+  "pack": "/Users/dwamianm/Sites/prism-write-rate/data/write-rate-2026-11/m4/current-a/4000/pack",
+  "stored_at_start": 4000,
+  "offer": {
+    "calls": "ingest_batch(5 facts, wait_for_extraction=False) every 1000.0 ms",
+    "planned_facts_per_second": 5.0,
+    "planned_seconds": 30.0,
+    "facts": 150
+  },
+  "offer_seconds": 29.262,
+  "offered_facts_per_second": 5.13,
+  "accept_latency_ms_per_call": {
+    "count": 30,
+    "p50": 135.18,
+    "p95": 250.53,
+    "max": 445.77,
+    "mean": 129.6
+  },
+  "accept_latency_ms_per_fact": {
+    "count": 30,
+    "p50": 27.04,
+    "p95": 50.11,
+    "max": 89.15,
+    "mean": 25.92
+  },
+  "calls_late_ms": {
+    "count": 30,
+    "p50": 0.99,
+    "p95": 63.42,
+    "max": 66.6,
+    "mean": 7.76
+  },
+  "settle_seconds": 60.0,
+  "run_seconds": 52.73,
+  "committed": 150,
+  "not_committed_at_stop": 0,
+  "commit_wait_s": {
+    "count": 150,
+    "p50": 17.39,
+    "p95": 23.09,
+    "max": 23.88,
+    "mean": 15.84
+  },
+  "commit_wait_lower_bound_s_for_backlog": null,
+  "committed_facts_per_second_after_offer_start": 2.84,
+  "samples": [
+    {
+      "offered_index": 0,
+      "object": "golden remote",
+      "rank": 1,
+      "results": 886,
+      "found_after_s": 2.321,
+      "committed_after_s": 0.177
+    },
+    {
+      "offered_index": 5,
+      "object": "old screwdriver",
+      "rank": 6,
+      "results": 948,
+      "found_after_s": 3.73,
+      "committed_after_s": 1.84
+    },
+    {
+      "offered_index": 10,
+      "object": "leather umbrella",
+      "rank": 5,
+      "results": 890,
+      "found_after_s": 5.035,
+      "committed_after_s": 3.223
+    },
+    {
+      "offered_index": 15,
+      "object": "round screwdriver",
+      "rank": 2,
+      "results": 925,
+      "found_after_s": 6.742,
+      "committed_after_s": 4.801
+    },
+    {
+      "offered_index": 20,
+      "object": "green charger",
+      "rank": 8,
+      "results": 909,
+      "found_after_s": 8.359,
+      "committed_after_s": 6.367
+    },
+    {
+      "offered_index": 25,
+      "object": "folded mug",
+      "rank": 3,
+      "results": 843,
+      "found_after_s": 10.151,
+      "committed_after_s": 8.059
+    },
+    {
+      "offered_index": 30,
+      "object": "small clipboard",
+      "rank": 5,
+      "results": 981,
+      "found_after_s": 11.603,
+      "committed_after_s": 9.53
+    },
+    {
+      "offered_index": 35,
+      "object": "white flashlight",
+      "rank": 4,
+      "results": 914,
+      "found_after_s": 13.015,
+      "committed_after_s": 11.016
+    },
+    {
+      "offered_index": 40,
+      "object": "metal screwdriver",
+      "rank": 10,
+      "results": 967,
+      "found_after_s": 14.618,
+      "committed_after_s": 12.739
+    },
+    {
+      "offered_index": 45,
+      "object": "blue umbrella",
+      "rank": 5,
+      "results": 860,
+      "found_after_s": 16.179,
+      "committed_after_s": 14.252
+    },
+    {
+      "offered_index": 60,
+      "object": "small charger",
+      "rank": 10,
+      "results": 883,
+      "found_after_s": 16.864,
+      "committed_after_s": 15.15
+    },
+    {
+      "offered_index": 75,
+      "object": "round lamp",
+      "rank": 2,
+      "results": 890,
+      "found_after_s": 18.435,
+      "committed_after_s": 16.504
+    },
+    {
+      "offered_index": 90,
+      "object": "blue charger",
+      "rank": 1,
+      "results": 931,
+      "found_after_s": 19.922,
+      "committed_after_s": 17.822
+    },
+    {
+      "offered_index": 105,
+      "object": "blue jacket",
+      "rank": 6,
+      "results": 891,
+      "found_after_s": 21.1,
+      "committed_after_s": 19.133
+    },
+    {
+      "offered_index": 120,
+      "object": "paper mug",
+      "rank": 5,
+      "results": 870,
+      "found_after_s": 22.028,
+      "committed_after_s": 20.259
+    },
+    {
+      "offered_index": 135,
+      "object": "heavy mug",
+      "rank": 1,
+      "results": 873,
+      "found_after_s": 23.571,
+      "committed_after_s": 21.651
+    }
+  ],
+  "backlog_curve": [
+    {
+      "t": 0.0,
+      "accepted": 0,
+      "committed": 0
+    },
+    {
+      "t": 0.3,
+      "accepted": 5,
+      "committed": 1
+    },
+    {
+      "t": 2.65,
+      "accepted": 15,
+      "committed": 4
+    },
+    {
+      "t": 2.95,
+      "accepted": 15,
+      "committed": 6
+    },
+    {
+      "t": 5.13,
+      "accepted": 30,
+      "committed": 9
+    },
+    {
+      "t": 5.44,
+      "accepted": 30,
+      "committed": 10
+    },
+    {
+      "t": 7.52,
+      "accepted": 40,
+      "committed": 13
+    },
+    {
+      "t": 7.82,
+      "accepted": 40,
+      "committed": 15
+    },
+    {
+      "t": 10.05,
+      "accepted": 55,
+      "committed": 18
+    },
+    {
+      "t": 10.35,
+      "accepted": 55,
+      "committed": 20
+    },
+    {
+      "t": 12.61,
+      "accepted": 65,
+      "committed": 22
+    },
+    {
+      "t": 12.92,
+      "accepted": 65,
+      "committed": 24
+    },
+    {
+      "t": 13.22,
+      "accepted": 70,
+      "committed": 26
+    },
+    {
+      "t": 15.55,
+      "accepted": 80,
+      "committed": 30
+    },
+    {
+      "t": 17.86,
+      "accepted": 90,
+      "committed": 33
+    },
+    {
+      "t": 18.16,
+      "accepted": 95,
+      "committed": 35
+    },
+    {
+      "t": 20.38,
+      "accepted": 105,
+      "committed": 38
+    },
+    {
+      "t": 20.68,
+      "accepted": 105,
+      "committed": 40
+    },
+    {
+      "t": 22.84,
+      "accepted": 115,
+      "committed": 43
+    },
+    {
+      "t": 23.15,
+      "accepted": 120,
+      "committed": 45
+    },
+    {
+      "t": 23.45,
+      "accepted": 120,
+      "committed": 46
+    },
+    {
+      "t": 25.62,
+      "accepted": 130,
+      "committed": 50
+    },
+    {
+      "t": 25.92,
+      "accepted": 130,
+      "committed": 51
+    },
+    {
+      "t": 26.22,
+      "accepted": 135,
+      "committed": 53
+    },
+    {
+      "t": 26.53,
+      "accepted": 135,
+      "committed": 54
+    },
+    {
+      "t": 26.83,
+      "accepted": 135,
+      "committed": 56
+    },
+    {
+      "t": 27.13,
+      "accepted": 140,
+      "committed": 58
+    },
+    {
+      "t": 27.44,
+      "accepted": 140,
+      "committed": 60
+    },
+    {
+      "t": 29.42,
+      "accepted": 150,
+      "committed": 62
+    },
+    {
+      "t": 29.72,
+      "accepted": 150,
+      "committed": 64
+    },
+    {
+      "t": 30.02,
+      "accepted": 150,
+      "committed": 66
+    },
+    {
+      "t": 30.32,
+      "accepted": 150,
+      "committed": 68
+    },
+    {
+      "t": 30.63,
+      "accepted": 150,
+      "committed": 70
+    },
+    {
+      "t": 30.93,
+      "accepted": 150,
+      "committed": 71
+    },
+    {
+      "t": 31.23,
+      "accepted": 150,
+      "committed": 73
+    },
+    {
+      "t": 31.54,
+      "accepted": 150,
+      "committed": 75
+    },
+    {
+      "t": 33.69,
+      "accepted": 150,
+      "committed": 78
+    },
+    {
+      "t": 33.99,
+      "accepted": 150,
+      "committed": 80
+    },
+    {
+      "t": 34.29,
+      "accepted": 150,
+      "committed": 82
+    },
+    {
+      "t": 34.59,
+      "accepted": 150,
+      "committed": 84
+    },
+    {
+      "t": 34.9,
+      "accepted": 150,
+      "committed": 85
+    },
+    {
+      "t": 35.2,
+      "accepted": 150,
+      "committed": 87
+    },
+    {
+      "t": 35.5,
+      "accepted": 150,
+      "committed": 89
+    },
+    {
+      "t": 35.81,
+      "accepted": 150,
+      "committed": 90
+    },
+    {
+      "t": 38.14,
+      "accepted": 150,
+      "committed": 94
+    },
+    {
+      "t": 38.44,
+      "accepted": 150,
+      "committed": 96
+    },
+    {
+      "t": 38.74,
+      "accepted": 150,
+      "committed": 97
+    },
+    {
+      "t": 39.05,
+      "accepted": 150,
+      "committed": 99
+    },
+    {
+      "t": 39.35,
+      "accepted": 150,
+      "committed": 101
+    },
+    {
+      "t": 39.65,
+      "accepted": 150,
+      "committed": 103
+    },
+    {
+      "t": 39.95,
+      "accepted": 150,
+      "committed": 104
+    },
+    {
+      "t": 40.26,
+      "accepted": 150,
+      "committed": 106
+    },
+    {
+      "t": 42.45,
+      "accepted": 150,
+      "committed": 110
+    },
+    {
+      "t": 42.76,
+      "accepted": 150,
+      "committed": 111
+    },
+    {
+      "t": 43.06,
+      "accepted": 150,
+      "committed": 113
+    },
+    {
+      "t": 43.36,
+      "accepted": 150,
+      "committed": 115
+    },
+    {
+      "t": 43.67,
+      "accepted": 150,
+      "committed": 117
+    },
+    {
+      "t": 43.97,
+      "accepted": 150,
+      "committed": 118
+    },
+    {
+      "t": 44.27,
+      "accepted": 150,
+      "committed": 120
+    },
+    {
+      "t": 46.33,
+      "accepted": 150,
+      "committed": 123
+    },
+    {
+      "t": 46.64,
+      "accepted": 150,
+      "committed": 124
+    },
+    {
+      "t": 46.94,
+      "accepted": 150,
+      "committed": 126
+    },
+    {
+      "t": 47.24,
+      "accepted": 150,
+      "committed": 128
+    },
+    {
+      "t": 47.55,
+      "accepted": 150,
+      "committed": 129
+    },
+    {
+      "t": 47.85,
+      "accepted": 150,
+      "committed": 131
+    },
+    {
+      "t": 48.15,
+      "accepted": 150,
+      "committed": 132
+    },
+    {
+      "t": 48.46,
+      "accepted": 150,
+      "committed": 134
+    },
+    {
+      "t": 48.76,
+      "accepted": 150,
+      "committed": 136
+    },
+    {
+      "t": 50.9,
+      "accepted": 150,
+      "committed": 139
+    },
+    {
+      "t": 51.21,
+      "accepted": 150,
+      "committed": 141
+    },
+    {
+      "t": 51.51,
+      "accepted": 150,
+      "committed": 143
+    },
+    {
+      "t": 51.81,
+      "accepted": 150,
+      "committed": 145
+    },
+    {
+      "t": 52.12,
+      "accepted": 150,
+      "committed": 147
+    },
+    {
+      "t": 52.42,
+      "accepted": 150,
+      "committed": 148
+    }
+  ],
+  "model_calls_missed": 0,
+  "searchable_within_1s": {
+    "samples_found": 16,
+    "samples_found_within_1s": 0,
+    "facts_committed_within_1s": 3,
+    "facts_offered": 150
+  }
+}

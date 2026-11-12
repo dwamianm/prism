@@ -1158,6 +1158,20 @@ class PRMEConfig(_ProjectSettings):
             "so the entity found is the same. False keeps the full scan."
         ),
     )
+    enable_batch_write_path: bool = Field(
+        default=False,
+        description=(
+            "Research prototype (research/write-batch-2026-11, not a product "
+            "option). When True, a batch flush of ingest_batch() turns on four "
+            "write path changes together: the filtered entity lookup "
+            "(enable_filtered_entity_lookup), one privacy query per page of "
+            "planning inputs instead of one per node, one lexical commit per "
+            "batch flush instead of one per plan (evictions wait for the same "
+            "commit), and a SQL key filter that finds the earlier copies of a "
+            "repeated claim before the exact claim key check. False keeps the "
+            "current path."
+        ),
+    )
     enable_mention_links: bool = Field(
         default=True,
         description=(

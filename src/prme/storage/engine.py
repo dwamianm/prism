@@ -850,6 +850,7 @@ class MemoryEngine:
                 named_claim_text=config.enable_named_claim_text,
                 typed_extraction=config.enable_typed_extraction,
                 filtered_entity_lookup=config.enable_filtered_entity_lookup,
+                batch_write_path=config.enable_batch_write_path,
             )
 
             startup.push_async_callback(pipeline.shutdown)
@@ -1045,6 +1046,7 @@ class MemoryEngine:
                 named_claim_text=config.enable_named_claim_text,
                 typed_extraction=config.enable_typed_extraction,
                 filtered_entity_lookup=config.enable_filtered_entity_lookup,
+                batch_write_path=config.enable_batch_write_path,
             )
 
             startup.push_async_callback(pipeline.shutdown)

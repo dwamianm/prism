@@ -68,15 +68,24 @@ def _effective(node: MemoryNode):
 
 async def find_repeated_claims(
     graph, subject_entity_id: str, new: MemoryNode, key: tuple,
-    object_entity_id: str | None, *, exclude: set[str],
+    object_entity_id: str | None, *, exclude: set[str], by_key: bool = False,
 ) -> list[MemoryNode]:
     """Return active copies of ``key`` on the subject, oldest first.
 
     ``exclude`` holds node IDs already planned for this source, which are
     handled before this lookup and must not replace each other.
+
+    ``by_key`` (research prototype, enable_batch_write_path) reads only the
+    targets the planning graph's key filter keeps (``claim_targets``), a
+    superset of the copies; the exact checks below still decide.
     """
-    edges = await graph.get_edges(source_id=subject_entity_id)
-    targets = sorted({str(edge.target_id) for edge in edges if edge.edge_type == EdgeType.HAS_FACT} - exclude)
+    targets = None
+    if by_key and hasattr(graph, "claim_targets"):
+        targets = await graph.claim_targets(subject_entity_id, key[3], key[4])
+    if targets is None:
+        edges = await graph.get_edges(source_id=subject_entity_id)
+        targets = [str(edge.target_id) for edge in edges if edge.edge_type == EdgeType.HAS_FACT]
+    targets = sorted(set(targets) - exclude)
     return await _copies(graph, targets, new, key, object_entity_id)
 
 

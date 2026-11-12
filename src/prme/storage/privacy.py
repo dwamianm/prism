@@ -279,6 +279,10 @@ class PrivacyRepository:
             row = await self._object_identity("events", supplemental_evidence, owner=actual_owner, scope=actual_scope)
             if row is not None:
                 rows.append(("events", str(UUID(str(supplemental_evidence))), row))
+        return await self._records_of(rows, lambda reference, owner: self.get(reference, user_id=owner))
+
+    async def _records_of(self, rows, lookup) -> tuple[PrivacyRecord, ...]:
+        """The admission records that identity ``rows`` reach; ``lookup(event_id, owner)`` reads one record."""
         records = {}
         for table, identifier, row in rows:
             object_owner, scope, marked, origin, evidence_refs = row
@@ -290,7 +294,7 @@ class PrivacyRepository:
                         raise ValueError()
                     refs.append(origin)
                 for reference in refs:
-                    saved = await self.get(str(UUID(reference)), user_id=object_owner)
+                    saved = await lookup(str(UUID(reference)), object_owner)
                     if saved is not None:
                         if saved.snapshot.policy.scope.value != scope:
                             raise PrivacyDenied("privacy_boundary_mismatch")
@@ -300,6 +304,65 @@ class PrivacyRepository:
             except (ValueError, TypeError):
                 raise PrivacyDenied("privacy_processing_unavailable") from None
         return tuple(records.values())
+
+    async def legacy_page(self, identifiers):
+        """Research prototype (enable_batch_write_path): read a page of objects for the legacy input check at once.
+
+        ``identifiers`` are (table, id) pairs. One identity query per table and one admission query for every
+        reference those rows hold replace records_for_objects' queries per object and per reference.
+        :meth:`records_in_page` then gives records_for_objects' answer for one object of the page from these reads
+        alone, with the same rule (:meth:`_records_of`). None on PostgreSQL, whose callers keep the per-object path.
+        """
+        if self.pool is not None:
+            return None
+        wanted: dict[str, set[str]] = {"events": set(), "nodes": set()}
+        for table, identifier in identifiers:
+            if table not in wanted:
+                raise PrivacyDenied("privacy_invalid_result")
+            wanted[table].add(str(UUID(str(identifier))))
+        rows = {}
+        for table, values in wanted.items():
+            if not values:
+                continue
+            evidence = "evidence_refs" if table == "nodes" else "NULL"
+            found = await self._query(
+                f"SELECT CAST(id AS VARCHAR),user_id,scope,json_extract(metadata,'$.{PRIVACY_KEY}') IS NOT NULL,"
+                f"json_extract_string(metadata,'$.{PRIVACY_KEY}.event_id'),{evidence} FROM {table} "
+                f"WHERE id IN ({','.join('?' for _ in values)})", tuple(sorted(values)))
+            rows.update({(table, row[0]): tuple(row[1:]) for row in found})
+        references = set()
+        for (table, identifier), (_owner, _scope, marked, origin, evidence_refs) in rows.items():
+            try:
+                values = [identifier] if table == "events" else list(json.loads(evidence_refs or "[]"))
+            except (ValueError, TypeError):
+                values = []  # _records_of refuses this object when its turn comes.
+            for value in values + ([origin] if marked else []):
+                try:
+                    references.add(str(UUID(str(value))))
+                except (ValueError, TypeError):
+                    continue
+        admissions = {}
+        if references:
+            found = await self._query(
+                "SELECT CAST(event_id AS VARCHAR),user_id,body FROM privacy_admissions "
+                f"WHERE event_id IN ({','.join('?' for _ in references)})", tuple(sorted(references)))
+            # Kept as text: a body is parsed only when its own owner's object reaches it, as get() parses it.
+            admissions = {(row[0], row[1]): row[2] for row in found}
+        return rows, admissions
+
+    async def records_in_page(self, page, table: str, identifier, *, owner: str) -> tuple[PrivacyRecord, ...]:
+        """records_for_objects([(table, identifier)], owner=owner), answered from a :meth:`legacy_page` read."""
+        rows, admissions = page
+        identifier = str(UUID(str(identifier)))
+        row = rows.get((table, identifier))
+        if row is None or row[0] != owner:
+            return ()
+
+        async def lookup(reference, user):
+            body = admissions.get((reference, user))
+            return None if body is None else PrivacyRecord.model_validate_json(body)
+
+        return await self._records_of([(table, identifier, row)], lookup)
 
     async def has_legacy_request(self, request_id: UUID, *, user_id: str) -> bool:
         from prme.storage.fast_ingest import fast_ingest_operation_id

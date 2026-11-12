@@ -15,6 +15,7 @@ committed) and extraction is retried with exponential backoff (5s, 30s, 180s).
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import inspect
 import math
 import time
@@ -88,6 +89,28 @@ _GROUNDING_POLICY: Literal["speech_act_v14"] = "speech_act_v14"
 # are extracted, unless a waiting ingest(), ingest_batch(),
 # process_extractions() or the engine's close extracts them sooner.
 BATCH_FLUSH_SECONDS = 30.0
+
+
+class _BatchPublication:
+    """Research prototype (enable_batch_write_path): the lexical work one batch flush defers to its end.
+
+    Each plan's lexical documents wait in the writer, and the nodes its replacements retire wait here, so the flush
+    commits the lexical index once (:meth:`IngestionPipeline._finish_batch`). ``open`` turns False at that commit.
+    """
+
+    def __init__(self) -> None:
+        self.open = True
+        self.evicted: list[str] = []
+        # Only the task that runs the flush defers into it. Any task it starts copies this context, and then
+        # publishes on the normal path or opens its own batch, so no deferred work can miss the batch's commit.
+        self.task = asyncio.current_task()
+
+    def active(self) -> bool:
+        return self.open and self.task is asyncio.current_task()
+
+
+_BATCH_PUBLICATION: contextvars.ContextVar[_BatchPublication | None] = contextvars.ContextVar(
+    "prme_batch_publication", default=None)
 # The longest the engine's close waits for the batches of queued turns (#258).
 # It allows the usual drain time plus the extraction timeout for each batch
 # of unfinished work, including saved output awaiting publication, up to this,
@@ -317,6 +340,7 @@ class IngestionPipeline:
         named_claim_text: bool = False,
         typed_extraction: bool = False,
         filtered_entity_lookup: bool = False,
+        batch_write_path: bool = False,
     ) -> None:
         if extraction_corrections and extraction_batch_target_tokens <= 0:
             raise ValueError("Extraction corrections need batched extraction")
@@ -414,6 +438,11 @@ class IngestionPipeline:
         else:
             from prme.epistemic.matrix import DEFAULT_CONFIDENCE_MATRIX
             self._confidence_matrix = DEFAULT_CONFIDENCE_MATRIX
+        # Research prototype (enable_batch_write_path, research/write-batch-2026-11): the filtered entity lookup,
+        # one privacy query per page of planning inputs, one lexical commit per batch flush and the claim key
+        # filter, all together.
+        self._batch_write_path = batch_write_path
+        filtered_entity_lookup = filtered_entity_lookup or batch_write_path
         # Entity lookups read only the entities whose text holds the name (enable_filtered_entity_lookup).
         self._filtered_entity_lookup = filtered_entity_lookup
         self._entity_merger = EntityMerger(
@@ -707,6 +736,17 @@ class IngestionPipeline:
         wait for the owner's next ingest().
         """
         scope = Scope(scope)
+        current = _BATCH_PUBLICATION.get()
+        if self._batch_write_path and (current is None or not current.active()):
+            # A flush task started inside another batch copies that batch; it opens its own.
+            batch = _BatchPublication()
+            token = _BATCH_PUBLICATION.set(batch)
+            try:
+                await self._flush(user_id, scope, through=through, wait_for=wait_for)
+            finally:
+                _BATCH_PUBLICATION.reset(token)
+                await self._finish_batch(batch)
+            return
         wait_for = wait_for or []
         waiting = set(wait_for)
         work = self._event_store.extraction_work
@@ -743,6 +783,29 @@ class IngestionPipeline:
                 if event is None:
                     raise RuntimeError("Extraction source is unavailable")
                 await self._run_extraction(event, event_id, event.scope, raise_errors=True, through=through)
+
+    async def _finish_batch(self, batch: _BatchPublication) -> None:
+        """Commit a batch flush's lexical work once: the deferred documents and the deletes of retired nodes.
+
+        Then the retired nodes leave the vector index, lexical first as in evict_from_indexes. Like that
+        eviction, this is best effort: the graph commits already happened, so a failure is logged, and the
+        index_compaction organizer job or prme rebuild repairs what it left (research/write-batch-2026-11/REPORT.md
+        names the gap this leaves for the deferred documents).
+        """
+        batch.open = False
+        try:
+            await self._write_queue.submit(
+                lambda: self._lexical_index.commit_deferred(batch.evicted), label="derivation.lexical_batch")
+        except Exception:
+            logger.warning("ingestion.batch_lexical_commit_failed", exc_info=True)
+            return
+        for node_id in dict.fromkeys(batch.evicted):
+            try:
+                await self._write_queue.submit(
+                    lambda node_id=node_id: self._vector_index.delete_by_node_id(node_id),
+                    label=f"evict.vector:{node_id}")
+            except Exception:
+                logger.warning("evict.index_failed", extra={"node_id": node_id}, exc_info=True)
 
     async def _arm_if_unfinished(self, user_id: str, scope: Scope, through: int | None) -> None:
         """Arm the next flush when jobs at or before ``through`` are still unfinished (#254)."""
@@ -1481,7 +1544,9 @@ class IngestionPipeline:
         group_check = None
 
         async def legacy_check(nodes=()):
-            if self._privacy is not None:
+            if self._privacy is not None and self._batch_write_path:
+                await self._privacy.require_legacy_page((event,), nodes)
+            elif self._privacy is not None:
                 await self._privacy.require_legacy_inputs((event,), nodes)
             if group_check is not None:
                 await group_check(nodes=nodes)
@@ -1490,7 +1555,8 @@ class IngestionPipeline:
 
         if privacy is None:
             await legacy_check()
-        graph = PlanningGraph(self._graph_store, event, legacy_check=legacy_check if privacy is None else None)
+        graph = PlanningGraph(self._graph_store, event, legacy_check=legacy_check if privacy is None else None,
+                              check_pages=self._batch_write_path)
         indexes = PlanningIndexes(graph)
         current_policy = materialization_policy in {"speech_act_v12", "speech_act_v13", "speech_act_v14"}
         from prme.models.owner_reference import OWNER_REFERENCE_KEY
@@ -1952,7 +2018,7 @@ class IngestionPipeline:
                 planned_claims.add(claim_identity)
                 copies = await find_repeated_claims(
                     graph_store, subject_entity_id, fact_node, key, object_entity_id,
-                    exclude=planned_fact_ids,
+                    exclude=planned_fact_ids, by_key=self._batch_write_path,
                 )
                 if group_owner is not None:
                     # A we entity is local to its message, so its own subject finds at most this
@@ -2059,8 +2125,11 @@ class IngestionPipeline:
                     )
                 # Numerical vector payloads are already durable; keep native file
                 # snapshots debounced. Lexical publication is one committed batch.
+                batch = _BATCH_PUBLICATION.get()
+                deferred = {"deferred": True} if batch is not None and batch.active() else {}
                 await self._write_queue.submit(
-                    lambda: self._lexical_index.stage(plan, fence=fence), label=f"derivation.lexical:{plan.id}",
+                    lambda: self._lexical_index.stage(plan, fence=fence, **deferred),
+                    label=f"derivation.lexical:{plan.id}",
                 )
             # PostgreSQL writes its prepared vector/lexical columns in this same
             # graph transaction. No provider call is permitted inside the commit.
@@ -2082,7 +2151,12 @@ class IngestionPipeline:
         # managed extraction's completed work row ends its retry before it
         # gets here; the receipt branch above evicts only for the unmanaged
         # callers that publish a committed plan again.
+        batch = _BATCH_PUBLICATION.get()
         for edge in plan.replacements:
+            if batch is not None and batch.active():
+                # Evicted at the batch's one lexical commit (enable_batch_write_path).
+                batch.evicted.append(str(edge.target_id))
+                continue
             await evict_from_indexes(
                 self._write_queue, self._lexical_index, self._vector_index, str(edge.target_id),
             )
