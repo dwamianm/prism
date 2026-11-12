@@ -7,7 +7,17 @@ All code is under `research/address-lookup-2026-11/` plus one behavior-preservin
 
 ## Verdict
 
-**Not now.** An index on the claim address does most of what the brief hoped for, but it does not reach 5 ms.
+The headline number is **2.6 s to about 7 ms**. The 5 ms bar is not met; the measured floor is p50 5.1 ms and
+p95 6.7 ms, stated beside it.
+
+The index on the claim address does the larger part of the work and does it cheaply. What it does not do alone is
+reach 5 ms, because the privacy range check and the contradiction edge fetch together cost more than the whole bar.
+An engine change should be argued on 2.6 s to about 7 ms, not on 5 ms.
+
+The brief's question was whether a lookup by address can answer in about 5 ms without a full scan and return
+exactly what the current lookup returns. The answer has two halves. It can return exactly what the current lookup
+returns, and it can do it without a full scan. It cannot do it in 5 ms on this machine at this size. It can do it in
+about 7 ms, which is where an engine change should aim.
 
 - Bar (a), identical records: **passes**, 233 of 233 pairs, zero mismatches.
 - Bar (b), p95 under 5 ms at 20,500: **fails**. The prototype reaches p95 53.4 ms (p50 41.1 ms), down from

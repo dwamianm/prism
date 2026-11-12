@@ -135,7 +135,6 @@ async def main(args) -> dict:
     medians = {name: summary(values)["p50"] for name, values in parts.items()}
     # ``build_state`` resolves the facade again for ``_contradiction_edges``, so its time holds one more fence and
     # one edge fetch. Everything after the page that is neither a fence nor a count is what remains.
-    state_only = medians["state_ms"] - medians["edges_ms"]
     report = {
         "directory": args.directory,
         "stored": args.stored,
