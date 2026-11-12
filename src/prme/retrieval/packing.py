@@ -19,12 +19,13 @@ import re
 from collections.abc import Sequence
 from datetime import datetime
 from functools import lru_cache
+from typing import Any
 from uuid import UUID
 
 from prme.models.nodes import MemoryNode
 from prme.models.speaker import metadata_speaker, text_states_speaker
 from prme.retrieval.config import DEFAULT_PACKING_CONFIG, PackingConfig
-from prme.retrieval.models import MemoryBundle, RetrievalCandidate
+from prme.retrieval.models import MemoryBundle, RetrievalCandidate, tie_key
 from prme.retrieval.tokenization import (
     LINE_ENDS,
     LINE_STARTS,
@@ -662,7 +663,7 @@ def pack_context(
             return 3
         return tier
 
-    def priority(candidate: RetrievalCandidate) -> tuple[int, float, str]:
+    def priority(candidate: RetrievalCandidate) -> tuple[Any, ...]:
         required_position = required_positions.get(candidate.node.id)
         if required_position is not None:
             return -1, float(required_position), str(candidate.node.id)
@@ -680,7 +681,7 @@ def pack_context(
             value = candidate.composite_score
         else:
             value = compute_str(candidate)
-        return tier, -value, str(candidate.node.id)
+        return tier, -value, *tie_key(candidate.node, config.stable_tie_break)
 
     # Under "adjacent", the packed members of each trigger's window, by their
     # offset from the trigger in session order.

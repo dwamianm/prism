@@ -866,6 +866,27 @@ class PackingConfig(BaseModel):
             "evidence; False restores the earlier reader lines exactly."
         ),
     )
+    # Omitted when off, so configurations and receipts that do not use it keep
+    # their bytes. Not tagged [HYPOTHESIS]: it has no tuned value, it only
+    # replaces a random order with a fixed one.
+    stable_tie_break: bool = Field(
+        default=False,
+        exclude_if=lambda value: not value,
+        description=(
+            "Order records with equal packing priority by what they hold, "
+            "not by their random node IDs, so two builds of the same memories "
+            "give the same context. Context records inherit the score of the "
+            "record that brought them in, so equal scores are common, and "
+            "with the option off their order in the context depends on the "
+            "node IDs the build drew. When True, equal records are packed "
+            "newest stated time first (event time, else when stored), then by "
+            "text compared without case or spacing differences, then by when "
+            "they were stored, and the node ID decides only what is left "
+            "(prme.retrieval.models.tie_key). It changes only the order of "
+            "records whose priority is equal, so which record ranks above "
+            "another of higher priority never changes. Off by default."
+        ),
+    )
     episode_context_top_k: int = Field(
         default=0,
         ge=0,

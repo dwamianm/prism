@@ -8,10 +8,11 @@ RetrievalResponse, RetrievalMetadata, and ExcludedCandidate.
 from __future__ import annotations
 
 import math
+import unicodedata
 from typing import Any, Literal, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -454,6 +455,26 @@ class RetrievalCandidate(BaseModel):
         default=None,
         description="ID of the contradicting node, if this node is CONTESTED",
     )
+
+
+def tie_key(node: MemoryNode, stable: bool) -> tuple[Any, ...]:
+    """What orders records whose scores are equal (``packing.stable_tie_break``).
+
+    Off, the node ID orders them. Node IDs are random, so two builds of the
+    same memories put equal scores in different orders. On, the newest stated
+    time (event time, else when it was stored) comes first, then the text,
+    compared without case or spacing differences, then when the record was
+    stored, and the node ID last. Every key but the ID is the same in every
+    build of the same memories. A time without a zone is read as UTC.
+    """
+    if not stable:
+        return (str(node.id),)
+
+    def seconds(moment: datetime) -> float:
+        return (moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)).timestamp()
+
+    text = " ".join(unicodedata.normalize("NFKC", node.content or "").casefold().split())
+    return (-seconds(node.event_time or node.created_at), text, seconds(node.created_at), str(node.id))
 
 
 def rank_fusion_relevance(candidate: RetrievalCandidate) -> float:

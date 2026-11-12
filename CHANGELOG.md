@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `packing.stable_tie_break` (`PRME_PACKING__STABLE_TIE_BREAK`, off by default) orders packed records of equal priority by newest stated time, then normalized text, then stored time, with the node ID last. Context records inherit their trigger's score, so ties are common, and with the setting off their order follows random node IDs, which differ between two builds of the same chat. With the setting off, contexts and receipts are unchanged. Stored memories are not rewritten, and `DERIVATION_VERSION` is unchanged.
+
 ## [0.17.0a7] - 2026-11-10
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
