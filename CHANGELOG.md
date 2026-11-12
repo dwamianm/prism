@@ -19,8 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     Each claim gets a state (current, planned, earlier, ended or negated) from its typed status, its polarity, its
     stated time and the later claims at the same address, and for a question about now the claim that holds now
     comes first among them. The claims among the results trade the places they already hold, so they read in ledger
-    order, and every other result keeps its rank (`BELIEF_VERSION` 3). Version 2 still lifted the group and added
-    claims; version 3 only reorders. A question no word routes can find its address in a catalog of the claims on the
+    order, and every other result keeps its rank. Version 2 still lifted the group and added claims; version 3 only
+    reorders. In version 4 (`BELIEF_VERSION` 4) the state orders the claims for a question about now, and claims in
+    one state keep the order retrieval gave them instead of newest first. A question no word routes can find its address in a catalog of the claims on the
     entities
     it names. The reader format shows the state as a tag and the receipt records the ledger. See
     [the belief ledger](docs/RELATIONS.md#the-belief-ledger).

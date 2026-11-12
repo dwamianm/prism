@@ -24,7 +24,7 @@ from prme.client import config_from_directory
 from prme.models.edges import MemoryEdge
 from prme.models.nodes import MemoryNode
 from prme.models.relevance import RetrievalReceipt, make_receipt
-from prme.retrieval.beliefs import BELIEF_PATH, Belief, is_single_valued, place_beliefs, read_ledger
+from prme.retrieval.beliefs import _NOW_ORDER, BELIEF_PATH, BELIEF_VERSION, Belief, is_single_valued, place_beliefs, read_ledger
 from prme.retrieval.config import RRF_RECENCY_ORDER_SEMANTIC_TOP, PackingConfig, ScoringWeights
 from prme.retrieval.models import MemoryBundle, ScoreAdjustment
 from prme.retrieval.pipeline import _asks_for_history
@@ -172,12 +172,15 @@ def test_for_now_the_order_is_current_planned_earlier_ended_negated():
     )
     assert states(beliefs) == [(1, "current"), (7, "current"), (2, "planned"), (3, "planned"), (6, "earlier"),
                                (4, "ended"), (5, "negated")]
+    # Version 4: claims in one state share an order, so placement keeps the order retrieval gave them.
+    assert [belief.order for belief in beliefs] == [0, 0, 1, 1, 2, 3, 4]
 
 
 def test_history_reads_the_ledger_in_time_order():
     beliefs = ledger(claim(3, days=7, obj="a clinic"), claim(1, days=60, obj="the hospital"),
                      claim(2, days=25, obj="my job", status="past"), relation="works_at", history=True)
     assert states(beliefs) == [(1, "ended"), (2, "ended"), (3, "current")]
+    assert [belief.order for belief in beliefs] == [0, 1, 2]
 
 
 def said(number, text, *, days, obj, status="current") -> MemoryNode:
@@ -276,8 +279,9 @@ def scored_pool(*semantics):
     return ranked
 
 
-def belief(number, state="current") -> Belief:
-    return Belief(node_id=node_id(number), state=state, relation="works_at", role=None, pivot="sam", when=NOW)
+def belief(number, state="current", order=None) -> Belief:
+    return Belief(node_id=node_id(number), state=state, relation="works_at", role=None, pivot="sam", when=NOW,
+                  order=_NOW_ORDER[state] if order is None else order)
 
 
 def order(results) -> list[int]:
@@ -341,7 +345,7 @@ def test_two_claims_with_equal_scores_keep_the_ledger_order(ledger_order, moved)
     # Candidates 2 and 3 tie on every channel, so they share a score; node id alone would put 2 first.
     scored = scored_pool(.9, .5, .5, .3)
     assert scored[1].composite_score == scored[2].composite_score
-    results, placed = place_beliefs(scored, [belief(number) for number in ledger_order])
+    results, placed = place_beliefs(scored, [belief(number, order=index) for index, number in enumerate(ledger_order)])
     assert placed == 2 and order(results) == [1, *ledger_order, 4]
     assert math.isclose(results[1].composite_score, scored[1].composite_score, rel_tol=1e-12)
     assert (results[2].composite_score < results[1].composite_score) is moved
@@ -359,6 +363,54 @@ def test_a_belief_coefficient_is_any_positive_number(coefficient, valid):
     else:
         with pytest.raises(ValidationError, match="above zero"):
             make()
+
+
+def placed_order(scored, *members, **options) -> list[int]:
+    """The candidates' order after ``read_ledger`` over ``members`` (see :func:`ledger`) placed them."""
+    results, _placed = place_beliefs(scored, ledger(*members, **options))
+    return order(results)
+
+
+@pytest.mark.parametrize("race_days, trip_days", [(30, 2), (2, 30)])
+def test_two_current_claims_at_a_set_valued_address_keep_the_order_retrieval_gave_them(race_days, trip_days):
+    # Version 4: the newer Portland trip is not more true than the half marathon, so the better match (candidate 2,
+    # the race) keeps the better place whichever claim is newer.
+    scored = scored_pool(.9, .7, .5, .3)
+    assert BELIEF_VERSION == 4
+    assert placed_order(scored, claim(2, days=race_days, obj="the half marathon"),
+                        claim(3, days=trip_days, obj="a Portland trip"), relation="involved_in") == [1, 2, 3, 4]
+
+
+@pytest.mark.parametrize("members, relation, expected", [
+    # An ended claim ranked above a current one gives it its place.
+    ((claim(2, days=1, obj="a hamster", status="past"), claim(3, days=30, obj="a beagle")), "owns", [1, 3, 2, 4]),
+    # At a single-valued relation the older value is earlier, below the newer one wherever retrieval put it.
+    ((claim(2, days=60, obj="the hospital"), claim(3, days=7, obj="a clinic")), "works_at", [1, 3, 2, 4]),
+    # Two current claims keep their order around an ended one: the ended claim takes the last place.
+    ((claim(2, days=30, obj="a beagle"), claim(3, days=1, obj="a hamster", status="past"),
+      claim(4, days=60, obj="a cat")), "owns", [1, 2, 4, 3]),
+])
+def test_for_now_a_current_claim_still_takes_the_place_of_an_earlier_or_ended_one(members, relation, expected):
+    assert placed_order(scored_pool(.9, .7, .5, .3), *members, relation=relation) == expected
+
+
+def test_history_still_places_the_claims_in_time_order():
+    scored = scored_pool(.9, .7, .5, .3)
+    members = (claim(2, days=5, obj="a clinic"), claim(3, days=30, obj="a school"), claim(4, days=60, obj="the hospital"))
+    assert placed_order(scored, *members, relation="works_at", history=True) == [1, 4, 3, 2]
+    assert placed_order(scored, *members, relation="owns", history=True) == [1, 4, 3, 2]
+
+
+def test_claims_placed_in_retrieval_order_inside_a_state_replay_from_a_receipt():
+    scored = scored_pool(.95, .9, .8, .7, .6, .5)
+    beliefs = ledger(claim(2, days=30, obj="a beagle"), claim(3, days=1, obj="a hamster", status="past"),
+                     claim(5, days=60, obj="a cat"), claim(6, days=2, obj="a parrot"))
+    results, placed = place_beliefs(scored, beliefs)
+    assert placed == 4 and order(results) == [1, 2, 5, 4, 6, 3]
+    saved = receipt(results, policy="score_id")
+    restored = RetrievalReceipt.model_validate_json(saved.model_dump_json())
+    assert restored.replay_ranking() == saved.replay_ranking() == tuple(result.node.id for result in results)
+    assert all(result.score_provenance.replay_score() == result.composite_score for result in results)
 
 
 def test_nothing_to_place_leaves_the_results_as_they_were():

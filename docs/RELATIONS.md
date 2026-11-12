@@ -189,16 +189,20 @@ too, so a rebuild of the same log gives the same ledger: a node id is new on eve
 have no recorded order, so the end one of them states does not close another.
 
 **Placement.** The ledger only reorders. The claims of the ledger that are among the results trade the places
-they already hold: the first claim of the ledger takes the best ranked member's place, the second the next member's
-place, and so on. Each takes the score of its new place, with a `belief` adjustment whose coefficient is that score
+they already hold. For a question about now the state decides the order between states (`current`, `planned`,
+`earlier`, `ended`, `negated`), and inside one state the order retrieval gave the claims stands: the ledger knows
+state, not relevance, and at an address that holds a set (Dana `involved_in` a half marathon and a Portland trip) the
+newer claim is not more true than the other. A question about history places them in time order. The first claim
+in that order takes the best ranked member's place, the second the next member's place, and so on. Each takes the score of its new place, with a `belief` adjustment whose coefficient is that score
 over its own replayed score, so the receipt replays the score. When two members' scores are equal, the later claim
-of the ledger takes the nearest float below, so the ledger order holds. Every other candidate keeps its score and
+takes the nearest float below, so the placed order holds. Every other candidate keeps its score and
 its rank, so a list question whose answer is another record ("Which cities will they visit?") keeps that record
 where it was. A claim of the ledger the search did not return, or that an earlier stage left out (a folded claim
 statement, a claim a filter dropped), is not added. Each member carries the `BELIEF` path, which packing reserves,
 and its `belief_state`, which the reader format shows as a tag. Until `BELIEF_VERSION` 2 the claims of a routed
 question led the results, which cost LoCoMo evidence in the top 25 on the mid tier. Version 2 still lifted the
-group and added claims; version 3 only reorders.
+group and added claims; version 3 only reorders. Version 3 put the newest claim first inside one state, which moved
+the half marathon answer on the chat-v1 probe from rank 2 to rank 4; version 4 keeps the retrieval order there.
 
 **The catalog.** A question no word routes ("What is Sam up to these days?") can still be about an address. Its
 catalog is the claims on the entities it names (and the owner's, for a first-person question), read with the walk's
@@ -210,7 +214,7 @@ a routed question, so a claim that holds now is never below one that ended, and 
 about gains no rank. A count or list question is not looked up this way.
 
 **Receipts and what stays the same.** A retrieval that placed a claim records `execution.features.belief_state`:
-the ledger version (`BELIEF_VERSION`, 3), the source (`route` or `catalog`) and each claim with its state, relation
+the ledger version (`BELIEF_VERSION`, 4), the source (`route` or `catalog`) and each claim with its state, relation
 and role. Nothing is written and no model is called; the ledger is computed from the stored claims each time, so a
 correction, a re-ingest or a rebuild changes the next answer and no stored memory is rewritten. A retrieval that
 places no claim, weighted fusion and a privacy-protected read retrieve exactly as with the option off, receipts

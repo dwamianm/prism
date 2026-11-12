@@ -15,11 +15,14 @@ one holds at the question's time:
   (a newer value took its place at a single-valued address), ``ended`` (a
   later claim says it stopped) or ``negated``.
 - :func:`place_beliefs` reorders those claims among the places they already
-  hold in the results, in ledger order, with a ``belief`` score adjustment that
-  replays, and the ``BELIEF`` path, which packing reserves. The text ranking
-  and relation routing decide where an address's claims rank; the ledger
-  decides which claim takes which of those places, so a claim that holds now is
-  never below one that ended. It adds no claim and lifts none.
+  hold in the results, with a ``belief`` score adjustment that replays, and the
+  ``BELIEF`` path, which packing reserves. The text ranking and relation
+  routing decide where an address's claims rank; the ledger decides which claim
+  takes which of those places. For a question about now it orders the states,
+  so a claim that holds now is never below one that ended, and inside one state
+  the order retrieval gave stands: the ledger knows state, not relevance. A
+  question about history reads the claims in time order. It adds no claim and
+  lifts none.
 
 Nothing is written: the ledger is computed from stored claims at read time, so
 a rebuild, a re-ingest or a correction changes the next answer and no stored
@@ -30,7 +33,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 import math
 import re
@@ -49,8 +52,10 @@ BELIEF_PATH = "BELIEF"
 # change to the states, the single-valued relations, the closing rules or the
 # order that can change where a claim is placed. Version 2: the claims stay where
 # the best ranked of them stands instead of leading the results. Version 2 still
-# lifted the group and added claims; version 3 only reorders.
-BELIEF_VERSION = 3
+# lifted the group and added claims; version 3 only reorders. Version 4: for a
+# question about now, claims in one state keep the order retrieval gave them
+# instead of newest first.
+BELIEF_VERSION = 4
 
 # Relations where a newer value replaces the older one: a person has one
 # employer, one home and one partner at a time unless the claims say
@@ -82,6 +87,10 @@ class Belief:
     role: str | None
     pivot: str
     when: datetime
+    # Where the claim goes among the address's places, lowest first. Claims with equal orders keep the order
+    # retrieval gave them: for a question about now the order is the state's (every current claim shares one),
+    # for a question about history the claim's place in time order.
+    order: int
 
 
 def _words(text: object) -> frozenset[str]:
@@ -150,6 +159,12 @@ def read_ledger(
     ``earlier``, ``ended`` and ``negated`` (newest first); with ``history``,
     in time order. Claims stated at one time are ordered by their text, so
     the order is the same on every build of the same log.
+
+    Each belief's ``order`` is what :func:`place_beliefs` sorts by. For a
+    question about now it is the state's place in the list above, so claims in
+    one state share it and keep the order retrieval gave them: which of two
+    current values matters more is a question of relevance, not of time. With
+    ``history`` it is the claim's place in time order.
     """
     now = as_utc(now)
     groups: dict[tuple[str, str, str | None], list[tuple[datetime, str, str]]] = defaultdict(list)
@@ -192,19 +207,20 @@ def read_ledger(
                 if when < newest:
                     states[node_id] = "earlier"
         beliefs.extend(
-            Belief(node_id=node_id, state=states[node_id], relation=relation, role=role, pivot=pivot, when=when)
+            Belief(node_id=node_id, state=states[node_id], relation=relation, role=role, pivot=pivot, when=when,
+                   order=_NOW_ORDER[states[node_id]])
             for when, node_id, _state in members
         )
 
     if history:
         beliefs.sort(key=lambda belief: (belief.when, _text_key(nodes[belief.node_id]), belief.node_id))
-    else:
-        beliefs.sort(key=lambda belief: (
-            _NOW_ORDER[belief.state],
-            belief.when.timestamp() if belief.state == "planned" else -belief.when.timestamp(),
-            _text_key(nodes[belief.node_id]),
-            belief.node_id,
-        ))
+        return [replace(belief, order=index) for index, belief in enumerate(beliefs)]
+    beliefs.sort(key=lambda belief: (
+        belief.order,
+        belief.when.timestamp() if belief.state == "planned" else -belief.when.timestamp(),
+        _text_key(nodes[belief.node_id]),
+        belief.node_id,
+    ))
     return beliefs
 
 
@@ -212,17 +228,19 @@ def place_beliefs(
     scored: list[RetrievalCandidate],
     beliefs: Sequence[Belief],
 ) -> tuple[list[RetrievalCandidate], int]:
-    """Reorder the ledger's claims among the places they already hold, in ledger order.
+    """Reorder the ledger's claims among the places they already hold, by their ``order``.
 
     Only claims of the ledger that are among ``scored`` take part. A claim the
     search did not return, or that an earlier stage left out (a folded claim
     statement, a claim a filter dropped), is not added. With the candidates
     ranked by score and node id, the places the members hold go to the
-    members in ledger order: the first claim of the ledger takes the best
-    ranked member's place, the second the next member's place, and so on.
-    Every other candidate keeps its score and its rank, so the group gains no
-    rank: the text ranking and the route list decide where an address's claims
-    stand, and the ledger decides which claim stands where.
+    members sorted by their ``order`` and then by the place each holds: the
+    first takes the best ranked member's place, the second the next member's
+    place, and so on. Members with equal orders (two current claims for a
+    question about now) keep the order retrieval gave them. Every other
+    candidate keeps its score and its rank, so the group gains no rank: the
+    text ranking and the route list decide where an address's claims stand,
+    and the ledger decides which claim stands where.
 
     A member takes the score of the place it takes. When that score would not
     keep the order (two members with equal scores, or a neighbor with an equal
@@ -242,14 +260,17 @@ def place_beliefs(
     ranked = sorted(scored, key=_rank_key)
     position = {str(candidate.node.id): index for index, candidate in enumerate(ranked)}
     states: dict[str, str] = {}
+    orders: dict[str, int] = {}
     for belief in beliefs:
         # A claim the walk read under two relations is placed once, at its first place in the ledger. A claim
         # whose score is not positive cannot be scaled to another place, so it keeps its own.
         if belief.node_id in position and ranked[position[belief.node_id]].composite_score > 0:
             states.setdefault(belief.node_id, belief.state)
+            orders.setdefault(belief.node_id, belief.order)
     if not states:
         return scored, 0
-    members = [ranked[position[node_id]] for node_id in states]
+    members = [ranked[position[node_id]] for node_id in sorted(states, key=lambda node_id: (
+        orders[node_id], position[node_id]))]
     places = sorted(position[node_id] for node_id in states)
     relevance = rank_fusion_relevance(ranked[places[0]])
     results = list(ranked)

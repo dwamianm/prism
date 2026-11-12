@@ -285,9 +285,11 @@ async def test_the_ledger_reads_stated_claims_with_no_special_case(config, user,
         response = await engine.retrieve("Where is the red mug now?", user_id=user,
                                          reference_time=T0 + timedelta(hours=1))
     placed = [(result.belief_state, result.node.content) for result in response.results if BELIEF_PATH in result.paths]
-    assert placed == [("current", "The red mug is on the office desk."),
-                      ("earlier", "The red mug is on the dishwasher."),
-                      ("earlier", "The red mug is on the kitchen counter.")]
+    # The claim that holds now leads. The two earlier places share a state, so since BELIEF_VERSION 4 they keep the
+    # order retrieval gave them.
+    assert placed[0] == ("current", "The red mug is on the office desk.")
+    assert sorted(placed[1:]) == [("earlier", "The red mug is on the dishwasher."),
+                                  ("earlier", "The red mug is on the kitchen counter.")]
 
 
 async def test_an_exactly_repeated_stated_fact_merges_into_one_current_claim(config, user, provider):
