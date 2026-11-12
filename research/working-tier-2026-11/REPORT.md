@@ -8,7 +8,7 @@ Status: every bar measured. Results in `results/`.
 | 2 | every accepted fact found by address within 1 s | FAIL, 17 of 19 samples; 2 took 1.62 s and 5.22 s |
 | 3 | same stored records as the current path | PASS at 500 and at 4,050 records |
 | 4 | kill mid-stream, reopen, lose nothing | PASS, 60 of 60 |
-| 5 | `retrieve()` p95 100 to 200 ms at 20,000; the tier's added ms | FAIL on the base read (22 s), tier adds 0 ms within noise |
+| 5 | `retrieve()` p95 100 to 200 ms at 20,000; the tier's added ms | FAIL, base read 22 s at the branch point and 0.67 s on the `934d60fd` base; tier adds 20 to 53 ms p50, 74 to 192 ms p95 |
 | 6 | privacy refused and hidden as the current path does | PASS, 4 of 4 cases |
 
 ## Verdict
@@ -48,8 +48,12 @@ address, log it, append the event, derive in batches, drop it after both complet
 2. **Make the derivation cheaper or parallel.** At 0.29 to 0.34 facts a second, a 200 a second stream needs a drain
    about 600 times faster, or a bounded working set with a defined drop policy. This is the real work, and P5
    already showed that SQL trimming alone does not reach it.
-3. **Make the stored read cheap enough for the robot goal.** That is P3's finding, unchanged by this prototype:
-   22 s at 20,500 stored against a 100 to 200 ms goal. A working tier sits beside that read and does not shorten it.
+3. **Make the stored read cheap enough for the robot goal.** At this branch point that is 22 s at 20,500 stored.
+   The addendum shows it is 0.67 s at `934d60fd`, so this gap is closing and is now about 4 times, not 100.
+
+The addendum also adds a fourth item: **make the working-table merge cheaper than a second full retrieval**. At
+12,000 facts in the table the merge's p95 is 192 ms, which is the whole goal band, so a reading path that merges
+cannot spend that.
 
 ## Machine caveat
 
@@ -205,6 +209,52 @@ The 400-stored run, `results/reads-400.json`, 5 questions, load average 17:
 | 200 | 666.6 ms | 658.5 ms | 51.3 ms | 1.55 ms | 0.2 MB |
 
 Same reading at the small size: the added cost is under 52 ms, and the base read already misses the goal.
+
+## Addendum, 2026-11-12 10:35 CST: bar 5 on the new base
+
+`main` moved past this branch's start after the measurements above: commit `934d60fd` (#562, one graph walk from all
+seeds in the graph candidate stage). #563 (read-path cost) had not landed when this addendum ran. The branch is
+rebased onto `934d60fd` and every number below is from that tree, same pack, same machine.
+
+**Bar 5 still fails, but the base read is about 30 times faster.** The bar is `retrieve()` p95 of 100 to 200 ms at
+20,000 facts. The new base reads in 0.62 to 1.13 s. That is still 3 to 6 times over the top of the goal.
+
+`retrieve()` on the new base, `results/addendum-reads-repeat.json`, 20,500 stored, 25 questions, backlog 0, load
+average 12.3:
+
+| Backlog | `retrieve()` p50 | p95 | p99 | with working table p50 | added p50 | added p95 | address lookup p50 | table memory |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 623.3 ms | 668.5 ms | 697.7 ms | 659.4 ms | 35.5 ms | 99.2 ms | 13.4 ms | 0 MB |
+| 1,000 | 654.0 ms | 769.7 ms | 769.7 ms | 683.9 ms | 40.2 ms | 74.6 ms | 13.8 ms | 0.98 MB |
+| 12,000 | 817.0 ms | 1,125.5 ms | 1,125.5 ms | 854.4 ms | 53.4 ms | 192.2 ms | 15.2 ms | 11.71 MB |
+
+The 1,000 and 12,000 rows come from `results/addendum-reads-backlog.json`, 20 questions, load average 11.7. The
+12,000 row was the noisiest run of the day: its p95 is 308 ms above its p50 while every other row's is under 120 ms,
+so read its p95 as an upper bound. A separate 9-question run, `results/addendum-reads-20500.json`, reads the same
+way: `retrieve()` p50 618.7 / 665.9 / 714.3 ms and added p50 47.4 / 21.8 / 20.0 ms at the three backlogs.
+
+**What changed in the reading:**
+
+- **The tier's added cost is now measurable and positive.** On the old base it was negative within noise, because a
+  22 s read swamped a 35 ms difference. A 623 ms read does not. The added cost is 20 to 53 ms at p50 and 74 to
+  192 ms at p95. Its own address lookup, timed on its own, is 13.8 to 15.2 ms, so the merge step costs more than the
+  lookup alone: about 20 ms at p50 that the separate timer does not see. The separate timer runs the lookup in its
+  own call after a fresh `retrieve()`; inside `retrieve_with_working` the lookup runs straight after a retrieval
+  that just read the same scope. The report does not separate those two parts, and the p95 of the pair is what a
+  caller pays either way.
+- **At 12,000 facts in the table the tier's p95 alone is 192 ms**, which is the whole top of the 100 to 200 ms goal
+  band. A caller that must hit the band cannot spend it on a merge step.
+- **Table memory is unchanged**: 0.98 MB at 1,000 facts, 11.71 MB at 12,000, so about 20 MB for a full 20,000.
+
+**The stored address lookup did not move.** `probes/lookup_cost.py` on the new base, 10 calls, 20,500 nodes scanned:
+p50 2,649.8 ms, p95 2,721.6 ms, status `unknown`. It was 2,563 ms on the old base. #562 changes candidate
+generation in `retrieve()`, not `get_assertion_state`, so no change was expected, and none was measured.
+
+**What this means for the verdict.** The verdict above holds and one line of it gets stronger. The base read is no
+longer an unchallenged 22 s wall: two commits took it down 30 times, so the 100 to 200 ms goal is now a gap of
+roughly 4 times rather than 100 times, and it looks reachable by more of the same work. Bar 5 still fails today,
+which is what the bar asks. The tier's own cost also stops being free: at 12,000 facts it consumes the goal band at
+p95, so a working-tier read has to make the merge cheaper than a second full retrieval.
 
 
 ## Scratch folders
