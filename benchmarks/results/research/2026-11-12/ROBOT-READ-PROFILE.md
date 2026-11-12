@@ -165,10 +165,15 @@ the profile off, 1,000 reads on the stated store add about 1.9 GB to `operations
   wherever they run.
 - The bench bar 2 runs (`main` `3fc87120` against this change, profile off, both memory modes, 60 reads each) are
   byte-identical on all 60, and the stated runs on all 25, both modes: eight sides, no difference.
-- Full suite on the pre-rebase tree: 7,627 passed, 1,728 skipped, 127 xfailed, 20 failed. Nineteen were caused by my
-  own `PRME_BENCH_CACHE_ONLY=1` flag, which makes a live extraction call raise `CacheOnlyViolation`; rerun without
-  the flag, all 19 pass. The twentieth, `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`,
-  asserts the checkout is the main clone and fails in any worktree; the full suite was not rerun after the rebase.
+- Full suite on the final commit `12067c75`, providers blocked: 7,645 passed, 1,728 skipped, 127 xfailed, 2 failed,
+  in 808 s. Both failures are the machine. `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`
+  asserts the checkout is the main clone, which a worktree is not; CI, which runs in a clone, passes it.
+  `tests/test_privacy_quality_sets.py::test_PV11_storage_parity_24_fixed_queries[duckdb]` raises
+  `PrivacyDenied: privacy_capability_unavailable` from the native key custody in `src/prme/privacy/local_keys.py`;
+  the same test on `main` `3fc87120`, with the same blocked environment, fails the same way (1 failed, 1 skipped,
+  268 s), and this change does not touch `src/prme/privacy/`. An earlier suite on the pre-rebase tree reported 7,627
+  passed and 20 failed, nineteen of them caused by my own `PRME_BENCH_CACHE_ONLY=1` flag; all nineteen passed when
+  rerun without it.
 
 ### Bar 5: quality (reported, not a pass condition)
 
