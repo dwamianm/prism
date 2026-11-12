@@ -474,3 +474,73 @@ only). Every total is the same as before this change:
 **Checks.** `test_belief_state`, `test_relation_routing`, `test_structured_assertions` and
 `test_address_first_repairs`: 316 passed, 26 skipped. `ruff check src tests`: passed. `test_derivation_version` run
 from a copy outside the checkout: 2 passed.
+
+## Ledger order inside a state, version 4
+
+**Change** (a4639e4d, `BELIEF_VERSION` 4). For a question about now, the ledger's state decides the order between
+states (current, planned, earlier, ended, negated), and inside one state the order retrieval gave the claims stands.
+A question about history keeps time order. The ledger knows state, not relevance: at an address that holds a set
+(Dana `involved_in`), the Portland trip is not more true than the half marathon because it is newer. `read_ledger`
+gives each belief an `order` key (the state's place for a question about now, so claims in one state share it; the
+claim's place in time order for a question about history), and `place_beliefs` sorts the members by that key and
+breaks ties by the place each member already holds. No new setting and no new path.
+
+**Setup.** Providers blocked, 0 model calls, one run at a time, all at a4639e4d.
+
+**Probes** (top 3 / top 5), the same packs as version 3: every M1 build replayed its extraction cache (0 extraction
+calls) and every B1 build made 0 model calls. Both columns are the builds' own reports (version 3 from task 15,
+version 4 from this run).
+
+| Probe | M1, version 3 | M1, version 4 | B1, version 3 | B1, version 4 |
+|---|---|---|---|---|
+| defects-v1 | 7/7 / 7/7 | 7/7 / 7/7 | 6/7 / 6/7 | 6/7 / 6/7 |
+| chat-v1 | 15/18 / 16/18 | 15/18 / 16/18 | 16/18 / 17/18 | 17/18 / 17/18 |
+| member-v1 | 11/12 / 12/12 | 11/12 / 12/12 | 12/12 / 12/12 | 12/12 / 12/12 |
+
+- chat-v1 B1: "What was Dana's half marathon finishing time?" moves from rank 4 to rank 1, its rank with the ledger
+  off. The address's 5 claims are all `current`, so they keep the order retrieval gave them.
+- Other rank moves, all inside the top 3: chat-v1 B1 "Which programming language does Dana prefer?" 2 to 1 and
+  "Who is Dana's running partner?" 1 to 2; defects-v1 B1 "What coding language is Alex learning?" 3 to 1 and "How
+  does Alex prefer to travel in Japan?" 1 to 2; member-v1 M1 "What are the names of Maya's dependents?" 1 to 2. No
+  answer left the top 3 on any arm.
+
+**Mid tier, LoCoMo**, `main-ret-v5` (the six settings of `main-ret-v4`, `--reuse-build main-0.17.0a6`), compared
+with `main-0.17.0a6`. Change in points, W / L / T:
+
+| Measure | Change | 95% questions | 95% conversations | W / L / T |
+|---|---:|---:|---:|---:|
+| All evidence packed | +0.8 | +0.5 to +1.3 | +0.3 to +1.6 | 13 / 0 / 1523 |
+| Evidence recall | +0.6 | +0.3 to +0.9 | +0.2 to +1.2 | 17 / 2 / 1517 |
+| Evidence in top 25 | -0.2 | -0.5 to -0.0 | -0.4 to -0.1 | 0 / 6 / 1530 |
+| All evidence among candidates | +0.0 | +0.0 to +0.0 | +0.0 to +0.0 | 0 / 0 / 1536 |
+| Projected accuracy | +0.6 | +0.3 to +0.9 | +0.2 to +1.1 | 13 / 0 / 1527 |
+
+Every row equals `main-ret-v4`'s, to the same wins and losses. The 6 questions lost in the top 25 are the 6 routing
+questions (conv-26-q0088, conv-44-q0068, conv-47-q0008, conv-49-q0006, conv-49-q0048, conv-43-q0128); none of the 10
+ledger questions is lost, and no other question is. LongMemEval-S (12 questions): no row moves.
+
+**Offline evidence gate** (mode off, then `--set 'memory_mode="address_first"'`, then `gate-compare`; LongMemEval-S
+controls manifest `0103b9509a35`). The first table is identical to version 3's: LoCoMo all evidence packed +0.1
+(+0.0 to +0.3, 2 / 0), evidence recall +0.1 (-0.0 to +0.1, 3 / 1), all evidence among the candidates +0.0,
+projected accuracy +0.1 (+0.0 to +0.2, 2 / 0); every LongMemEval-S row +0.0. No interval is entirely below zero, and
+no question lost all its evidence among the candidates (0 on LoCoMo, 0 on LongMemEval-S).
+
+**Contract scorecard** (totals only for the hidden set). Every total is the same as with version 3:
+
+| Set | classic | address_first |
+|---|---|---|
+| visible | 73 passed, 87 xfailed | 73 passed, 44 xpassed, 43 xfailed, 0 failed |
+| hidden | 82 passed, 80 xfailed | 82 passed, 38 xpassed, 42 xfailed |
+
+**Test changes.**
+
+- `tests/test_belief_state.py`: new tests that two current claims at a set-valued address keep the retrieval order
+  whichever is newer; that a current claim still takes the place of an earlier or ended one, and two current claims
+  keep their order around an ended one; that history still places the claims in time order; and that the placed
+  results replay from a `score_id` receipt. The order tests for now and for history also check the `order` keys.
+- `tests/test_structured_assertions.py`, `test_the_ledger_reads_stated_claims_with_no_special_case`: the current
+  place (office desk) still comes first. The two earlier places (kitchen counter, dishwasher) share a state, so they
+  now keep the retrieval order instead of newest first; the test checks the set, not their order.
+
+**Checks.** `test_belief_state`, `test_relation_routing`, `test_structured_assertions` and
+`test_address_first_repairs`: 323 passed, 26 skipped. `ruff check src tests`: passed.
