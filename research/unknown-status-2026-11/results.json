@@ -1,0 +1,623 @@
+{
+ "protocol": "PROTOCOL.md",
+ "modes": {
+  "classic": {
+   "locomo_questions": {
+    "unknown": 444,
+    "answerable": 1536
+   },
+   "lme_questions": {
+    "unknown": 30,
+    "answerable": 470
+   },
+   "fits_on_locomo": {
+    "R1 weak match": {
+     "thresholds": [
+      0.705
+     ],
+     "hit": 21,
+     "miss": 423,
+     "false_unknown": 27,
+     "kept": 1509,
+     "unknown_share": 0.0472972972972973,
+     "false_share": 0.017578125,
+     "unknown_share_95": [
+      0.0311,
+      0.0712
+     ],
+     "false_share_95": [
+      0.0121,
+      0.0255
+     ]
+    },
+    "R2 missing words": {
+     "thresholds": [
+      3
+     ],
+     "hit": 3,
+     "miss": 441,
+     "false_unknown": 10,
+     "kept": 1526,
+     "unknown_share": 0.006756756756756757,
+     "false_share": 0.006510416666666667,
+     "unknown_share_95": [
+      0.0023,
+      0.0197
+     ],
+     "false_share_95": [
+      0.0035,
+      0.0119
+     ]
+    },
+    "R3 no address and weak match": {
+     "thresholds": [
+      0.705
+     ],
+     "hit": 21,
+     "miss": 423,
+     "false_unknown": 27,
+     "kept": 1509,
+     "unknown_share": 0.0472972972972973,
+     "false_share": 0.017578125,
+     "unknown_share_95": [
+      0.0311,
+      0.0712
+     ],
+     "false_share_95": [
+      0.0121,
+      0.0255
+     ]
+    },
+    "R4 wrong owner": {
+     "thresholds": [
+      0.045
+     ],
+     "hit": 40,
+     "miss": 404,
+     "false_unknown": 24,
+     "kept": 1512,
+     "unknown_share": 0.09009009009009009,
+     "false_share": 0.015625,
+     "unknown_share_95": [
+      0.0669,
+      0.1204
+     ],
+     "false_share_95": [
+      0.0105,
+      0.0231
+     ]
+    },
+    "R5 weak coverage": {
+     "thresholds": [
+      0.35
+     ],
+     "hit": 9,
+     "miss": 435,
+     "false_unknown": 14,
+     "kept": 1522,
+     "unknown_share": 0.02027027027027027,
+     "false_share": 0.009114583333333334,
+     "unknown_share_95": [
+      0.0107,
+      0.0381
+     ],
+     "false_share_95": [
+      0.0054,
+      0.0152
+     ]
+    },
+    "R1 or R2": {
+     "thresholds": [
+      0.705,
+      5
+     ],
+     "hit": 21,
+     "miss": 423,
+     "false_unknown": 27,
+     "kept": 1509,
+     "unknown_share": 0.0472972972972973,
+     "false_share": 0.017578125,
+     "unknown_share_95": [
+      0.0311,
+      0.0712
+     ],
+     "false_share_95": [
+      0.0121,
+      0.0255
+     ]
+    },
+    "R4 or R2": {
+     "thresholds": [
+      0.045,
+      5
+     ],
+     "hit": 40,
+     "miss": 404,
+     "false_unknown": 24,
+     "kept": 1512,
+     "unknown_share": 0.09009009009009009,
+     "false_share": 0.015625,
+     "unknown_share_95": [
+      0.0669,
+      0.1204
+     ],
+     "false_share_95": [
+      0.0105,
+      0.0231
+     ]
+    }
+   },
+   "chosen": "R4 wrong owner",
+   "tests_on_lme": {
+    "R1 weak match": {
+     "hit": 22,
+     "miss": 8,
+     "false_unknown": 149,
+     "kept": 321,
+     "unknown_share": 0.7333333333333333,
+     "false_share": 0.3170212765957447,
+     "unknown_share_95": [
+      0.5555,
+      0.8582
+     ],
+     "false_share_95": [
+      0.2766,
+      0.3604
+     ]
+    },
+    "R2 missing words": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    },
+    "R3 no address and weak match": {
+     "hit": 22,
+     "miss": 8,
+     "false_unknown": 149,
+     "kept": 321,
+     "unknown_share": 0.7333333333333333,
+     "false_share": 0.3170212765957447,
+     "unknown_share_95": [
+      0.5555,
+      0.8582
+     ],
+     "false_share_95": [
+      0.2766,
+      0.3604
+     ]
+    },
+    "R4 wrong owner": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    },
+    "R5 weak coverage": {
+     "hit": 2,
+     "miss": 28,
+     "false_unknown": 13,
+     "kept": 457,
+     "unknown_share": 0.06666666666666667,
+     "false_share": 0.027659574468085105,
+     "unknown_share_95": [
+      0.0185,
+      0.2132
+     ],
+     "false_share_95": [
+      0.0162,
+      0.0467
+     ]
+    },
+    "R1 or R2": {
+     "hit": 22,
+     "miss": 8,
+     "false_unknown": 149,
+     "kept": 321,
+     "unknown_share": 0.7333333333333333,
+     "false_share": 0.3170212765957447,
+     "unknown_share_95": [
+      0.5555,
+      0.8582
+     ],
+     "false_share_95": [
+      0.2766,
+      0.3604
+     ]
+    },
+    "R4 or R2": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    }
+   },
+   "verdict_bar_met": false,
+   "examples": {
+    "hit": null,
+    "false_unknown": null,
+    "miss": {
+     "question_id": "0862e8bf_abs",
+     "category": "single-session-user",
+     "question": "What is the name of my hamster?",
+     "best_cos": 0.59661,
+     "missing_terms": [
+      "hamster"
+     ],
+     "walked": false,
+     "owner_gap": null,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_hit": {
+     "question_id": "conv-26-q0168",
+     "category": "adversarial",
+     "question": "What are the new shoes that Caroline got used for?",
+     "best_cos": 0.80056,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.10989000000000004,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_false_unknown": {
+     "question_id": "conv-26-q0083",
+     "category": "single-hop",
+     "question": "What did Melanie realize after the charity race?",
+     "best_cos": 0.8667,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.05302000000000007,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_miss": {
+     "question_id": "conv-26-q0152",
+     "category": "adversarial",
+     "question": "What did Caroline realize after her charity race?",
+     "best_cos": 0.73829,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.0,
+     "rule": "R4 wrong owner"
+    }
+   }
+  },
+  "address_first": {
+   "locomo_questions": {
+    "unknown": 444,
+    "answerable": 1536
+   },
+   "lme_questions": {
+    "unknown": 30,
+    "answerable": 470
+   },
+   "fits_on_locomo": {
+    "R1 weak match": {
+     "thresholds": [
+      0.705
+     ],
+     "hit": 23,
+     "miss": 421,
+     "false_unknown": 30,
+     "kept": 1506,
+     "unknown_share": 0.0518018018018018,
+     "false_share": 0.01953125,
+     "unknown_share_95": [
+      0.0348,
+      0.0765
+     ],
+     "false_share_95": [
+      0.0137,
+      0.0277
+     ]
+    },
+    "R2 missing words": {
+     "thresholds": [
+      3
+     ],
+     "hit": 3,
+     "miss": 441,
+     "false_unknown": 10,
+     "kept": 1526,
+     "unknown_share": 0.006756756756756757,
+     "false_share": 0.006510416666666667,
+     "unknown_share_95": [
+      0.0023,
+      0.0197
+     ],
+     "false_share_95": [
+      0.0035,
+      0.0119
+     ]
+    },
+    "R3 no address and weak match": {
+     "thresholds": [
+      0.715
+     ],
+     "hit": 26,
+     "miss": 418,
+     "false_unknown": 27,
+     "kept": 1509,
+     "unknown_share": 0.05855855855855856,
+     "false_share": 0.017578125,
+     "unknown_share_95": [
+      0.0403,
+      0.0844
+     ],
+     "false_share_95": [
+      0.0121,
+      0.0255
+     ]
+    },
+    "R4 wrong owner": {
+     "thresholds": [
+      0.04
+     ],
+     "hit": 45,
+     "miss": 399,
+     "false_unknown": 29,
+     "kept": 1507,
+     "unknown_share": 0.10135135135135136,
+     "false_share": 0.018880208333333332,
+     "unknown_share_95": [
+      0.0766,
+      0.1329
+     ],
+     "false_share_95": [
+      0.0132,
+      0.027
+     ]
+    },
+    "R5 weak coverage": {
+     "thresholds": [
+      0.35
+     ],
+     "hit": 9,
+     "miss": 435,
+     "false_unknown": 14,
+     "kept": 1522,
+     "unknown_share": 0.02027027027027027,
+     "false_share": 0.009114583333333334,
+     "unknown_share_95": [
+      0.0107,
+      0.0381
+     ],
+     "false_share_95": [
+      0.0054,
+      0.0152
+     ]
+    },
+    "R1 or R2": {
+     "thresholds": [
+      0.705,
+      5
+     ],
+     "hit": 23,
+     "miss": 421,
+     "false_unknown": 30,
+     "kept": 1506,
+     "unknown_share": 0.0518018018018018,
+     "false_share": 0.01953125,
+     "unknown_share_95": [
+      0.0348,
+      0.0765
+     ],
+     "false_share_95": [
+      0.0137,
+      0.0277
+     ]
+    },
+    "R4 or R2": {
+     "thresholds": [
+      0.04,
+      5
+     ],
+     "hit": 45,
+     "miss": 399,
+     "false_unknown": 29,
+     "kept": 1507,
+     "unknown_share": 0.10135135135135136,
+     "false_share": 0.018880208333333332,
+     "unknown_share_95": [
+      0.0766,
+      0.1329
+     ],
+     "false_share_95": [
+      0.0132,
+      0.027
+     ]
+    }
+   },
+   "chosen": "R4 wrong owner",
+   "tests_on_lme": {
+    "R1 weak match": {
+     "hit": 22,
+     "miss": 8,
+     "false_unknown": 149,
+     "kept": 321,
+     "unknown_share": 0.7333333333333333,
+     "false_share": 0.3170212765957447,
+     "unknown_share_95": [
+      0.5555,
+      0.8582
+     ],
+     "false_share_95": [
+      0.2766,
+      0.3604
+     ]
+    },
+    "R2 missing words": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    },
+    "R3 no address and weak match": {
+     "hit": 23,
+     "miss": 7,
+     "false_unknown": 170,
+     "kept": 300,
+     "unknown_share": 0.7666666666666667,
+     "false_share": 0.3617021276595745,
+     "unknown_share_95": [
+      0.5907,
+      0.8821
+     ],
+     "false_share_95": [
+      0.3195,
+      0.4061
+     ]
+    },
+    "R4 wrong owner": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    },
+    "R5 weak coverage": {
+     "hit": 2,
+     "miss": 28,
+     "false_unknown": 13,
+     "kept": 457,
+     "unknown_share": 0.06666666666666667,
+     "false_share": 0.027659574468085105,
+     "unknown_share_95": [
+      0.0185,
+      0.2132
+     ],
+     "false_share_95": [
+      0.0162,
+      0.0467
+     ]
+    },
+    "R1 or R2": {
+     "hit": 22,
+     "miss": 8,
+     "false_unknown": 149,
+     "kept": 321,
+     "unknown_share": 0.7333333333333333,
+     "false_share": 0.3170212765957447,
+     "unknown_share_95": [
+      0.5555,
+      0.8582
+     ],
+     "false_share_95": [
+      0.2766,
+      0.3604
+     ]
+    },
+    "R4 or R2": {
+     "hit": 0,
+     "miss": 30,
+     "false_unknown": 0,
+     "kept": 470,
+     "unknown_share": 0.0,
+     "false_share": 0.0,
+     "unknown_share_95": [
+      0.0,
+      0.1135
+     ],
+     "false_share_95": [
+      0.0,
+      0.0081
+     ]
+    }
+   },
+   "verdict_bar_met": false,
+   "examples": {
+    "hit": null,
+    "false_unknown": null,
+    "miss": {
+     "question_id": "0862e8bf_abs",
+     "category": "single-session-user",
+     "question": "What is the name of my hamster?",
+     "best_cos": 0.59661,
+     "missing_terms": [
+      "hamster"
+     ],
+     "walked": false,
+     "owner_gap": null,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_hit": {
+     "question_id": "conv-26-q0162",
+     "category": "adversarial",
+     "question": "What did Caroline and her family do while camping?",
+     "best_cos": 0.73562,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.04492000000000007,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_false_unknown": {
+     "question_id": "conv-26-q0005",
+     "category": "temporal",
+     "question": "When did Melanie run a charity race?",
+     "best_cos": 0.91979,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.044560000000000044,
+     "rule": "R4 wrong owner"
+    },
+    "locomo_miss": {
+     "question_id": "conv-26-q0152",
+     "category": "adversarial",
+     "question": "What did Caroline realize after her charity race?",
+     "best_cos": 0.73829,
+     "missing_terms": [],
+     "walked": false,
+     "owner_gap": 0.0,
+     "rule": "R4 wrong owner"
+    }
+   }
+  }
+ }
+}
