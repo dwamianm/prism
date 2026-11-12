@@ -390,16 +390,20 @@ class VectorIndex:
         # Lifecycle states eligible for retrieval (exclude superseded/archived)
         _ACTIVE_STATES = ("tentative", "stable", "contested")
 
-        key_placeholders = ", ".join("?" for _ in candidate_keys)
+        # The keys are written into the SQL as integer literals. DuckDB binds
+        # each parameter separately, and with the 1,500 keys of a default read
+        # the binding cost about 15 times the query itself (READ-PATH-COST.md,
+        # 2026-11-12). int() keeps the text a plain number.
+        key_literals = ", ".join(str(int(key)) for key in candidate_keys)
         sql = (
             "SELECT vm.vector_key, vm.node_id, vm.embedding_model, "
             "vm.embedding_version, vm.embedding_dim FROM vector_metadata vm "
             "JOIN nodes n ON vm.node_id = n.id "
-            f"WHERE vm.vector_key IN ({key_placeholders})"
+            f"WHERE vm.vector_key IN ({key_literals})"
             " AND vm.user_id = ? AND n.user_id = vm.user_id"
             " AND COALESCE(n.lifecycle_state, 'tentative') IN (?, ?, ?)"
         )
-        params: list = [*candidate_keys, user_id, *_ACTIVE_STATES]
+        params: list = [user_id, *_ACTIVE_STATES]
 
         if scope is not None and scope:
             placeholders = ", ".join("?" for _ in scope)
