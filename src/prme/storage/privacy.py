@@ -364,7 +364,7 @@ class PrivacyRepository:
             async with self.pool.acquire() as conn, conn.transaction():
                 for event, record, intent in zip(events, records, direct, strict=True):
                     await conn.execute(
-                        self.events.insert_sql, *self.events._insert_row(event))
+                        self.events.insert_sql, *self.events._insert_values(event))
                     await conn.execute("INSERT INTO privacy_admissions VALUES ($1,$2,$3,$4,$5,$6)", *_values(record))
                     if intent is not None:
                         await conn.execute("INSERT INTO event_materializations(event_id) VALUES ($1)", str(event.id))

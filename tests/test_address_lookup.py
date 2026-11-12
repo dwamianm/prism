@@ -47,6 +47,16 @@ second_user = "assertion-state-second-owner"
 reference = datetime(2026, 12, 1, tzinfo=timezone.utc)
 
 
+def _duckdb_only(config):
+    """Skip a test that reads DuckDB internals (the stored columns, the raw node writer).
+
+    PostgreSQL has no stored address or marker columns and keeps the full scan, so the
+    equality tests still run there and check that the fallback returns the same state.
+    """
+    if config.backend != "duckdb":
+        pytest.skip("the stored address and marker columns exist only on DuckDB")
+
+
 async def _store(engine, *, owner, subject="Alice", predicate="lives_in",
                  object_value="Seattle", scope=Scope.PERSONAL, **kwargs):
     content = f"{subject} {predicate} {object_value}."
@@ -136,6 +146,7 @@ async def test_a_second_owners_claims_are_not_at_the_first_owners_address(config
 
 async def test_the_scan_counts_are_the_same_on_both_paths(config, user):
     """The counts describe the whole queried node type, and the address read takes them from a count."""
+    _duckdb_only(config)
     async with MemoryEngine.open(config) as engine:
         await _store(engine, owner=user, object_value="Seattle")
         # A node with no usable claim, which is what missing_structured_assertion counts.
@@ -158,6 +169,7 @@ async def test_the_scan_counts_are_the_same_on_both_paths(config, user):
 
 
 async def test_the_stored_address_matches_the_normalize_rule(config, user):
+    _duckdb_only(config)
     async with MemoryEngine.open(config) as engine:
         node = await _store(engine, owner=user, subject="  Alice  ", predicate="Lives   In",
                             object_value="Seattle")
@@ -277,6 +289,7 @@ async def test_no_index_covers_the_stored_columns(config, user):
     address and the marker, so no index may name them. The supported DuckDB does not use one
     for this read anyway (``prme.storage.assertion_keys`` has the measurement).
     """
+    _duckdb_only(config)
     async with MemoryEngine.open(config) as engine:
         rows = engine._graph_store._conn.execute(
             "SELECT index_name, sql FROM duckdb_indexes() WHERE table_name IN ('nodes', 'events')"
