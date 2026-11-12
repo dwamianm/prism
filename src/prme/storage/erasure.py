@@ -694,11 +694,20 @@ async def _purge_sql_step(repository, intent):
                 # Keep an opaque enrollment reservation. A predictable digest of
                 # erased content is not a valid integrity/replay record.
                 metadata = json.dumps({"_prme_privacy_v1": record.reference(), "erasure": "memory"})
+                # The row keeps a privacy marker, so its stored marker column is written
+                # with it on a store that has the column and never left saying otherwise.
+                event_columns = {row["column_name"] for row in await session.fetch(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema=current_schema() AND table_name='events'")}
+                marker_columns = (",has_privacy_marker=true" if "has_privacy_marker" in event_columns else "")
                 if "privacy_format" in tables:
-                    await session.execute("UPDATE events SET content='',metadata=$1 WHERE id=$2 AND user_id=$3",
+                    await session.execute(
+                        f"UPDATE events SET content='',metadata=$1{marker_columns} WHERE id=$2 AND user_id=$3",
                         metadata, str(event_id), str(intent.owner_id))
                 else:
-                    await session.execute("UPDATE events SET content='',content_hash=$1,metadata=$2 WHERE id=$3 AND user_id=$4",
+                    await session.execute(
+                        f"UPDATE events SET content='',content_hash=$1,metadata=$2{marker_columns} "
+                        f"WHERE id=$3 AND user_id=$4",
                         "", metadata, str(event_id), str(intent.owner_id))
                 await session.execute("UPDATE event_materializations SET status='failed',last_error='privacy_erased' WHERE event_id=$1", str(event_id))
         if request.mode != "memory":

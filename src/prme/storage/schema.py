@@ -41,11 +41,17 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
             scope VARCHAR NOT NULL DEFAULT 'personal',
             metadata JSON,
             created_at TIMESTAMPTZ DEFAULT current_timestamp,
-            event_time TIMESTAMPTZ
+            event_time TIMESTAMPTZ,
+            has_privacy_marker BOOLEAN
         )
     """
     if protected:
+        # The protected format declares exactly its own events columns, so it keeps no
+        # stored privacy marker (``prme.storage.assertion_keys``).
         event_ddl = event_ddl.replace("            content_hash VARCHAR NOT NULL,\n", "")
+        event_ddl = event_ddl.replace(
+            "            event_time TIMESTAMPTZ,\n            has_privacy_marker BOOLEAN\n",
+            "            event_time TIMESTAMPTZ\n")
     conn.execute(event_ddl)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_events_user ON events (user_id)"
@@ -142,7 +148,10 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
             confidence_base FLOAT DEFAULT 0.5,
             pinned BOOLEAN DEFAULT FALSE,
             ttl_days INTEGER,
-            event_time TIMESTAMPTZ
+            event_time TIMESTAMPTZ,
+            assertion_subject_key VARCHAR,
+            assertion_predicate_key VARCHAR,
+            has_privacy_marker BOOLEAN
         )
     """)
     conn.execute(
@@ -266,6 +275,44 @@ def create_schema(conn: duckdb.DuckDBPyConnection, *, protected: bool = False) -
         # ALTER above does: DuckDB's WAL replay of an ADD COLUMN is not reliable
         # after an abrupt exit.
         conn.execute("CHECKPOINT")
+
+
+def _add_and_backfill_assertion_columns(
+    conn: duckdb.DuckDBPyConnection, *, protected: bool
+) -> None:
+    """Give a pack that predates them the stored address and marker columns, then fill them.
+
+    A new store declares the columns in ``CREATE TABLE``. A pack that predates them gains
+    them here, after every other column migration, because the node row reader reads
+    columns by position and these must come after ``event_time``. The ALTER is checkpointed
+    at once, as the event_extractions and organizer_watermarks ALTERs are: DuckDB 1.4.4
+    cannot replay an ADD COLUMN on a table with a ``current_timestamp`` default from the WAL
+    after an abrupt exit. They carry no index; the reason is in
+    ``prme.storage.assertion_keys``.
+    """
+    from prme.storage.assertion_keys import add_columns
+    if add_columns(conn, protected=protected):
+        conn.execute("CHECKPOINT")
+    _backfill_assertion_columns(conn)
+
+
+def _backfill_assertion_columns(conn: duckdb.DuckDBPyConnection) -> None:
+    """Fill the stored claim address and privacy marker of rows that have neither.
+
+    Both values come from the row's own stored metadata, so filling them cannot change what
+    any read returns; it only saves a scan. A row that needs nothing is not read again, and
+    a pack that is already filled pays one short probe here. Runs on open, before any
+    read can ask for an address that is not there yet.
+    """
+    from prme.storage.assertion_keys import backfill, needs_backfill
+    if not needs_backfill(conn):
+        return
+    counts = backfill(conn)
+    if any(counts.values()):
+        logger.info(
+            "Backfilled the claim address and privacy marker: %s",
+            ", ".join(f"{name} {count}" for name, count in sorted(counts.items())),
+        )
 
 
 def _migrate_events_scope(conn: duckdb.DuckDBPyConnection) -> None:
@@ -607,6 +654,7 @@ def initialize_database(conn: duckdb.DuckDBPyConnection, *, protected: bool = Fa
     _migrate_nodes_ttl_days(conn)
     _migrate_events_event_time(conn)
     _migrate_nodes_event_time(conn)
+    _add_and_backfill_assertion_columns(conn, protected=protected)
     from prme.storage.derivation_registry import initialize_duck
     initialize_duck(conn)
     from prme.storage.profile_registry import initialize_duck as initialize_profiles

@@ -33,7 +33,8 @@ async def initialize_pg(conn) -> None:
     await conn.execute(ROTATION_DDL)
 
 
-def _protected_range_sql(postgres: bool, scope: str | None, *, unscoped: bool = False) -> str:
+def _protected_range_sql(postgres: bool, scope: str | None, *, unscoped: bool = False,
+                         marked: bool = False) -> str:
     # Opaque enrollment metadata only, including orphaned or malformed markers.
     # An empty event body or missing work row cannot establish legacy status.
     where = "1=1" if unscoped else "user_id=$1"
@@ -41,14 +42,42 @@ def _protected_range_sql(postgres: bool, scope: str | None, *, unscoped: bool = 
         where += " AND scope=$1" if unscoped else " AND scope=$2"
     marker = (f"metadata ? '{PRIVACY_KEY}'" if postgres else
               f"json_extract(metadata,'$.{PRIVACY_KEY}') IS NOT NULL")
-    return (f"SELECT 1 FROM privacy_admissions WHERE {where} UNION ALL "
-            f"SELECT 1 FROM events WHERE {where} AND {marker} UNION ALL "
-            f"SELECT 1 FROM nodes WHERE {where} AND {marker} LIMIT 1")
+    if not marked:
+        return (f"SELECT 1 FROM privacy_admissions WHERE {where} UNION ALL "
+                f"SELECT 1 FROM events WHERE {where} AND {marker} UNION ALL "
+                f"SELECT 1 FROM nodes WHERE {where} AND {marker} LIMIT 1")
+    # A store this build wrote carries the marker column on both tables. The column says
+    # whether the marker is there, so a row it covers is answered without reading the JSON,
+    # and a row it does not cover (NULL) is asked the exact question. The two questions
+    # together accept exactly the rows the single predicate above accepts.
+    from prme.storage.assertion_keys import PRIVACY_COLUMN
+    branches = [f"SELECT 1 FROM privacy_admissions WHERE {where}"]
+    for table in ("events", "nodes"):
+        branches.append(f"SELECT 1 FROM {table} WHERE {where} AND {PRIVACY_COLUMN}")
+        branches.append(
+            f"SELECT 1 FROM {table} WHERE {where} AND {PRIVACY_COLUMN} IS NULL AND {marker}")
+    return " UNION ALL ".join(branches) + " LIMIT 1"
+
+
+def _marked_columns(conn) -> bool:
+    """Whether both tables carry the stored privacy marker column.
+
+    A pack this build wrote does, and a pack it has opened once has been given it. This
+    probe is two prepared-statement lookups on this connection, and its cost is paid once
+    per call to keep the range check exact on a pack that predates the column.
+    """
+    from prme.storage.assertion_keys import PRIVACY_COLUMN
+    for table in ("events", "nodes"):
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info('{table}')").fetchall()}
+        if PRIVACY_COLUMN not in columns:
+            return False
+    return True
 
 
 def require_legacy_duck(conn, user_id: str | None, scope: str | None) -> None:
     args = ([] if user_id is None else [user_id]) + ([scope] if scope is not None else [])
-    if conn.execute(_protected_range_sql(False, scope, unscoped=user_id is None), args).fetchone() is not None:
+    sql = _protected_range_sql(False, scope, unscoped=user_id is None, marked=_marked_columns(conn))
+    if conn.execute(sql, args).fetchone() is not None:
         raise PrivacyDenied("privacy_provider_unavailable")
 
 

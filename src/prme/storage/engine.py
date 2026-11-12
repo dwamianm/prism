@@ -3539,11 +3539,16 @@ class MemoryEngine:
         user_id: str,
         batch_size: int = 500,
     ) -> "AssertionState":
-        """Return exact current claim candidates and their stored timeline."""
-        from prme.models.temporal import AssertionStateQuery
-        from prme.retrieval.temporal import get_assertion_state
+        """Return exact current claim candidates and their stored timeline.
 
-        return await get_assertion_state(
+        Reads one address when the store carries the stored address columns, which every
+        pack this build opened does, and the full scan otherwise. Both return the same
+        state: the address read is checked field for field against the full scan.
+        """
+        from prme.models.temporal import AssertionStateQuery
+        from prme.retrieval.temporal import get_assertion_state_by_address
+
+        return await get_assertion_state_by_address(
             self,
             AssertionStateQuery.model_validate(query),
             user_id=user_id,
