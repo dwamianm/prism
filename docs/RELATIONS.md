@@ -181,7 +181,8 @@ superseded, or a validity end that has passed; `planned` for the status planned 
   claims stated at that same time are all `current`.
 
 For a question about now the ledger lists `current` (newest first), `planned` (soonest first), `earlier`, `ended` and
-`negated` (newest first). A question that is not about now (`is_current_state_question`) and asks for history
+`negated` (newest first); the receipt records that list, and placement (below) keeps the retrieval order inside one
+state. A question that is not about now (`is_current_state_question`) and asks for history
 ("when", "before", "use to", "every", "how long") reads it in time order. The names the ledger's claims use are
 taken out of the question before either check, so "Where is the first aid kit now?" asks about now: "first" there
 names the kit. Claims stated at one time are ordered by their text, and by node id only when the text is the same
