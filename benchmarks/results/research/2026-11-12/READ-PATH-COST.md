@@ -18,6 +18,11 @@ replaced. `compare` fails on any difference.
 Machine: Apple M5 Pro, 18 cores, Python 3.11.6, DuckDB 1.4.4, USearch 2.26.2. The machine was not idle (load
 average about 3.6), as in daily use.
 
+Setup trap: a fresh worktree for the `origin/main` side needs `uv sync --all-extras`, as the branch worktree has.
+Without it `sentence-transformers` is missing, and every stored receipt differs in `execution.features.packages`
+while nothing else changes. The bar (a) runs below used matching environments (`uv pip freeze` identical apart from
+the project path).
+
 ## Baseline (origin/main e10ca299)
 
 | Memories | Reads | p50 | p95 | Mean | Max |
@@ -116,10 +121,49 @@ and bar (a) failed.
 Cycle 1 (vector keys only) on the growing pack: p95 192.3 ms and 201.6 ms against 276.2 ms and 295.6 ms, 60/60
 identical. Those runs read a larger store than their baseline, so they are recorded only as history.
 
+## Bar (a)
+
+Run after the two cycles, with no code change. Off side: `origin/main` e10ca299 in its own detached worktree. On
+side: this branch at 455b6b7a. Providers blocked. Model identity `e04da138`, Ollama 0.40.16.
+
+**Probes.** The defect, chat and member probes (member with `--speaker` and `enable_speaker_grounding=true`) were
+built on each side from the saved extraction cache with `PRME_BENCH_CACHE_ONLY=1`: 0 model calls (14, 54 and 30
+cache hits).
+
+| Probe | Top 3, main | Top 3, branch | Top 5, main | Top 5, branch | Claims on the named owner, main and branch |
+|---|---|---|---|---|---|
+| `defects-v1` | 7/7 | 7/7 | 7/7 | 7/7 | 12 and 12 |
+| `chat-v1` | 14/18 | 14/18 | 15/18 | 15/18 | 35 and 35 |
+| `member-v1` | 10/12 | 10/12 | 11/12 | 11/12 | 7 and 7 |
+
+Answer ranks and top results are identical on all 37 probes. Rebuilt packs differ in some lines lower in the
+context, which change order (`chat-v1` 3 of 18 contexts, `member-v1` 3 of 12, and the `record_types` count of 3
+`chat-v1` probes). That is the known engine-wide tie-break on random node ids, an open item that this branch does not
+touch: `origin/main` built twice against itself shows the same kind of difference (`chat-v1` 1 of 18 contexts and
+the same 3 `record_types` counts, `member-v1` 3 of 12, `defects-v1` 0 of 7).
+
+**Same pack, each side's code.** To take the rebuild out, each probe pack built on `origin/main` was copied four
+times and measured with `chat_probe measure` (no model): twice with the branch, twice with `origin/main`. Every
+context is identical (37 of 37 in both branch runs), and every stored retrieval receipt is byte-identical with its
+request id masked (37 of 37), as in the main-against-main control. This is the bar (a) evidence for the probes.
+
+**Offline evidence gate.** `product_packing gate` with the regenerated LongMemEval-S controls, no `--set`, then
+`gate-compare`: every row of the first table +0.0 pp, interval +0.0 to +0.0, 0 won and 0 lost (1,540 LoCoMo and
+500 LongMemEval-S questions). No question lost or gained all its evidence among the candidates. All 2,040 rows are
+identical except their timing, the context digest included. Both sides ran at the same time on one machine (load
+average 15 to 23), so the gate's latency is not a clean comparison: p50 / p95 LoCoMo 180 / 265 ms to 123 / 203 ms,
+LongMemEval-S 183 / 268 ms to 141 / 217 ms.
+
+**Tests.** The targeted tests listed under bar (c), `test_determinism_rebuild.py` included: 97 passed, 27 skipped
+(PostgreSQL), providers blocked.
+
+Reports (ignored): `data/read-cost-v1/gate/` (`off`, `on`, `compare`) and `data/chat-probe-v1/<conversation>/`
+`rc-M`, `rc-M2` (main twice) and `rc-B` (branch).
+
 ## Verdict
 
-- Bar (a): met for the stage-timing questions at both sizes (60/60 and 60/60). The defect, chat and member probes and
-  the offline evidence gate were not run, because bar (b) failed after two cycles and the brief says to stop there.
+- Bar (a): **met.** The stage-timing questions are identical at both sizes (60/60 and 60/60). The probes, the
+  same-pack receipts, the offline evidence gate and the determinism tests show no difference ("Bar (a)" above).
 - Bar (b): **not met.** p95 at 20,000 memories is 221.5 ms, 0.70x of `main2`; the bar is 0.50x (158.7 ms).
 - Bar (c): ruff passes on the changed files. Targeted tests pass with providers blocked: 97 passed, 27 skipped
   (PostgreSQL), in `test_determinism_rebuild.py`, `test_packing_receipt_compatibility.py`, `test_privacy_receipts.py`,
