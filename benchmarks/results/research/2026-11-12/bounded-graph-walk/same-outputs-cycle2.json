@@ -1,0 +1,68 @@
+{
+ "locomo-conv-26": {
+  "reads": 152,
+  "ranked_same": 152,
+  "packed_same": 152,
+  "context_same": 152,
+  "response_same": 152,
+  "receipts": "152/152",
+  "receipt_same": 152,
+  "receipt_fields_same": 152,
+  "first_diffs": []
+ },
+ "locomo-conv-30": {
+  "reads": 81,
+  "ranked_same": 81,
+  "packed_same": 81,
+  "context_same": 81,
+  "response_same": 81,
+  "receipts": "81/81",
+  "receipt_same": 81,
+  "receipt_fields_same": 81,
+  "first_diffs": []
+ },
+ "locomo-conv-41": {
+  "reads": 152,
+  "ranked_same": 152,
+  "packed_same": 152,
+  "context_same": 152,
+  "response_same": 152,
+  "receipts": "152/152",
+  "receipt_same": 152,
+  "receipt_fields_same": 152,
+  "first_diffs": []
+ },
+ "stated-20500": {
+  "reads": 25,
+  "ranked_same": 25,
+  "packed_same": 25,
+  "context_same": 25,
+  "response_same": 25,
+  "receipts": "25/25",
+  "receipt_same": 25,
+  "receipt_fields_same": 25,
+  "first_diffs": []
+ },
+ "stated-400": {
+  "reads": 25,
+  "ranked_same": 25,
+  "packed_same": 25,
+  "context_same": 25,
+  "response_same": 25,
+  "receipts": "25/25",
+  "receipt_same": 25,
+  "receipt_fields_same": 25,
+  "first_diffs": []
+ },
+ "stated-4000": {
+  "reads": 25,
+  "ranked_same": 25,
+  "packed_same": 25,
+  "context_same": 25,
+  "response_same": 25,
+  "receipts": "25/25",
+  "receipt_same": 25,
+  "receipt_fields_same": 25,
+  "first_diffs": []
+ }
+}

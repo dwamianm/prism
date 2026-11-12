@@ -23,6 +23,7 @@ import duckdb
 from prme.privacy.journals import protected_mutation, journal_deadline
 from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
+from prme.storage.seed_walk import WalkedNode, seed_walk_sql, walk_links_sql, walked_nodes
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
 from prme.storage.owner_reads import (
@@ -60,6 +61,20 @@ ARCHIVED_PROFILE_EXCLUSION_SQL = (
     "AND COALESCE(json_type(metadata, '$.entity_profile'), 'NULL') = 'BOOLEAN' "
     "AND json_extract_string(metadata, '$.entity_profile') = 'true')"
 )
+
+
+def _uuid_literals(values: list[str]) -> str | None:
+    """SQL literals for canonical UUID strings, or None if any value is not one.
+
+    A value is written only when it is exactly ``str(UUID(value))``: 36
+    lowercase hexadecimal digits and hyphens, so the text cannot carry SQL.
+    """
+    try:
+        if all(isinstance(value, str) and str(UUID(value)) == value for value in values):
+            return ", ".join(f"'{value}'" for value in values)
+    except (ValueError, AttributeError, TypeError):
+        pass
+    return None
 
 
 class DuckPGQGraphStore:
@@ -1071,6 +1086,56 @@ class DuckPGQGraphStore:
                 user_id,
             )
 
+    async def walk_from_seeds(
+        self,
+        seed_ids: list[str],
+        *,
+        max_hops: int,
+        valid_at: datetime | None = None,
+        user_id: str,
+    ) -> list[tuple[WalkedNode, int]]:
+        """Every node within ``max_hops`` of any seed, once, with its fewest hops.
+
+        The per-seed walks of ``get_neighborhood_with_depth`` in one query
+        (``prme.storage.seed_walk``): a seed is returned when another seed
+        reaches it, at its fewest hops from another seed. The rows are small
+        ``WalkedNode`` records; read full records with ``get_nodes``.
+        """
+        if not seed_ids:
+            return []
+        query = seed_walk_sql("duckdb", with_valid_at=valid_at is not None)
+        params: list = [user_id, max_hops, list(seed_ids)]
+        if valid_at is not None:
+            params.append(valid_at)
+
+        def read() -> list[tuple[WalkedNode, int]]:
+            return walked_nodes(self._conn.execute(query, params).fetchall(), epoch=True)
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
+    async def walk_links(self, node_ids: list[str]) -> list[tuple[str, str]]:
+        """The links a graph walk can step along that touch ``node_ids``, as two ids each.
+
+        The edges ``get_edges(node_ids=...)`` returns, without an edge from a
+        node to itself or an alias proposal no one accepted, as (source,
+        target) text instead of full records (``prme.storage.seed_walk``).
+        """
+        ids = list(node_ids)
+        if not ids:
+            return []
+        literals = _uuid_literals(ids)
+        if literals is not None:
+            query, params = walk_links_sql("duckdb", literals), []
+        else:
+            query, params = walk_links_sql("duckdb", ", ".join("?" for _ in ids)), ids + ids
+
+        def read() -> list[tuple[str, str]]:
+            return [(source, target) for source, target in self._conn.execute(query, params).fetchall()]
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
     async def find_shortest_path(
         self,
         source_id: str,
@@ -1341,8 +1406,15 @@ class DuckPGQGraphStore:
     def _get_nodes_sync(
         self, node_ids: list[str], include_superseded: bool
     ) -> list[MemoryNode]:
-        """Retrieve multiple nodes by ID with one IN query (sync)."""
-        placeholders = ", ".join(["?" for _ in node_ids])
+        """Retrieve multiple nodes by ID with one IN query (sync).
+
+        Canonical UUID strings go into the SQL as literals, as in
+        ``_get_edges_sync``: binding each id separately made reading 900
+        nodes take about 60 ms instead of 12 (BOUNDED-GRAPH-WALK.md).
+        """
+        literals = _uuid_literals(list(node_ids))
+        placeholders = literals if literals is not None else ", ".join(["?" for _ in node_ids])
+        params = [] if literals is not None else list(node_ids)
         if include_superseded:
             query = f"SELECT * FROM nodes WHERE id IN ({placeholders})"
         else:
@@ -1351,7 +1423,7 @@ class DuckPGQGraphStore:
                 WHERE id IN ({placeholders})
                 AND lifecycle_state IN ('tentative', 'stable', 'contested')
             """
-        rows = self._conn.execute(query, list(node_ids)).fetchall()
+        rows = self._conn.execute(query, params).fetchall()
         return [self._row_to_node(row) for row in rows]
 
     @staticmethod
@@ -1558,13 +1630,22 @@ class DuckPGQGraphStore:
             params.append(target_id)
 
         if node_ids is not None and node_ids:
-            id_placeholders = ", ".join(["?" for _ in node_ids])
-            conditions.append(
-                f"(source_id IN ({id_placeholders}) "
-                f"OR target_id IN ({id_placeholders}))"
-            )
-            params.extend(node_ids)
-            params.extend(node_ids)
+            # Canonical UUID strings go into the SQL as literals: DuckDB binds
+            # each parameter separately, and the seed reach read passes up to
+            # 5,000 ids twice (BOUNDED-GRAPH-WALK.md, 2026-11-12). Any other
+            # value keeps the bound parameters.
+            ids = list(node_ids)
+            literals = _uuid_literals(ids)
+            if literals is not None:
+                conditions.append(f"(source_id IN ({literals}) OR target_id IN ({literals}))")
+            else:
+                id_placeholders = ", ".join(["?" for _ in ids])
+                conditions.append(
+                    f"(source_id IN ({id_placeholders}) "
+                    f"OR target_id IN ({id_placeholders}))"
+                )
+                params.extend(ids)
+                params.extend(ids)
 
         if edge_type is not None:
             conditions.append("edge_type = ?")

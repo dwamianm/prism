@@ -1,0 +1,11 @@
+defects-v1 sp-walk measured
+chat-v1 sp-walk measured
+member-v1 sp-walk measured
+defects-v1 main vs walk: raw identical 0/7, masked identical 7/7, log fields 7/7
+chat-v1 main vs walk: raw identical 0/18, masked identical 18/18, log fields 18/18
+member-v1 main vs walk: raw identical 0/12, masked identical 12/12, log fields 12/12
+== defects-v1 diff lines:        0
+== chat-v1 diff lines:        0
+== member-v1 diff lines:        0
+
+[exited with code 0]
