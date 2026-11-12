@@ -1,0 +1,2024 @@
+{
+  "kind": "offline-evidence-gate-comparison",
+  "complete": true,
+  "bootstrap_samples": 2000,
+  "bootstrap_seed": 42,
+  "interval_note": "Intervals resample questions. LoCoMo's 1,540 questions come from 10 conversations, so they are narrower than conversation-level intervals.",
+  "before": {
+    "provenance": {
+      "commit": "934d60fdc3efb4a375cb1643ba0ea39c54da2cd0",
+      "dirty": true,
+      "worktree_sha256": "4359a75fa4c2248ed73fc17f85eaff498c370ed6557640301ca51bb1a78e56d0",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.17.0a7",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "privacy_policy": null,
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "pack_path": null,
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "batch_timeout": 180.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time",
+          "rrf_recency_order": true,
+          "rrf_graph_weight": 0.5,
+          "rrf_graph_seed_count": true
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 150,
+          "vector_k": 500,
+          "lexical_k": 500,
+          "graph_max_hops": 3,
+          "graph_seed_words": true,
+          "clock_window_filter": true,
+          "collapse_identical_text": true,
+          "session_context_direct_first": 10,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "session_context_skip_entities": true,
+          "fold_repeated_text": true,
+          "folded_records_keep_rank": true,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000,
+          "current_state_observations": true
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "incremental_enabled": false,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "vision": {
+          "enabled": false,
+          "provider": "ollama",
+          "model": "qwen3.5:9b",
+          "base_url": null,
+          "timeout": 180.0,
+          "describe_prompt_version": 3,
+          "extract": true,
+          "extraction_retry_delays": [
+            5.0,
+            15.0,
+            60.0
+          ],
+          "fps": 1.0,
+          "frame_width": 1280,
+          "change_threshold": 0.55,
+          "calibrate_keyframes": true,
+          "min_change_threshold": 0.3,
+          "noise_multiplier": 5.0,
+          "max_gap_seconds": 30.0,
+          "stream_settle_seconds": 0.5,
+          "stream_settle_timeout_seconds": 6.0,
+          "stream_moving_gap_seconds": 10.0,
+          "stream_heartbeat_seconds": 60.0,
+          "stream_max_pending": 10,
+          "stream_max_sessions": 16,
+          "stream_idle_seconds": 300.0,
+          "repeat_similarity": 0.93,
+          "thumbnail_width": 320,
+          "keep_thumbnails": true
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "enable_store_extraction": false,
+        "enable_reingest": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_owner_window_extraction": false,
+        "enable_pronoun_repair": false,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": true,
+        "enable_claim_sentence_text": true,
+        "enable_speaker_grounding": false,
+        "extraction_batch_target_tokens": 2048,
+        "enable_extraction_corrections": false,
+        "lexical_term_weights": true,
+        "enable_mention_links": true,
+        "enable_ingest_claim_fixes": true,
+        "enable_owner_name_carry": true,
+        "enable_owner_group_links": true,
+        "enable_named_claim_text": false,
+        "enable_superseded_source_suppression": false,
+        "enable_owner_profile_context": false,
+        "enable_relation_routing": true,
+        "memory_mode": "address_first",
+        "enable_belief_state": true,
+        "enable_typed_extraction": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "memory_mode": "address_first"
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "lme_captures": {
+        "path": "/Users/dwamianm/Sites/prism/data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline",
+        "manifest_sha256": "0103b9509a35cc8cb79614c3e6f3def4a8216f8528da4e7533867b1b37e6bb4f",
+        "label": "lme-controls-regenerated-2026-10-14",
+        "built_at": "2026-10-15T02:45:10.650958+00:00",
+        "commit": "5e4c3ae6da588c73c5d6451e5d1ba5140ce1a0ce",
+        "master_packs": "data/benchmarks/longmemeval-s-prme-baseline-v1",
+        "questions": 500,
+        "inputs_matching_master_identity": 500,
+        "master_captures_checked": 500,
+        "not_applicable": [
+          "source_capture_sha256",
+          "artifact_checksum"
+        ]
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-11-12T15:47:18.144439+00:00",
+    "load_average": {
+      "start": [
+        4.724609375,
+        6.29541015625,
+        5.8017578125
+      ],
+      "end": [
+        5.1953125,
+        5.2529296875,
+        5.42041015625
+      ]
+    }
+  },
+  "after": {
+    "provenance": {
+      "commit": "934d60fdc3efb4a375cb1643ba0ea39c54da2cd0",
+      "dirty": true,
+      "worktree_sha256": "4359a75fa4c2248ed73fc17f85eaff498c370ed6557640301ca51bb1a78e56d0",
+      "python": "3.11.6",
+      "platform": "macOS-26.6.1-arm64-arm-64bit",
+      "dependencies": {
+        "prme": "0.17.0a7",
+        "duckdb": "1.4.4",
+        "usearch": "2.26.2",
+        "tantivy": "0.25.1",
+        "fastembed": "0.7.4",
+        "tiktoken": "0.12.0",
+        "dateparser": "1.3.0"
+      },
+      "engine_config": {
+        "privacy_policy": null,
+        "database_url": "<redacted>",
+        "namespace_id": null,
+        "db_path": "{pack}/memory.duckdb",
+        "pack_path": null,
+        "duckdb_threads": null,
+        "vector_path": "{pack}/vectors.usearch",
+        "lexical_path": "{pack}/lexical_index",
+        "embedding": {
+          "provider": "fastembed",
+          "model_name": "BAAI/bge-small-en-v1.5",
+          "dimension": 384,
+          "api_key": "<redacted>"
+        },
+        "extraction": {
+          "provider": "openai",
+          "model": "gpt-4o-mini",
+          "max_retries": 3,
+          "timeout": 30.0,
+          "batch_timeout": 180.0,
+          "temperature": 0.0,
+          "reasoning_effort": null,
+          "lease_seconds": 300.0,
+          "api_key": "<redacted>",
+          "base_url": null
+        },
+        "write_queue_size": 1000,
+        "scoring": {
+          "w_semantic": 0.25,
+          "w_lexical": 0.2,
+          "w_graph": 0.2,
+          "w_recency": 0.1,
+          "w_salience": 0.1,
+          "w_confidence": 0.15,
+          "w_epistemic": 0.05,
+          "w_paths": 0.0,
+          "recency_lambda": 0.02,
+          "temporal_boost": 0.15,
+          "node_type_boost": {
+            "fact": 1.15,
+            "preference": 1.15,
+            "decision": 1.15,
+            "summary": 1.1,
+            "instruction": 1.15
+          },
+          "relevance_floor": 0.35,
+          "current_update_multiplier": 1.3,
+          "fusion": "rrf",
+          "rrf_k": 60,
+          "rrf_recency_boost": 0.25,
+          "rrf_tie_break": "event_time",
+          "rrf_recency_order": true,
+          "rrf_graph_weight": 0.5,
+          "rrf_graph_seed_count": true
+        },
+        "packing": {
+          "multipath_ordering": "balanced",
+          "context_guidance_mode": "temporal",
+          "context_format": "reader",
+          "context_citations": false,
+          "token_budget": 4096,
+          "tokenizer": "cl100k_base",
+          "min_fidelity": "reference",
+          "overhead_tokens": 100,
+          "chars_per_token": 4.2,
+          "graph_max_candidates": 40,
+          "vector_k": 60,
+          "lexical_k": 60,
+          "graph_max_hops": 2,
+          "graph_seed_words": true,
+          "clock_window_filter": true,
+          "collapse_identical_text": true,
+          "session_context_direct_first": 10,
+          "cross_scope_top_n": 5,
+          "cross_scope_token_budget": 512,
+          "session_context_window": 3,
+          "session_context_top_k": 20,
+          "session_context_score_decay": 0.85,
+          "session_context_rank_fusion_score_decay": 0.6,
+          "session_context_skip_entities": true,
+          "fold_repeated_text": true,
+          "folded_records_keep_rank": true,
+          "episode_context_top_k": 0,
+          "episode_context_local_k": 8,
+          "episode_context_score_decay": 0.95,
+          "evidence_projection_top_k": 0,
+          "evidence_projection_max_sources": 1,
+          "evidence_projection_score_decay": 1.0,
+          "evidence_augmentation_top_k": 0,
+          "evidence_augmentation_max_sources": 1,
+          "evidence_augmentation_score_decay": 0.99,
+          "evidence_augmentation_anchor_policy": "all",
+          "aggregation_k_multiplier": 3.0,
+          "aggregation_k_max": 2000,
+          "current_state_observations": true
+        },
+        "temporal_relation": {
+          "enabled": false,
+          "resolver_provider": "ollama",
+          "resolver_model": "deepseek-v4.1-flash:cloud",
+          "resolver_base_url": "http://127.0.0.1:11434",
+          "resolver_model_digest": "e04da138d31e0c9468e982e1ae9503d06cb7e170caa16a90c17d931c4aa140f8",
+          "resolver_timeout_seconds": 90.0,
+          "resolver_max_attempts": 3,
+          "maximum_schema_repairs": 1,
+          "gate_provider": "typesafe_jev",
+          "gate_model": "jev-1.13.0",
+          "gate_api_url": "https://api.typesafe.ai/v1/systemone",
+          "gate_threshold": 0.85,
+          "gate_timeout_seconds": 60.0,
+          "gate_max_attempts": 3,
+          "gate_api_key": "<redacted>",
+          "failure_policy": "fallback"
+        },
+        "organizer": {
+          "opportunistic_enabled": false,
+          "opportunistic_cooldown": 3600,
+          "opportunistic_budget_ms": 200,
+          "opportunistic_batch_size": 50,
+          "default_organize_budget_ms": 5000,
+          "incremental_enabled": false,
+          "promotion_age_days": 7.0,
+          "promotion_evidence_count": 1,
+          "archive_salience_threshold": 0.1,
+          "archive_confidence_threshold": 0.4,
+          "force_archive_salience_threshold": 0.05,
+          "deprecate_confidence_threshold": 0.15,
+          "dedup_similarity_threshold": 0.92,
+          "alias_similarity_threshold": 0.85,
+          "consolidation_min_cluster_size": 3,
+          "consolidation_similarity_threshold": 0.8,
+          "consolidation_preserve_recent_days": 7,
+          "consolidation_min_confidence_preserve": 0.8,
+          "default_ttl_days": {
+            "entity": null,
+            "fact": null,
+            "event": 365,
+            "decision": 180,
+            "preference": null,
+            "task": 90,
+            "summary": 365,
+            "note": 90
+          },
+          "summarization_daily_min_events": 5,
+          "summarization_weekly_min_summaries": 3,
+          "summarization_monthly_min_summaries": 2,
+          "summarization_max_items_per_summary": 10
+        },
+        "mcp": {
+          "user_id": null,
+          "user_keys": {}
+        },
+        "vision": {
+          "enabled": false,
+          "provider": "ollama",
+          "model": "qwen3.5:9b",
+          "base_url": null,
+          "timeout": 180.0,
+          "describe_prompt_version": 3,
+          "extract": true,
+          "extraction_retry_delays": [
+            5.0,
+            15.0,
+            60.0
+          ],
+          "fps": 1.0,
+          "frame_width": 1280,
+          "change_threshold": 0.55,
+          "calibrate_keyframes": true,
+          "min_change_threshold": 0.3,
+          "noise_multiplier": 5.0,
+          "max_gap_seconds": 30.0,
+          "stream_settle_seconds": 0.5,
+          "stream_settle_timeout_seconds": 6.0,
+          "stream_moving_gap_seconds": 10.0,
+          "stream_heartbeat_seconds": 60.0,
+          "stream_max_pending": 10,
+          "stream_max_sessions": 16,
+          "stream_idle_seconds": 300.0,
+          "repeat_similarity": 0.93,
+          "thumbnail_width": 320,
+          "keep_thumbnails": true
+        },
+        "api": {
+          "api_key": "<redacted>",
+          "user_keys": {},
+          "cors_origins": [],
+          "cors_allow_credentials": false
+        },
+        "enable_store_supersedence": false,
+        "enable_store_extraction": false,
+        "enable_reingest": false,
+        "reinforce_similarity_threshold": null,
+        "enable_claim_merge": true,
+        "enable_windowed_extraction": false,
+        "extraction_window_turns": 4,
+        "enable_owner_window_extraction": false,
+        "enable_pronoun_repair": false,
+        "enable_fact_text_resolution": false,
+        "enable_speaker_references": true,
+        "enable_claim_sentence_text": true,
+        "enable_speaker_grounding": false,
+        "extraction_batch_target_tokens": 2048,
+        "enable_extraction_corrections": false,
+        "lexical_term_weights": true,
+        "enable_mention_links": true,
+        "enable_ingest_claim_fixes": true,
+        "enable_owner_name_carry": true,
+        "enable_owner_group_links": true,
+        "enable_named_claim_text": false,
+        "enable_superseded_source_suppression": false,
+        "enable_owner_profile_context": false,
+        "enable_relation_routing": true,
+        "memory_mode": "address_first",
+        "result_limit": 40,
+        "read_profile": "robot",
+        "enable_belief_state": true,
+        "enable_typed_extraction": false,
+        "enable_qa_pairing": false,
+        "enable_surprise_gating": false,
+        "novelty_high_threshold": 0.7,
+        "novelty_low_threshold": 0.3,
+        "novelty_salience_boost": 0.15,
+        "novelty_salience_penalty": 0.1,
+        "enable_reranker": false,
+        "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "reranker_top_k": 100,
+        "reranker_prior_weight": 0.3,
+        "reranker_policy": "legacy",
+        "enable_query_reformulation": false,
+        "query_reformulation_merge_policy": "new_only",
+        "query_reformulation_count": 2,
+        "temporal_languages": [
+          "en"
+        ],
+        "query_intent_order": "entity_first",
+        "materialization_queue_size": 500,
+        "materialization_budget_ms": 100,
+        "vector_save_interval": 64,
+        "vector_exact_search": true,
+        "lexical_commit_interval": 64,
+        "lexical_commit_max_delay_s": 2.0,
+        "max_concurrent_extractions": 8,
+        "namespace_weights": {},
+        "epistemic_weights": {
+          "observed": 1.0,
+          "asserted": 0.9,
+          "inferred": 0.7,
+          "hypothetical": 0.3,
+          "conditional": 0.5,
+          "deprecated": 0.1,
+          "unverified": 0.5
+        },
+        "unverified_confidence_threshold": 0.3,
+        "confidence_overrides": {},
+        "encryption_enabled": false,
+        "encryption_key": "<redacted>"
+      },
+      "overrides": {
+        "memory_mode": "address_first",
+        "read_profile": "robot"
+      },
+      "retrieval_timing": "after-warm-up-v1",
+      "archive": {
+        "path": "/Users/dwamianm/Sites/prism/data/gpt54-comparison-v1",
+        "prepared_sha256": {
+          "locomo": "3fc704addc43229a5b4256f7d3d8220bb54f99f057fdbc9fb218005d2689d10b",
+          "longmemeval": "685284d70d36c2865e0942c4d2a1066d6a4403b2647077dcf7f06228c9cdc742"
+        }
+      },
+      "lme_captures": {
+        "path": "/Users/dwamianm/Sites/prism/data/opt-in-study/lme-controls-regenerated-2026-10-14/baseline",
+        "manifest_sha256": "0103b9509a35cc8cb79614c3e6f3def4a8216f8528da4e7533867b1b37e6bb4f",
+        "label": "lme-controls-regenerated-2026-10-14",
+        "built_at": "2026-10-15T02:45:10.650958+00:00",
+        "commit": "5e4c3ae6da588c73c5d6451e5d1ba5140ce1a0ce",
+        "master_packs": "data/benchmarks/longmemeval-s-prme-baseline-v1",
+        "questions": 500,
+        "inputs_matching_master_identity": 500,
+        "master_captures_checked": 500,
+        "not_applicable": [
+          "source_capture_sha256",
+          "artifact_checksum"
+        ]
+      },
+      "datasets": {
+        "locomo": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+        "longmemeval": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+      }
+    },
+    "started_at": "2026-11-12T15:56:52.126114+00:00",
+    "load_average": {
+      "start": [
+        5.41943359375,
+        5.29833984375,
+        5.43505859375
+      ],
+      "end": [
+        17.189453125,
+        15.1787109375,
+        11.4052734375
+      ]
+    }
+  },
+  "projection": {
+    "label": "Planning estimate, not an answer score.",
+    "method": "Each question takes the saved GPT-5.4 run's accuracy on questions whose annotated evidence was all packed, or partly missing: per category for LoCoMo, pooled for LongMemEval-S. Questions that retrieval cannot move (no resolvable annotation, or abstention) keep their category's measured rate.",
+    "calibration": "At the saved run's evidence states the projection reproduces 985/1,540 and 430/500 by construction; LongMemEval-S category values are pooled estimates. The audit's re-pack simulator, using the same LoCoMo rates, reproduced the real packed sets with mean Jaccard 0.83 and projected 63.3% against 64.0% measured (memory_bank/AUDIT-2026-09-23-BENCHMARK-GAP.md, section 1).",
+    "limits": [
+      "It ignores distractor effects: added or reordered context can change answers without changing evidence coverage.",
+      "It relies on the datasets' evidence annotations, which have gaps; equivalent evidence can exist elsewhere.",
+      "Its conditional accuracies come from one reader and one strict judge (GPT-5.4).",
+      "All 2,040 questions have already been examined, so this is a development gate. Publication claims need fresh or held-out data."
+    ],
+    "conditional_accuracy": {
+      "locomo": {
+        "single-hop": {
+          "all_packed": [
+            600,
+            657
+          ],
+          "missing": [
+            30,
+            183
+          ]
+        },
+        "temporal": {
+          "all_packed": [
+            216,
+            252
+          ],
+          "missing": [
+            10,
+            68
+          ]
+        },
+        "multi-hop": {
+          "all_packed": [
+            37,
+            45
+          ],
+          "missing": [
+            42,
+            233
+          ]
+        },
+        "open-domain": {
+          "all_packed": [
+            22,
+            29
+          ],
+          "missing": [
+            19,
+            60
+          ]
+        }
+      },
+      "longmemeval": {
+        "*": {
+          "all_packed": [
+            385,
+            403
+          ],
+          "missing": [
+            21,
+            67
+          ]
+        }
+      }
+    },
+    "unscored_accuracy": {
+      "locomo": {
+        "multi-hop": [
+          1,
+          4
+        ],
+        "open-domain": [
+          7,
+          7
+        ],
+        "single-hop": [
+          0,
+          1
+        ],
+        "temporal": [
+          1,
+          1
+        ]
+      },
+      "longmemeval": {
+        "knowledge-update": [
+          4,
+          6
+        ],
+        "multi-session": [
+          9,
+          12
+        ],
+        "single-session-user": [
+          6,
+          6
+        ],
+        "temporal-reasoning": [
+          5,
+          6
+        ]
+      }
+    },
+    "measured_accuracy": {
+      "locomo": [
+        985,
+        1540
+      ],
+      "longmemeval": [
+        430,
+        500
+      ]
+    }
+  },
+  "benchmarks": {
+    "locomo": {
+      "all_evidence_packed": {
+        "queries": 1536,
+        "before": 0.8411458333333334,
+        "after": 0.7936197916666666,
+        "delta": -0.047526041666666664,
+        "interval_95": [
+          -0.061848958333333336,
+          -0.033854166666666664
+        ],
+        "wins": 28,
+        "losses": 101,
+        "ties": 1407
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 1536,
+        "before": 0.8411458333333334,
+        "after": 0.7936197916666666,
+        "delta": -0.047526041666666664,
+        "interval_95": [
+          -0.061848958333333336,
+          -0.033854166666666664
+        ],
+        "wins": 28,
+        "losses": 101,
+        "ties": 1407
+      },
+      "evidence_recall": {
+        "queries": 1536,
+        "before": 0.892188159362961,
+        "after": 0.8503768628705137,
+        "delta": -0.041811296492447324,
+        "interval_95": [
+          -0.053572635028227136,
+          -0.030342683553850832
+        ],
+        "wins": 33,
+        "losses": 154,
+        "ties": 1349
+      },
+      "all_evidence_returned": {
+        "queries": 1536,
+        "before": 0.9928385416666666,
+        "after": 0.7936197916666666,
+        "delta": -0.19921875,
+        "interval_95": [
+          -0.21940104166666666,
+          -0.17903645833333334
+        ],
+        "wins": 0,
+        "losses": 306,
+        "ties": 1230
+      },
+      "projected_accuracy": {
+        "queries": 1540,
+        "before": 0.7773563674382651,
+        "after": 0.7464618284788351,
+        "delta": -0.03089453895943,
+        "interval_95": [
+          -0.041026536220921055,
+          -0.021397450599521244
+        ],
+        "wins": 28,
+        "losses": 101,
+        "ties": 1411
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [
+        "conv-26-q0004",
+        "conv-26-q0007",
+        "conv-26-q0011",
+        "conv-26-q0015",
+        "conv-26-q0019",
+        "conv-26-q0024",
+        "conv-26-q0032",
+        "conv-26-q0034",
+        "conv-26-q0038",
+        "conv-26-q0042",
+        "conv-26-q0043",
+        "conv-26-q0047",
+        "conv-26-q0048",
+        "conv-26-q0050",
+        "conv-26-q0051",
+        "conv-26-q0055",
+        "conv-26-q0056",
+        "conv-26-q0065",
+        "conv-26-q0066",
+        "conv-26-q0069",
+        "conv-26-q0070",
+        "conv-26-q0075",
+        "conv-26-q0078",
+        "conv-26-q0081",
+        "conv-26-q0095",
+        "conv-26-q0149",
+        "conv-26-q0150",
+        "conv-30-q0002",
+        "conv-30-q0003",
+        "conv-30-q0009",
+        "conv-30-q0017",
+        "conv-30-q0018",
+        "conv-30-q0023",
+        "conv-30-q0027",
+        "conv-30-q0029",
+        "conv-30-q0031",
+        "conv-30-q0044",
+        "conv-30-q0068",
+        "conv-30-q0074",
+        "conv-30-q0075",
+        "conv-30-q0081",
+        "conv-41-q0003",
+        "conv-41-q0006",
+        "conv-41-q0007",
+        "conv-41-q0008",
+        "conv-41-q0010",
+        "conv-41-q0011",
+        "conv-41-q0014",
+        "conv-41-q0025",
+        "conv-41-q0028",
+        "conv-41-q0029",
+        "conv-41-q0032",
+        "conv-41-q0035",
+        "conv-41-q0040",
+        "conv-41-q0041",
+        "conv-41-q0045",
+        "conv-41-q0047",
+        "conv-41-q0050",
+        "conv-41-q0057",
+        "conv-41-q0064",
+        "conv-41-q0072",
+        "conv-41-q0107",
+        "conv-41-q0131",
+        "conv-42-q0001",
+        "conv-42-q0004",
+        "conv-42-q0008",
+        "conv-42-q0011",
+        "conv-42-q0014",
+        "conv-42-q0022",
+        "conv-42-q0023",
+        "conv-42-q0026",
+        "conv-42-q0027",
+        "conv-42-q0030",
+        "conv-42-q0034",
+        "conv-42-q0042",
+        "conv-42-q0050",
+        "conv-42-q0051",
+        "conv-42-q0055",
+        "conv-42-q0056",
+        "conv-42-q0057",
+        "conv-42-q0059",
+        "conv-42-q0061",
+        "conv-42-q0063",
+        "conv-42-q0066",
+        "conv-42-q0067",
+        "conv-42-q0068",
+        "conv-42-q0069",
+        "conv-42-q0070",
+        "conv-42-q0074",
+        "conv-42-q0075",
+        "conv-42-q0079",
+        "conv-42-q0081",
+        "conv-42-q0082",
+        "conv-42-q0083",
+        "conv-42-q0084",
+        "conv-42-q0085",
+        "conv-42-q0087",
+        "conv-42-q0095",
+        "conv-42-q0108",
+        "conv-42-q0120",
+        "conv-42-q0122",
+        "conv-42-q0134",
+        "conv-42-q0135",
+        "conv-42-q0147",
+        "conv-42-q0151",
+        "conv-42-q0169",
+        "conv-42-q0186",
+        "conv-42-q0195",
+        "conv-42-q0198",
+        "conv-43-q0003",
+        "conv-43-q0004",
+        "conv-43-q0005",
+        "conv-43-q0007",
+        "conv-43-q0009",
+        "conv-43-q0011",
+        "conv-43-q0014",
+        "conv-43-q0017",
+        "conv-43-q0019",
+        "conv-43-q0020",
+        "conv-43-q0021",
+        "conv-43-q0024",
+        "conv-43-q0025",
+        "conv-43-q0026",
+        "conv-43-q0030",
+        "conv-43-q0034",
+        "conv-43-q0035",
+        "conv-43-q0036",
+        "conv-43-q0038",
+        "conv-43-q0040",
+        "conv-43-q0041",
+        "conv-43-q0050",
+        "conv-43-q0052",
+        "conv-43-q0053",
+        "conv-43-q0059",
+        "conv-43-q0061",
+        "conv-43-q0065",
+        "conv-43-q0067",
+        "conv-43-q0070",
+        "conv-43-q0118",
+        "conv-43-q0151",
+        "conv-44-q0002",
+        "conv-44-q0003",
+        "conv-44-q0008",
+        "conv-44-q0012",
+        "conv-44-q0013",
+        "conv-44-q0015",
+        "conv-44-q0017",
+        "conv-44-q0018",
+        "conv-44-q0019",
+        "conv-44-q0022",
+        "conv-44-q0023",
+        "conv-44-q0024",
+        "conv-44-q0026",
+        "conv-44-q0027",
+        "conv-44-q0028",
+        "conv-44-q0029",
+        "conv-44-q0031",
+        "conv-44-q0033",
+        "conv-44-q0034",
+        "conv-44-q0035",
+        "conv-44-q0036",
+        "conv-44-q0039",
+        "conv-44-q0040",
+        "conv-44-q0042",
+        "conv-44-q0044",
+        "conv-44-q0045",
+        "conv-44-q0046",
+        "conv-44-q0047",
+        "conv-44-q0049",
+        "conv-44-q0050",
+        "conv-44-q0051",
+        "conv-44-q0052",
+        "conv-44-q0053",
+        "conv-44-q0054",
+        "conv-44-q0055",
+        "conv-44-q0056",
+        "conv-44-q0060",
+        "conv-44-q0105",
+        "conv-47-q0000",
+        "conv-47-q0001",
+        "conv-47-q0002",
+        "conv-47-q0003",
+        "conv-47-q0005",
+        "conv-47-q0008",
+        "conv-47-q0009",
+        "conv-47-q0012",
+        "conv-47-q0015",
+        "conv-47-q0019",
+        "conv-47-q0022",
+        "conv-47-q0024",
+        "conv-47-q0026",
+        "conv-47-q0027",
+        "conv-47-q0033",
+        "conv-47-q0040",
+        "conv-47-q0041",
+        "conv-47-q0051",
+        "conv-47-q0053",
+        "conv-47-q0054",
+        "conv-47-q0056",
+        "conv-47-q0094",
+        "conv-48-q0008",
+        "conv-48-q0011",
+        "conv-48-q0013",
+        "conv-48-q0014",
+        "conv-48-q0015",
+        "conv-48-q0019",
+        "conv-48-q0020",
+        "conv-48-q0023",
+        "conv-48-q0036",
+        "conv-48-q0039",
+        "conv-48-q0041",
+        "conv-48-q0045",
+        "conv-48-q0048",
+        "conv-48-q0050",
+        "conv-48-q0054",
+        "conv-48-q0055",
+        "conv-48-q0059",
+        "conv-48-q0062",
+        "conv-48-q0065",
+        "conv-48-q0078",
+        "conv-48-q0080",
+        "conv-48-q0081",
+        "conv-48-q0082",
+        "conv-48-q0084",
+        "conv-48-q0086",
+        "conv-48-q0088",
+        "conv-48-q0094",
+        "conv-48-q0102",
+        "conv-48-q0104",
+        "conv-48-q0106",
+        "conv-48-q0109",
+        "conv-48-q0133",
+        "conv-48-q0179",
+        "conv-48-q0188",
+        "conv-49-q0000",
+        "conv-49-q0001",
+        "conv-49-q0002",
+        "conv-49-q0005",
+        "conv-49-q0006",
+        "conv-49-q0007",
+        "conv-49-q0010",
+        "conv-49-q0011",
+        "conv-49-q0014",
+        "conv-49-q0018",
+        "conv-49-q0019",
+        "conv-49-q0020",
+        "conv-49-q0024",
+        "conv-49-q0025",
+        "conv-49-q0026",
+        "conv-49-q0028",
+        "conv-49-q0032",
+        "conv-49-q0036",
+        "conv-49-q0037",
+        "conv-49-q0043",
+        "conv-49-q0045",
+        "conv-49-q0048",
+        "conv-49-q0049",
+        "conv-49-q0050",
+        "conv-49-q0051",
+        "conv-49-q0053",
+        "conv-49-q0054",
+        "conv-49-q0055",
+        "conv-49-q0060",
+        "conv-49-q0067",
+        "conv-49-q0068",
+        "conv-49-q0070",
+        "conv-49-q0077",
+        "conv-49-q0081",
+        "conv-49-q0082",
+        "conv-49-q0086",
+        "conv-49-q0110",
+        "conv-49-q0118",
+        "conv-49-q0123",
+        "conv-49-q0127",
+        "conv-50-q0001",
+        "conv-50-q0004",
+        "conv-50-q0005",
+        "conv-50-q0006",
+        "conv-50-q0011",
+        "conv-50-q0019",
+        "conv-50-q0020",
+        "conv-50-q0023",
+        "conv-50-q0027",
+        "conv-50-q0028",
+        "conv-50-q0029",
+        "conv-50-q0030",
+        "conv-50-q0031",
+        "conv-50-q0034",
+        "conv-50-q0043",
+        "conv-50-q0045",
+        "conv-50-q0046",
+        "conv-50-q0048",
+        "conv-50-q0049",
+        "conv-50-q0056",
+        "conv-50-q0057",
+        "conv-50-q0058",
+        "conv-50-q0063",
+        "conv-50-q0064",
+        "conv-50-q0066",
+        "conv-50-q0068",
+        "conv-50-q0075",
+        "conv-50-q0117",
+        "conv-50-q0119",
+        "conv-50-q0130",
+        "conv-50-q0140",
+        "conv-50-q0152"
+      ],
+      "gained_all_evidence": [
+        "conv-26-q0071",
+        "conv-26-q0085",
+        "conv-26-q0090",
+        "conv-26-q0121",
+        "conv-26-q0144",
+        "conv-26-q0146",
+        "conv-41-q0044",
+        "conv-41-q0112",
+        "conv-41-q0124",
+        "conv-41-q0150",
+        "conv-42-q0000",
+        "conv-42-q0005",
+        "conv-42-q0098",
+        "conv-42-q0171",
+        "conv-43-q0105",
+        "conv-47-q0018",
+        "conv-47-q0032",
+        "conv-47-q0048",
+        "conv-47-q0064",
+        "conv-47-q0103",
+        "conv-47-q0147",
+        "conv-48-q0025",
+        "conv-48-q0090",
+        "conv-49-q0039",
+        "conv-49-q0071",
+        "conv-49-q0122",
+        "conv-50-q0003",
+        "conv-50-q0120"
+      ],
+      "lost_all_evidence": [
+        "conv-26-q0050",
+        "conv-26-q0051",
+        "conv-26-q0055",
+        "conv-26-q0065",
+        "conv-26-q0066",
+        "conv-26-q0081",
+        "conv-26-q0095",
+        "conv-26-q0149",
+        "conv-26-q0150",
+        "conv-30-q0017",
+        "conv-30-q0029",
+        "conv-30-q0068",
+        "conv-41-q0007",
+        "conv-41-q0029",
+        "conv-41-q0041",
+        "conv-41-q0131",
+        "conv-42-q0004",
+        "conv-42-q0008",
+        "conv-42-q0022",
+        "conv-42-q0023",
+        "conv-42-q0026",
+        "conv-42-q0027",
+        "conv-42-q0051",
+        "conv-42-q0057",
+        "conv-42-q0068",
+        "conv-42-q0070",
+        "conv-42-q0082",
+        "conv-42-q0085",
+        "conv-42-q0095",
+        "conv-42-q0108",
+        "conv-42-q0122",
+        "conv-42-q0134",
+        "conv-42-q0147",
+        "conv-42-q0169",
+        "conv-42-q0186",
+        "conv-42-q0195",
+        "conv-43-q0009",
+        "conv-43-q0017",
+        "conv-43-q0019",
+        "conv-43-q0024",
+        "conv-43-q0030",
+        "conv-43-q0036",
+        "conv-43-q0040",
+        "conv-43-q0050",
+        "conv-43-q0065",
+        "conv-43-q0070",
+        "conv-44-q0013",
+        "conv-44-q0018",
+        "conv-44-q0022",
+        "conv-44-q0029",
+        "conv-44-q0034",
+        "conv-44-q0042",
+        "conv-44-q0050",
+        "conv-44-q0056",
+        "conv-44-q0105",
+        "conv-47-q0000",
+        "conv-47-q0009",
+        "conv-47-q0015",
+        "conv-47-q0026",
+        "conv-47-q0054",
+        "conv-48-q0011",
+        "conv-48-q0013",
+        "conv-48-q0015",
+        "conv-48-q0020",
+        "conv-48-q0045",
+        "conv-48-q0050",
+        "conv-48-q0054",
+        "conv-48-q0055",
+        "conv-48-q0059",
+        "conv-48-q0062",
+        "conv-48-q0065",
+        "conv-48-q0080",
+        "conv-48-q0081",
+        "conv-48-q0094",
+        "conv-48-q0102",
+        "conv-48-q0104",
+        "conv-48-q0106",
+        "conv-48-q0109",
+        "conv-49-q0000",
+        "conv-49-q0002",
+        "conv-49-q0005",
+        "conv-49-q0045",
+        "conv-49-q0053",
+        "conv-49-q0055",
+        "conv-49-q0067",
+        "conv-49-q0070",
+        "conv-49-q0118",
+        "conv-49-q0123",
+        "conv-49-q0127",
+        "conv-50-q0001",
+        "conv-50-q0005",
+        "conv-50-q0006",
+        "conv-50-q0020",
+        "conv-50-q0028",
+        "conv-50-q0034",
+        "conv-50-q0049",
+        "conv-50-q0057",
+        "conv-50-q0075",
+        "conv-50-q0117",
+        "conv-50-q0130",
+        "conv-50-q0140"
+      ],
+      "all_evidence_packed_by_category": {
+        "multi-hop": {
+          "queries": 282,
+          "before": 0.5,
+          "after": 0.37943262411347517,
+          "delta": -0.12056737588652482,
+          "interval_95": [
+            -0.16312056737588654,
+            -0.07801418439716312
+          ],
+          "wins": 5,
+          "losses": 39,
+          "ties": 238
+        },
+        "open-domain": {
+          "queries": 92,
+          "before": 0.5760869565217391,
+          "after": 0.4782608695652174,
+          "delta": -0.09782608695652174,
+          "interval_95": [
+            -0.17391304347826086,
+            -0.03260869565217391
+          ],
+          "wins": 2,
+          "losses": 11,
+          "ties": 79
+        },
+        "single-hop": {
+          "queries": 841,
+          "before": 0.9536266349583828,
+          "after": 0.93935790725327,
+          "delta": -0.014268727705112961,
+          "interval_95": [
+            -0.030915576694411414,
+            0.0011890606420927466
+          ],
+          "wins": 17,
+          "losses": 29,
+          "ties": 795
+        },
+        "temporal": {
+          "queries": 321,
+          "before": 0.9221183800623053,
+          "after": 0.8660436137071651,
+          "delta": -0.056074766355140186,
+          "interval_95": [
+            -0.08722741433021806,
+            -0.024922118380062305
+          ],
+          "wins": 4,
+          "losses": 22,
+          "ties": 295
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 84.47597402597403,
+          "memory_text_share": 0.9661348228671507,
+          "records_without_text": 0,
+          "candidates_mean": 554.8
+        },
+        "after": {
+          "questions": 1540,
+          "contexts_matching_saved": 0,
+          "records_per_context": 40.0,
+          "memory_text_share": 0.9480856775441117,
+          "records_without_text": 0,
+          "candidates_mean": 40.0
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.13286162500298815,
+          "p95": 0.17608296430116752
+        },
+        "after": {
+          "p50": 0.04739581250032643,
+          "p95": 0.06313646490380051
+        }
+      },
+      "reranking_seconds": {
+        "before": null,
+        "after": null
+      },
+      "aggregation": {
+        "before": {
+          "questions": 41,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 41
+          }
+        },
+        "after": {
+          "questions": 41,
+          "filled_widened_limit": 41,
+          "paths_at_limit": {
+            "LEXICAL": 40,
+            "LEXICAL_AGG": 41,
+            "VECTOR": 41
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "multi-hop": 282,
+            "open-domain": 96,
+            "single-hop": 841,
+            "temporal": 321
+          },
+          "before": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          },
+          "after": {
+            "multi-hop": 0,
+            "open-domain": 0,
+            "single-hop": 0,
+            "temporal": 0
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [
+          "conv-41-q0012",
+          "conv-41-q0015",
+          "conv-41-q0023",
+          "conv-41-q0025",
+          "conv-41-q0028",
+          "conv-41-q0029",
+          "conv-41-q0030",
+          "conv-41-q0032",
+          "conv-41-q0035",
+          "conv-41-q0036",
+          "conv-41-q0037",
+          "conv-41-q0044",
+          "conv-41-q0057",
+          "conv-41-q0101",
+          "conv-41-q0136",
+          "conv-41-q0150",
+          "conv-42-q0010",
+          "conv-42-q0027",
+          "conv-42-q0030",
+          "conv-42-q0034",
+          "conv-42-q0046",
+          "conv-42-q0060",
+          "conv-42-q0061",
+          "conv-42-q0063",
+          "conv-42-q0067",
+          "conv-42-q0070",
+          "conv-42-q0081",
+          "conv-42-q0082",
+          "conv-42-q0085",
+          "conv-42-q0092",
+          "conv-42-q0096",
+          "conv-42-q0114",
+          "conv-42-q0115",
+          "conv-42-q0128",
+          "conv-42-q0144",
+          "conv-42-q0147",
+          "conv-42-q0153",
+          "conv-42-q0163",
+          "conv-42-q0164",
+          "conv-42-q0183",
+          "conv-42-q0187",
+          "conv-42-q0190",
+          "conv-43-q0002",
+          "conv-43-q0004",
+          "conv-43-q0011",
+          "conv-43-q0014",
+          "conv-43-q0018",
+          "conv-43-q0035",
+          "conv-43-q0036",
+          "conv-43-q0041",
+          "conv-43-q0061",
+          "conv-43-q0065",
+          "conv-43-q0083",
+          "conv-43-q0090",
+          "conv-43-q0097",
+          "conv-43-q0099",
+          "conv-43-q0114",
+          "conv-43-q0124",
+          "conv-43-q0127",
+          "conv-43-q0128",
+          "conv-43-q0164",
+          "conv-43-q0169",
+          "conv-43-q0171",
+          "conv-44-q0002",
+          "conv-44-q0032",
+          "conv-44-q0051",
+          "conv-44-q0064",
+          "conv-44-q0080",
+          "conv-44-q0083",
+          "conv-44-q0095",
+          "conv-44-q0101",
+          "conv-44-q0103",
+          "conv-47-q0027",
+          "conv-47-q0036",
+          "conv-47-q0045",
+          "conv-47-q0060",
+          "conv-47-q0085",
+          "conv-47-q0086",
+          "conv-47-q0116",
+          "conv-48-q0015",
+          "conv-48-q0042",
+          "conv-48-q0086",
+          "conv-48-q0088",
+          "conv-48-q0091",
+          "conv-48-q0126",
+          "conv-48-q0141",
+          "conv-48-q0154",
+          "conv-48-q0155",
+          "conv-50-q0011",
+          "conv-50-q0060",
+          "conv-50-q0064",
+          "conv-50-q0076",
+          "conv-50-q0091",
+          "conv-50-q0095",
+          "conv-50-q0097",
+          "conv-50-q0107",
+          "conv-50-q0124",
+          "conv-50-q0147",
+          "conv-50-q0148",
+          "conv-50-q0149",
+          "conv-50-q0153",
+          "conv-50-q0157"
+        ],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 60045,
+            "added": 8,
+            "promoted": 33262,
+            "reached_share": 0.46155442644877126,
+            "added_share": 6.149446934116364e-05,
+            "promoted_share": 0.2556786299032231
+          },
+          "multi-hop": {
+            "reached": 10846,
+            "added": 0,
+            "promoted": 6056,
+            "reached_share": 0.4606889521301448,
+            "added_share": 0.0,
+            "promoted_share": 0.2572314488382959
+          },
+          "open-domain": {
+            "reached": 3521,
+            "added": 0,
+            "promoted": 1963,
+            "reached_share": 0.4260133091349062,
+            "added_share": 0.0,
+            "promoted_share": 0.23750756200846945
+          },
+          "single-hop": {
+            "reached": 33447,
+            "added": 2,
+            "promoted": 18488,
+            "reached_share": 0.47169571839566765,
+            "added_share": 2.8205562136853388e-05,
+            "promoted_share": 0.2607322163930727
+          },
+          "temporal": {
+            "reached": 12231,
+            "added": 6,
+            "promoted": 6755,
+            "reached_share": 0.44676188041056364,
+            "added_share": 0.00021916207035102458,
+            "promoted_share": 0.2467399642035285
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 39184,
+            "added": 16717,
+            "promoted": 25752,
+            "reached_share": 0.6361038961038961,
+            "added_share": 0.27137987012987014,
+            "promoted_share": 0.41805194805194806
+          },
+          "multi-hop": {
+            "reached": 7079,
+            "added": 3034,
+            "promoted": 4610,
+            "reached_share": 0.6275709219858157,
+            "added_share": 0.26897163120567374,
+            "promoted_share": 0.40868794326241137
+          },
+          "open-domain": {
+            "reached": 2411,
+            "added": 1150,
+            "promoted": 1689,
+            "reached_share": 0.6278645833333333,
+            "added_share": 0.2994791666666667,
+            "promoted_share": 0.43984375
+          },
+          "single-hop": {
+            "reached": 21486,
+            "added": 8816,
+            "promoted": 13883,
+            "reached_share": 0.6387039239001189,
+            "added_share": 0.2620689655172414,
+            "promoted_share": 0.4126932223543401
+          },
+          "temporal": {
+            "reached": 8208,
+            "added": 3717,
+            "promoted": 5570,
+            "reached_share": 0.6392523364485981,
+            "added_share": 0.2894859813084112,
+            "promoted_share": 0.4338006230529595
+          }
+        }
+      }
+    },
+    "longmemeval": {
+      "all_evidence_packed": {
+        "queries": 470,
+        "before": 0.9468085106382979,
+        "after": 0.8787234042553191,
+        "delta": -0.06808510638297872,
+        "interval_95": [
+          -0.09361702127659574,
+          -0.0425531914893617
+        ],
+        "wins": 4,
+        "losses": 36,
+        "ties": 430
+      },
+      "all_evidence_packed_with_text": {
+        "queries": 470,
+        "before": 0.9468085106382979,
+        "after": 0.8787234042553191,
+        "delta": -0.06808510638297872,
+        "interval_95": [
+          -0.09361702127659574,
+          -0.0425531914893617
+        ],
+        "wins": 4,
+        "losses": 36,
+        "ties": 430
+      },
+      "evidence_recall": {
+        "queries": 470,
+        "before": 0.9730141843971631,
+        "after": 0.929822695035461,
+        "delta": -0.043191489361702126,
+        "interval_95": [
+          -0.06209219858156029,
+          -0.024716312056737588
+        ],
+        "wins": 4,
+        "losses": 41,
+        "ties": 425
+      },
+      "all_evidence_returned": {
+        "queries": 470,
+        "before": 1.0,
+        "after": 0.9212765957446809,
+        "delta": -0.07872340425531915,
+        "interval_95": [
+          -0.10425531914893617,
+          -0.05531914893617021
+        ],
+        "wins": 0,
+        "losses": 37,
+        "ties": 433
+      },
+      "projected_accuracy": {
+        "queries": 500,
+        "before": 0.9139197807488612,
+        "after": 0.8728380430354431,
+        "delta": -0.04108173771341802,
+        "interval_95": [
+          -0.05648738935594978,
+          -0.026959890374430577
+        ],
+        "wins": 4,
+        "losses": 36,
+        "ties": 460
+      },
+      "gained_all_evidence_among_candidates": [],
+      "lost_all_evidence_among_candidates": [
+        "6d550036",
+        "gpt4_59c863d7",
+        "gpt4_d84a3211",
+        "gpt4_f2262a51",
+        "c4a1ceb8",
+        "gpt4_15e38248",
+        "88432d0a",
+        "gpt4_7fce9456",
+        "d682f1a2",
+        "2ce6a0f2",
+        "gpt4_31ff4165",
+        "gpt4_194be4b3",
+        "gpt4_ab202e7f",
+        "e3038f8c",
+        "1a8a66a6",
+        "bf659f65",
+        "75832dbd",
+        "d6233ab6",
+        "1c0ddc50",
+        "92a0aa75",
+        "ba358f49",
+        "bc149d6b",
+        "157a136e",
+        "c18a7dc8",
+        "b46e15ed",
+        "0bc8ad92",
+        "gpt4_7f6b06db",
+        "gpt4_7abb270c",
+        "gpt4_e061b84f",
+        "gpt4_d6585ce8",
+        "gpt4_f420262c",
+        "gpt4_d6585ce9",
+        "eac54add",
+        "6e984302",
+        "gpt4_8279ba03",
+        "gpt4_68e94288",
+        "a3838d2b"
+      ],
+      "gained_all_evidence": [
+        "e47becba",
+        "75499fd8",
+        "58470ed2",
+        "6222b6eb"
+      ],
+      "lost_all_evidence": [
+        "5d3d2817",
+        "gpt4_59c863d7",
+        "gpt4_d84a3211",
+        "88432d0a",
+        "gpt4_7fce9456",
+        "d682f1a2",
+        "2ce6a0f2",
+        "eeda8a6d",
+        "gpt4_194be4b3",
+        "e3038f8c",
+        "06878be2",
+        "75832dbd",
+        "32260d93",
+        "06f04340",
+        "09d032c9",
+        "95228167",
+        "d6233ab6",
+        "1c0ddc50",
+        "0a34ad58",
+        "51c32626",
+        "5025383b",
+        "a1cc6108",
+        "92a0aa75",
+        "157a136e",
+        "0bc8ad92",
+        "gpt4_7f6b06db",
+        "gpt4_e061b84f",
+        "gpt4_ec93e27f",
+        "gpt4_d6585ce9",
+        "gpt4_1e4a8aec",
+        "gpt4_4929293b",
+        "4dfccbf8",
+        "gpt4_8279ba03",
+        "gpt4_65aabe59",
+        "gpt4_b4a80587",
+        "gpt4_2f56ae70"
+      ],
+      "all_evidence_packed_by_category": {
+        "knowledge-update": {
+          "queries": 72,
+          "before": 1.0,
+          "after": 1.0,
+          "delta": 0.0,
+          "interval_95": [
+            0.0,
+            0.0
+          ],
+          "wins": 0,
+          "losses": 0,
+          "ties": 72
+        },
+        "multi-session": {
+          "queries": 121,
+          "before": 0.8925619834710744,
+          "after": 0.7768595041322314,
+          "delta": -0.11570247933884298,
+          "interval_95": [
+            -0.17355371900826447,
+            -0.05785123966942149
+          ],
+          "wins": 0,
+          "losses": 14,
+          "ties": 107
+        },
+        "single-session-assistant": {
+          "queries": 56,
+          "before": 0.9642857142857143,
+          "after": 1.0,
+          "delta": 0.03571428571428571,
+          "interval_95": [
+            0.0,
+            0.08928571428571429
+          ],
+          "wins": 2,
+          "losses": 0,
+          "ties": 54
+        },
+        "single-session-preference": {
+          "queries": 30,
+          "before": 1.0,
+          "after": 0.7,
+          "delta": -0.3,
+          "interval_95": [
+            -0.4666666666666667,
+            -0.13333333333333333
+          ],
+          "wins": 0,
+          "losses": 9,
+          "ties": 21
+        },
+        "single-session-user": {
+          "queries": 64,
+          "before": 0.96875,
+          "after": 0.984375,
+          "delta": 0.015625,
+          "interval_95": [
+            -0.03125,
+            0.0625
+          ],
+          "wins": 2,
+          "losses": 1,
+          "ties": 61
+        },
+        "temporal-reasoning": {
+          "queries": 127,
+          "before": 0.937007874015748,
+          "after": 0.84251968503937,
+          "delta": -0.09448818897637795,
+          "interval_95": [
+            -0.14960629921259844,
+            -0.047244094488188976
+          ],
+          "wins": 0,
+          "losses": 12,
+          "ties": 115
+        }
+      },
+      "context": {
+        "before": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 39.728,
+          "memory_text_share": 0.826394098806601,
+          "records_without_text": 0,
+          "candidates_mean": 490.132
+        },
+        "after": {
+          "questions": 500,
+          "contexts_matching_saved": 0,
+          "records_per_context": 23.874,
+          "memory_text_share": 0.8705903786593026,
+          "records_without_text": 0,
+          "candidates_mean": 40.0
+        }
+      },
+      "retrieval_seconds": {
+        "before": {
+          "p50": 0.1442219370001112,
+          "p95": 0.2037030378494819
+        },
+        "after": {
+          "p50": 0.10559585400187643,
+          "p95": 0.16940384580229875
+        }
+      },
+      "reranking_seconds": {
+        "before": null,
+        "after": null
+      },
+      "aggregation": {
+        "before": {
+          "questions": 180,
+          "filled_widened_limit": 0,
+          "paths_at_limit": {
+            "LEXICAL_AGG": 91
+          }
+        },
+        "after": {
+          "questions": 180,
+          "filled_widened_limit": 180,
+          "paths_at_limit": {
+            "LEXICAL": 180,
+            "LEXICAL_AGG": 91,
+            "VECTOR": 180
+          }
+        }
+      },
+      "query_scoring": {
+        "temporal_affinity_varies_by_category": {
+          "questions": {
+            "knowledge-update": 78,
+            "multi-session": 133,
+            "single-session-assistant": 56,
+            "single-session-preference": 30,
+            "single-session-user": 70,
+            "temporal-reasoning": 133
+          },
+          "before": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 7,
+            "temporal-reasoning": 37
+          },
+          "after": {
+            "knowledge-update": 11,
+            "multi-session": 23,
+            "single-session-assistant": 3,
+            "single-session-preference": 1,
+            "single-session-user": 5,
+            "temporal-reasoning": 35
+          }
+        },
+        "entered_current_state_path": [],
+        "left_current_state_path": [],
+        "current_state_path_unknown": 0
+      },
+      "session_context_records": {
+        "before": {
+          "all": {
+            "reached": 10891,
+            "added": 0,
+            "promoted": 2431,
+            "reached_share": 0.54827829238824,
+            "added_share": 0.0,
+            "promoted_share": 0.12238219895287958
+          },
+          "knowledge-update": {
+            "reached": 1689,
+            "added": 0,
+            "promoted": 364,
+            "reached_share": 0.5639398998330551,
+            "added_share": 0.0,
+            "promoted_share": 0.12153589315525877
+          },
+          "multi-session": {
+            "reached": 2916,
+            "added": 0,
+            "promoted": 657,
+            "reached_share": 0.5935273763484633,
+            "added_share": 0.0,
+            "promoted_share": 0.1337268471402402
+          },
+          "single-session-assistant": {
+            "reached": 1311,
+            "added": 0,
+            "promoted": 325,
+            "reached_share": 0.5392842451665981,
+            "added_share": 0.0,
+            "promoted_share": 0.13368983957219252
+          },
+          "single-session-preference": {
+            "reached": 669,
+            "added": 0,
+            "promoted": 150,
+            "reached_share": 0.45572207084468663,
+            "added_share": 0.0,
+            "promoted_share": 0.10217983651226158
+          },
+          "single-session-user": {
+            "reached": 1425,
+            "added": 0,
+            "promoted": 306,
+            "reached_share": 0.4863481228668942,
+            "added_share": 0.0,
+            "promoted_share": 0.10443686006825939
+          },
+          "temporal-reasoning": {
+            "reached": 2881,
+            "added": 0,
+            "promoted": 629,
+            "reached_share": 0.5619270528574215,
+            "added_share": 0.0,
+            "promoted_share": 0.12268383070021455
+          }
+        },
+        "after": {
+          "all": {
+            "reached": 8558,
+            "added": 394,
+            "promoted": 1402,
+            "reached_share": 0.716930552065008,
+            "added_share": 0.033006618078244114,
+            "promoted_share": 0.11744994554745748
+          },
+          "knowledge-update": {
+            "reached": 1411,
+            "added": 44,
+            "promoted": 200,
+            "reached_share": 0.712266532054518,
+            "added_share": 0.02221100454316002,
+            "promoted_share": 0.10095911155981828
+          },
+          "multi-session": {
+            "reached": 2328,
+            "added": 26,
+            "promoted": 228,
+            "reached_share": 0.6970059880239521,
+            "added_share": 0.007784431137724551,
+            "promoted_share": 0.06826347305389222
+          },
+          "single-session-assistant": {
+            "reached": 1011,
+            "added": 101,
+            "promoted": 269,
+            "reached_share": 0.737956204379562,
+            "added_share": 0.07372262773722628,
+            "promoted_share": 0.19635036496350364
+          },
+          "single-session-preference": {
+            "reached": 485,
+            "added": 39,
+            "promoted": 120,
+            "reached_share": 0.6764295676429568,
+            "added_share": 0.05439330543933055,
+            "promoted_share": 0.16736401673640167
+          },
+          "single-session-user": {
+            "reached": 1104,
+            "added": 76,
+            "promoted": 240,
+            "reached_share": 0.6943396226415094,
+            "added_share": 0.04779874213836478,
+            "promoted_share": 0.1509433962264151
+          },
+          "temporal-reasoning": {
+            "reached": 2219,
+            "added": 108,
+            "promoted": 345,
+            "reached_share": 0.7550187138482477,
+            "added_share": 0.03674719292276284,
+            "promoted_share": 0.11738686628104797
+          }
+        }
+      }
+    }
+  },
+  "inputs": {
+    "before_sha256": "f226639188fb503e6d81972322a3b16603423af91dcc54a626a8c16b9e033292",
+    "after_sha256": "5b205e043b58bf14160e91299d9988d0155a963352b90f6b4b7e6f70b1f2d604"
+  }
+}

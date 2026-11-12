@@ -95,6 +95,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `store()` and through `ingest()` replaying a recorded extraction, with which claims its corrections
   retire), with no model call and no network. `uv run pytest tests/contract -q`; `--memory-mode address_first` runs
   it under the switch, and `--stated` adds the moves written as stated facts.
+- A read profile for a fast, small read on a large store, off by default: `read_profile="robot"`
+  (`PRME_READ_PROFILE=robot`). It sets existing settings only, each unless the configuration sets it itself:
+  `packing.vector_k=60`, `packing.lexical_k=60`, `packing.graph_max_candidates=40`, `packing.graph_max_hops=2`, and
+  the new `result_limit=40` (`PRME_RESULT_LIMIT`), the results `retrieve()` returns when the caller passes no
+  `limit`. Ranking code is unchanged and the receipt still replays. With it off, reads, contexts and receipts are
+  byte-identical. No stored memory is rewritten. `[HYPOTHESIS]`: no benchmark answer run.
 
 ### Changed
 

@@ -1,0 +1,67 @@
+{
+ "kind": "task22-robot-read-bar2",
+ "commit": "main 3fc87120 plus the read_profile change",
+ "method": "scripts/robot_read.py, 1 round, profile off, main 3fc87120 against the change; fingerprints hold ranked ids and scores, packed ids, context digest and stored receipt digest (request id replaced)",
+ "runs": [
+  {
+   "pack": "bench",
+   "mode": "classic",
+   "identical": "60/60",
+   "main_fingerprints_sha256": "372e1adedec6e7da4f4dfc0b8ee8622d3379d50473589c103bee9a68cd01b180",
+   "change_fingerprints_sha256": "372e1adedec6e7da4f4dfc0b8ee8622d3379d50473589c103bee9a68cd01b180",
+   "receipt_bytes_median": [
+    1414941,
+    1414941
+   ],
+   "reads": [
+    60,
+    60
+   ]
+  },
+  {
+   "pack": "bench",
+   "mode": "address_first",
+   "identical": "60/60",
+   "main_fingerprints_sha256": "f1611885ac80bc3d352e6fa76e2eb0c41fb1b7df53ed2f5efb67e75ddb951f2c",
+   "change_fingerprints_sha256": "f1611885ac80bc3d352e6fa76e2eb0c41fb1b7df53ed2f5efb67e75ddb951f2c",
+   "receipt_bytes_median": [
+    142953,
+    142953
+   ],
+   "reads": [
+    60,
+    60
+   ]
+  },
+  {
+   "pack": "stated",
+   "mode": "classic",
+   "identical": "25/25",
+   "main_fingerprints_sha256": "a7fb12b49b29ce518f17f9b6652e42e852e0315718a9b0ccd9f4b2a394b57083",
+   "change_fingerprints_sha256": "a7fb12b49b29ce518f17f9b6652e42e852e0315718a9b0ccd9f4b2a394b57083",
+   "receipt_bytes_median": [
+    1811470,
+    1811470
+   ],
+   "reads": [
+    25,
+    25
+   ]
+  },
+  {
+   "pack": "stated",
+   "mode": "address_first",
+   "identical": "25/25",
+   "main_fingerprints_sha256": "723a9cd961d5ae5d7e1ab5aeb7a3182b6cd5fd0c2df9b67855d8bc8c1b24db6a",
+   "change_fingerprints_sha256": "723a9cd961d5ae5d7e1ab5aeb7a3182b6cd5fd0c2df9b67855d8bc8c1b24db6a",
+   "receipt_bytes_median": [
+    1707471,
+    1707471
+   ],
+   "reads": [
+    25,
+    25
+   ]
+  }
+ ]
+}

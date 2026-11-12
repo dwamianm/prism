@@ -2855,6 +2855,7 @@ class MemoryEngine:
                 detected an embedding mismatch and no result has a cosine, the
                 floor is skipped and ``metadata.min_score_skipped`` is set.
             limit: Maximum primary results before context packing. Zero returns none.
+                When None, ``PRMEConfig.result_limit`` applies (unset by default).
             max_per_source: Optional maximum results with the same exact source
                 passage and evidence set. Use 1 to prevent extracted sibling
                 claims from consuming a fixed result count with duplicate text.
@@ -2898,6 +2899,9 @@ class MemoryEngine:
         Raises:
             NotImplementedError: If no retrieval pipeline is configured.
         """
+        if limit is None:
+            # The configuration's default result limit (read_profile="robot" sets it).
+            limit = self._config.result_limit
         validate_selection(min_score, limit, max_per_source, max_per_evidence)
         from prme.retrieval.filtering import normalize_include_types, normalize_type_filters
 

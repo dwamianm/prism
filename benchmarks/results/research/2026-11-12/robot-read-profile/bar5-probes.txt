@@ -1,0 +1,13 @@
+conv side top3 top5 owner answer_in_context records_med records_max tokens_med
+defects-v1 classic-off 7/7 7/7 12 7/7 15 15 531
+defects-v1 classic-on 7/7 7/7 12 7/7 14 15 500
+defects-v1 af-off 7/7 7/7 12 7/7 15 15 531
+defects-v1 af-on 7/7 7/7 12 7/7 14 15 500
+chat-v1 classic-off 14/18 15/18 35 17/18 90.0 90 3070.0
+chat-v1 classic-on 14/18 16/18 35 17/18 28.5 33 1100.5
+chat-v1 af-off 15/18 16/18 35 17/18 90.0 90 3073.0
+chat-v1 af-on 15/18 16/18 35 17/18 28.5 33 1122.0
+member-v1 classic-off 10/12 11/12 7 12/12 54.0 54 1779.0
+member-v1 classic-on 10/12 11/12 7 12/12 33.5 37 1135.0
+member-v1 af-off 11/12 12/12 7 12/12 52.0 52 1805.0
+member-v1 af-on 11/12 12/12 7 12/12 33.5 36 1188.0
