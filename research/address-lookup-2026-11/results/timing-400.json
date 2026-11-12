@@ -1,0 +1,137 @@
+{
+ "pack": "/tmp/p6/build/current-500/pack",
+ "stored": 400,
+ "calls": 10,
+ "pairs": [
+  "light tape measure / located_in",
+  "glass flashlight / located_in",
+  "spare remote / located_in"
+ ],
+ "migration": {
+  "nodes": 1444,
+  "keyed": 500,
+  "unkeyable": 944,
+  "seconds": 0.356
+ },
+ "load_before": [
+  7.21,
+  7.21,
+  7.68
+ ],
+ "sides": {
+  "current": {
+   "per_pair": [
+    {
+     "pair": "light tape measure / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 33.16,
+      "p95": 42.67,
+      "max": 42.67,
+      "mean": 33.894
+     },
+     "scanned_nodes": 500,
+     "matched_records": 2,
+     "status": "multiple"
+    },
+    {
+     "pair": "glass flashlight / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 32.883,
+      "p95": 35.308,
+      "max": 35.308,
+      "mean": 33.118
+     },
+     "scanned_nodes": 500,
+     "matched_records": 1,
+     "status": "single"
+    },
+    {
+     "pair": "spare remote / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 36.805,
+      "p95": 45.533,
+      "max": 45.533,
+      "mean": 39.139
+     },
+     "scanned_nodes": 500,
+     "matched_records": 1,
+     "status": "single"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 33.16,
+    "p95": 36.805,
+    "max": 36.805,
+    "mean": 34.283
+   },
+   "worst_pair_p95": 45.533,
+   "best_pair_p95": 35.308,
+   "load_after": [
+    7.43,
+    7.26,
+    7.69
+   ]
+  },
+  "indexed": {
+   "per_pair": [
+    {
+     "pair": "light tape measure / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 8.589,
+      "p95": 10.207,
+      "max": 10.207,
+      "mean": 8.623
+     },
+     "scanned_nodes": 500,
+     "matched_records": 2,
+     "status": "multiple"
+    },
+    {
+     "pair": "glass flashlight / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 6.573,
+      "p95": 9.379,
+      "max": 9.379,
+      "mean": 7.158
+     },
+     "scanned_nodes": 500,
+     "matched_records": 1,
+     "status": "single"
+    },
+    {
+     "pair": "spare remote / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 8.269,
+      "p95": 10.871,
+      "max": 10.871,
+      "mean": 8.598
+     },
+     "scanned_nodes": 500,
+     "matched_records": 1,
+     "status": "single"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 8.269,
+    "p95": 8.589,
+    "max": 8.589,
+    "mean": 7.81
+   },
+   "worst_pair_p95": 10.871,
+   "best_pair_p95": 9.379,
+   "load_after": [
+    7.43,
+    7.26,
+    7.69
+   ]
+  }
+ }
+}

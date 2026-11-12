@@ -1,0 +1,22 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "pairs": 233,
+ "seed": 11,
+ "mismatches": [],
+ "shapes": {
+  "empty": 111,
+  "one": 9,
+  "many": 113,
+  "retired": 111,
+  "second_user": 2,
+  "seeded_shape": 0
+ },
+ "statuses": {
+  "multiple": 112,
+  "unknown": 116,
+  "contested": 1,
+  "single": 4
+ },
+ "compared_fields": 233,
+ "passed": true
+}

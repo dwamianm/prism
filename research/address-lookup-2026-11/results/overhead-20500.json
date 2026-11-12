@@ -1,0 +1,11 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "pages": 42,
+ "ordinary_graph_ms": 13.885,
+ "scan_page_ms": {
+  "p50": 56.704,
+  "max": 88.142,
+  "total": 2436.214,
+  "mean": 58.005
+ }
+}

@@ -1,0 +1,75 @@
+{
+ "pack": "/tmp/p6/build/current-500/pack",
+ "stored": 400,
+ "calls": 10,
+ "pairs": [
+  {
+   "subject": "golden scarf",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 27.781,
+    "p95": 33.772,
+    "p99": 33.772,
+    "max": 33.772,
+    "mean": 28.559
+   },
+   "scanned_nodes": 500,
+   "matched_records": 2,
+   "status": "multiple",
+   "current_candidate_count": 2,
+   "exclusions": {
+    "selector_mismatch": 498
+   }
+  },
+  {
+   "subject": "old kettle",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 28.261,
+    "p95": 28.984,
+    "p99": 28.984,
+    "max": 28.984,
+    "mean": 28.125
+   },
+   "scanned_nodes": 500,
+   "matched_records": 1,
+   "status": "single",
+   "current_candidate_count": 1,
+   "exclusions": {
+    "selector_mismatch": 499
+   }
+  },
+  {
+   "subject": "blue flashlight",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 27.549,
+    "p95": 28.492,
+    "p99": 28.492,
+    "max": 28.492,
+    "mean": 27.575
+   },
+   "scanned_nodes": 500,
+   "matched_records": 1,
+   "status": "single",
+   "current_candidate_count": 1,
+   "exclusions": {
+    "selector_mismatch": 499
+   }
+  }
+ ],
+ "stages": [
+  {
+   "pair": "golden scarf / located_in",
+   "total_ms": 28.095,
+   "pages": 4,
+   "python_ms": 24.184,
+   "outside_scan_ms": 3.911,
+   "scanned_nodes": 500,
+   "matched": 2
+  }
+ ]
+}

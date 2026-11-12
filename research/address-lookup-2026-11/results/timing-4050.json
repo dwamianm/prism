@@ -1,0 +1,137 @@
+{
+ "pack": "/tmp/p6/build/current-4050/pack",
+ "stored": 4050,
+ "calls": 10,
+ "pairs": [
+  "white jacket / located_in",
+  "red flashlight / located_in",
+  "large kettle / located_in"
+ ],
+ "migration": {
+  "nodes": 8720,
+  "keyed": 4050,
+  "unkeyable": 4670,
+  "seconds": 2.296
+ },
+ "load_before": [
+  8.51,
+  7.5,
+  7.77
+ ],
+ "sides": {
+  "current": {
+   "per_pair": [
+    {
+     "pair": "white jacket / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 290.299,
+      "p95": 317.946,
+      "max": 317.946,
+      "mean": 288.582
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 9,
+     "status": "multiple"
+    },
+    {
+     "pair": "red flashlight / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 292.578,
+      "p95": 334.214,
+      "max": 334.214,
+      "mean": 300.763
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 1,
+     "status": "single"
+    },
+    {
+     "pair": "large kettle / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 303.953,
+      "p95": 335.799,
+      "max": 335.799,
+      "mean": 305.657
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 9,
+     "status": "multiple"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 292.578,
+    "p95": 303.953,
+    "max": 303.953,
+    "mean": 295.61
+   },
+   "worst_pair_p95": 335.799,
+   "best_pair_p95": 317.946,
+   "load_after": [
+    7.98,
+    7.42,
+    7.74
+   ]
+  },
+  "indexed": {
+   "per_pair": [
+    {
+     "pair": "white jacket / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 15.071,
+      "p95": 15.768,
+      "max": 15.768,
+      "mean": 14.841
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 9,
+     "status": "multiple"
+    },
+    {
+     "pair": "red flashlight / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 13.293,
+      "p95": 14.304,
+      "max": 14.304,
+      "mean": 13.474
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 1,
+     "status": "single"
+    },
+    {
+     "pair": "large kettle / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 13.961,
+      "p95": 18.286,
+      "max": 18.286,
+      "mean": 14.867
+     },
+     "scanned_nodes": 4050,
+     "matched_records": 9,
+     "status": "multiple"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 13.961,
+    "p95": 15.071,
+    "max": 15.071,
+    "mean": 14.108
+   },
+   "worst_pair_p95": 18.286,
+   "best_pair_p95": 14.304,
+   "load_after": [
+    7.98,
+    7.42,
+    7.74
+   ]
+  }
+ }
+}

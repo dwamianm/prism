@@ -1,0 +1,84 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "stored": 20500,
+ "calls": 10,
+ "pairs": [
+  {
+   "subject": "heavy scarf",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 2742.872,
+    "p95": 2828.525,
+    "p99": 2828.525,
+    "max": 2828.525,
+    "mean": 2759.089
+   },
+   "scanned_nodes": 20500,
+   "matched_records": 44,
+   "status": "multiple",
+   "current_candidate_count": 35,
+   "exclusions": {
+    "lifecycle_not_active": 9,
+    "outside_validity_window": 9,
+    "selector_mismatch": 20456,
+    "superseded_pointer": 9
+   }
+  },
+  {
+   "subject": "new leash",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 2606.462,
+    "p95": 2788.802,
+    "p99": 2788.802,
+    "max": 2788.802,
+    "mean": 2660.388
+   },
+   "scanned_nodes": 20500,
+   "matched_records": 29,
+   "status": "multiple",
+   "current_candidate_count": 25,
+   "exclusions": {
+    "lifecycle_not_active": 4,
+    "outside_validity_window": 4,
+    "selector_mismatch": 20471,
+    "superseded_pointer": 4
+   }
+  },
+  {
+   "subject": "large umbrella",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 2625.764,
+    "p95": 2814.85,
+    "p99": 2814.85,
+    "max": 2814.85,
+    "mean": 2635.41
+   },
+   "scanned_nodes": 20500,
+   "matched_records": 47,
+   "status": "multiple",
+   "current_candidate_count": 39,
+   "exclusions": {
+    "lifecycle_not_active": 8,
+    "outside_validity_window": 8,
+    "selector_mismatch": 20453,
+    "superseded_pointer": 8
+   }
+  }
+ ],
+ "stages": [
+  {
+   "pair": "heavy scarf / located_in",
+   "total_ms": 2511.374,
+   "pages": 44,
+   "python_ms": 2432.076,
+   "outside_scan_ms": 79.299,
+   "scanned_nodes": 20500,
+   "matched": 44
+  }
+ ]
+}

@@ -1,0 +1,74 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "steps": {
+  "before": {
+   "nodes": {
+    "rows": 41620,
+    "sha256": "13a0cc08bafa94e0dcac3fd225443e7b8b4a5f2dd8de3282f757dd55570991f9"
+   },
+   "events": {
+    "rows": 20500,
+    "sha256": "31346fc68aefb8f44c2cd335e14477e16b27c6c39f98888c467ea91737cf4704"
+   }
+  },
+  "after_schema": {
+   "nodes": {
+    "rows": 41620,
+    "sha256": "13a0cc08bafa94e0dcac3fd225443e7b8b4a5f2dd8de3282f757dd55570991f9"
+   },
+   "events": {
+    "rows": 20500,
+    "sha256": "31346fc68aefb8f44c2cd335e14477e16b27c6c39f98888c467ea91737cf4704"
+   }
+  },
+  "backfill": {
+   "nodes": 41620,
+   "keyed": 20500,
+   "unkeyable": 21120
+  },
+  "after_reopen": {
+   "nodes": {
+    "rows": 41620,
+    "sha256": "13a0cc08bafa94e0dcac3fd225443e7b8b4a5f2dd8de3282f757dd55570991f9"
+   },
+   "events": {
+    "rows": 20500,
+    "sha256": "31346fc68aefb8f44c2cd335e14477e16b27c6c39f98888c467ea91737cf4704"
+   }
+  },
+  "backfill_again": {
+   "nodes": 41620,
+   "keyed": 20500,
+   "unkeyable": 21120
+  },
+  "after_rebuild": {
+   "nodes": {
+    "rows": 41620,
+    "sha256": "13a0cc08bafa94e0dcac3fd225443e7b8b4a5f2dd8de3282f757dd55570991f9"
+   },
+   "events": {
+    "rows": 20500,
+    "sha256": "31346fc68aefb8f44c2cd335e14477e16b27c6c39f98888c467ea91737cf4704"
+   }
+  },
+  "after_second_reopen": {
+   "nodes": {
+    "rows": 41620,
+    "sha256": "13a0cc08bafa94e0dcac3fd225443e7b8b4a5f2dd8de3282f757dd55570991f9"
+   },
+   "events": {
+    "rows": 20500,
+    "sha256": "31346fc68aefb8f44c2cd335e14477e16b27c6c39f98888c467ea91737cf4704"
+   }
+  }
+ },
+ "checks": {
+  "no_node_lost": true,
+  "no_node_changed": true,
+  "no_event_changed": true,
+  "key_stable_across_rebuild": true,
+  "key_rebuild_matches_original": true,
+  "key_rows": 41620
+ },
+ "passed": true
+}

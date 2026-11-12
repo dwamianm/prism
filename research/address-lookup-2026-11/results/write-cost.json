@@ -1,0 +1,44 @@
+{
+ "pack": "/tmp/p6/build/current-4050/pack",
+ "facts": 150,
+ "stores": 10,
+ "insert_without_key_ms": {
+  "count": 150,
+  "p50": 8.883,
+  "p95": 17.631,
+  "mean": 9.374
+ },
+ "insert_with_key_inline_ms": {
+  "count": 150,
+  "p50": 20.266,
+  "p95": 33.537,
+  "mean": 20.913
+ },
+ "insert_through_installed_path_ms": {
+  "count": 150,
+  "p50": 20.309,
+  "p95": 32.589,
+  "mean": 20.497
+ },
+ "insert_with_key_in_statement_ms": {
+  "count": 150,
+  "p50": 9.553,
+  "p95": 17.138,
+  "mean": 10.025
+ },
+ "added_per_fact_ms": {
+  "inline_p50": 11.383,
+  "inline_mean": 11.539,
+  "installed_p50": 11.426,
+  "installed_mean": 11.123,
+  "in_statement_p50": 0.67,
+  "in_statement_mean": 0.651
+ },
+ "store_call_ms": {
+  "count": 10,
+  "p50": 576.816,
+  "p95": 1524.525,
+  "mean": 690.231
+ },
+ "key_share_of_store_p50_percent": 1.981
+}

@@ -1,0 +1,12 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "pair": "green bag / located_in",
+ "pages": 44,
+ "scanned_nodes": 20500,
+ "matched": 44,
+ "sql_fetch_ms": 357.864,
+ "hydrate_ms": 188.579,
+ "view_ms": 243.046,
+ "filter_ms": 15.351,
+ "sum_ms": 804.839
+}

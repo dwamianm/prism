@@ -112,6 +112,55 @@ def _entry(record: _Record) -> AssertionStateEntry:
     )
 
 
+def classify_page(
+    page: list[MemoryNode],
+    *,
+    engine,
+    query: AssertionStateQuery,
+    normalized_subject: str,
+    normalized_predicate: str,
+    exclusions: Counter[str],
+) -> tuple[list[_Record], int]:
+    """Turn one page of scanned nodes into claim records, counting every rejection.
+
+    Returns the records this page contributed and how many of them matched the address. The counts are the ones the
+    state reports: a node with no usable assertion, a node at another address, a node after the knowledge cutoff,
+    and one reason for each eligibility exclusion.
+    """
+    records: list[_Record] = []
+    matched = 0
+    for node in page:
+        values = _assertion_values(node)
+        if values is None:
+            exclusions["missing_structured_assertion"] += 1
+            continue
+        if (
+            normalize_assertion_value("subject", values["subject"])
+            != normalized_subject
+            or normalize_assertion_value("predicate", values["predicate"])
+            != normalized_predicate
+        ):
+            exclusions["selector_mismatch"] += 1
+            continue
+        matched += 1
+        if query.knowledge_at is not None and node.created_at > query.knowledge_at:
+            exclusions["after_knowledge_cutoff"] += 1
+            continue
+        reasons = _eligibility_reasons(engine, node, query)
+        exclusions.update(reason.split(":", 1)[0] for reason in reasons)
+        records.append(_Record(
+            node=node,
+            subject=values["subject"],
+            predicate=values["predicate"],
+            object=values["object"],
+            polarity=values["polarity"],
+            normalized_object=normalize_assertion_value("object", values["object"]),
+            normalized_polarity=normalize_assertion_value("polarity", values["polarity"]),
+            exclusion_reasons=reasons,
+        ))
+    return records, matched
+
+
 async def get_assertion_state(
     engine,
     query: AssertionStateQuery,
@@ -144,39 +193,45 @@ async def get_assertion_state(
             scanned_nodes += len(page)
             if not page:
                 break
-            for node in page:
-                values = _assertion_values(node)
-                if values is None:
-                    exclusions["missing_structured_assertion"] += 1
-                    continue
-                if (
-                    normalize_assertion_value("subject", values["subject"])
-                    != normalized_subject
-                    or normalize_assertion_value("predicate", values["predicate"])
-                    != normalized_predicate
-                ):
-                    exclusions["selector_mismatch"] += 1
-                    continue
-                matched_records += 1
-                if query.knowledge_at is not None and node.created_at > query.knowledge_at:
-                    exclusions["after_knowledge_cutoff"] += 1
-                    continue
-                reasons = _eligibility_reasons(engine, node, query)
-                exclusions.update(reason.split(":", 1)[0] for reason in reasons)
-                records.append(_Record(
-                    node=node,
-                    subject=values["subject"],
-                    predicate=values["predicate"],
-                    object=values["object"],
-                    polarity=values["polarity"],
-                    normalized_object=normalize_assertion_value("object", values["object"]),
-                    normalized_polarity=normalize_assertion_value("polarity", values["polarity"]),
-                    exclusion_reasons=reasons,
-                ))
+            page_records, page_matched = classify_page(
+                page, engine=engine, query=query,
+                normalized_subject=normalized_subject,
+                normalized_predicate=normalized_predicate,
+                exclusions=exclusions,
+            )
+            records.extend(page_records)
+            matched_records += page_matched
             if len(page) < batch_size:
                 break
             cursor = str(page[-1].id)
 
+    return await build_state(
+        engine, query, user_id=user_id, records=records,
+        normalized_subject=normalized_subject, normalized_predicate=normalized_predicate,
+        exclusions=exclusions, scanned_nodes=scanned_nodes, matched_records=matched_records,
+    )
+
+
+async def build_state(
+    engine,
+    query: AssertionStateQuery,
+    *,
+    user_id: str,
+    records: list[_Record],
+    normalized_subject: str,
+    normalized_predicate: str,
+    exclusions: Counter[str] | None = None,
+    scanned_nodes: int = 0,
+    matched_records: int = 0,
+) -> AssertionState:
+    """Build the state from the matched records, for either page source.
+
+    Every step after the page lives here: contradiction edges, status, value groups, ordering, truncation. A caller
+    that finds the records another way passes the same two scan counts it would have made, so the state it returns
+    carries the same numbers.
+    """
+    if exclusions is None:
+        exclusions = Counter()
     visible_ids = {record.node.id for record in records}
     records_by_id = {record.node.id: record for record in records}
     current_ids = {

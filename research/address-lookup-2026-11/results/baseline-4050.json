@@ -1,0 +1,78 @@
+{
+ "pack": "/tmp/p6/build/current-4050/pack",
+ "stored": 4050,
+ "calls": 10,
+ "pairs": [
+  {
+   "subject": "plastic bowl",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 226.407,
+    "p95": 249.865,
+    "p99": 249.865,
+    "max": 249.865,
+    "mean": 231.739
+   },
+   "scanned_nodes": 4050,
+   "matched_records": 9,
+   "status": "multiple",
+   "current_candidate_count": 8,
+   "exclusions": {
+    "lifecycle_not_active": 1,
+    "outside_validity_window": 1,
+    "selector_mismatch": 4041,
+    "superseded_pointer": 1
+   }
+  },
+  {
+   "subject": "red flashlight",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 220.972,
+    "p95": 248.647,
+    "p99": 248.647,
+    "max": 248.647,
+    "mean": 228.201
+   },
+   "scanned_nodes": 4050,
+   "matched_records": 1,
+   "status": "single",
+   "current_candidate_count": 1,
+   "exclusions": {
+    "selector_mismatch": 4049
+   }
+  },
+  {
+   "subject": "red scarf",
+   "predicate": "located_in",
+   "ms": {
+    "count": 10,
+    "p50": 228.398,
+    "p95": 254.369,
+    "p99": 254.369,
+    "max": 254.369,
+    "mean": 233.468
+   },
+   "scanned_nodes": 4050,
+   "matched_records": 9,
+   "status": "multiple",
+   "current_candidate_count": 9,
+   "exclusions": {
+    "selector_mismatch": 4041
+   }
+  }
+ ],
+ "stages": [
+  {
+   "pair": "plastic bowl / located_in",
+   "total_ms": 225.273,
+   "pages": 11,
+   "python_ms": 208.255,
+   "outside_scan_ms": 17.018,
+   "scanned_nodes": 4050,
+   "matched": 9
+  }
+ ]
+}

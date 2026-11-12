@@ -1,0 +1,74 @@
+{
+ "pack": "/tmp/p6/build/current-4050/pack",
+ "steps": {
+  "before": {
+   "nodes": {
+    "rows": 8720,
+    "sha256": "292f66788db1176a03b77fa14fd2dfdb5dbd2f47ac027f3e4c592571c6f7e255"
+   },
+   "events": {
+    "rows": 4050,
+    "sha256": "146b2aab42af3206784133110070795993ec83b056af4cccf5cfc76e88674dcb"
+   }
+  },
+  "after_schema": {
+   "nodes": {
+    "rows": 8720,
+    "sha256": "292f66788db1176a03b77fa14fd2dfdb5dbd2f47ac027f3e4c592571c6f7e255"
+   },
+   "events": {
+    "rows": 4050,
+    "sha256": "146b2aab42af3206784133110070795993ec83b056af4cccf5cfc76e88674dcb"
+   }
+  },
+  "backfill": {
+   "nodes": 8720,
+   "keyed": 4050,
+   "unkeyable": 4670
+  },
+  "after_reopen": {
+   "nodes": {
+    "rows": 8720,
+    "sha256": "292f66788db1176a03b77fa14fd2dfdb5dbd2f47ac027f3e4c592571c6f7e255"
+   },
+   "events": {
+    "rows": 4050,
+    "sha256": "146b2aab42af3206784133110070795993ec83b056af4cccf5cfc76e88674dcb"
+   }
+  },
+  "backfill_again": {
+   "nodes": 8720,
+   "keyed": 4050,
+   "unkeyable": 4670
+  },
+  "after_rebuild": {
+   "nodes": {
+    "rows": 8720,
+    "sha256": "292f66788db1176a03b77fa14fd2dfdb5dbd2f47ac027f3e4c592571c6f7e255"
+   },
+   "events": {
+    "rows": 4050,
+    "sha256": "146b2aab42af3206784133110070795993ec83b056af4cccf5cfc76e88674dcb"
+   }
+  },
+  "after_second_reopen": {
+   "nodes": {
+    "rows": 8720,
+    "sha256": "292f66788db1176a03b77fa14fd2dfdb5dbd2f47ac027f3e4c592571c6f7e255"
+   },
+   "events": {
+    "rows": 4050,
+    "sha256": "146b2aab42af3206784133110070795993ec83b056af4cccf5cfc76e88674dcb"
+   }
+  }
+ },
+ "checks": {
+  "no_node_lost": true,
+  "no_node_changed": true,
+  "no_event_changed": true,
+  "key_stable_across_rebuild": true,
+  "key_rebuild_matches_original": true,
+  "key_rows": 8720
+ },
+ "passed": true
+}

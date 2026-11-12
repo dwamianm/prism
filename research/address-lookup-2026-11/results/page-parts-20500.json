@@ -1,0 +1,21 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "rows": 500,
+ "reads": 10,
+ "wall_ms": {
+  "p50": 17.506,
+  "min": 16.86,
+  "max": 18.559
+ },
+ "last_read_parts_ms": {
+  "row_to_node_ms": 4.3,
+  "owned_view_ms": 4.713
+ },
+ "last_read_calls": {
+  "row_to_node": 500,
+  "owned_view": 1
+ },
+ "row_to_node_ms_per_call": 0.0086,
+ "owned_view_ms_per_call": 4.713,
+ "sql_and_overhead_ms": 8.493
+}

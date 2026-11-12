@@ -1,0 +1,137 @@
+{
+ "pack": "/tmp/p6/lookup/pack",
+ "stored": 20500,
+ "calls": 10,
+ "pairs": [
+  "white basket / located_in",
+  "new leash / located_in",
+  "silver kettle / located_in"
+ ],
+ "migration": {
+  "nodes": 41620,
+  "keyed": 20500,
+  "unkeyable": 21120,
+  "seconds": 11.178
+ },
+ "load_before": [
+  9.02,
+  7.69,
+  7.83
+ ],
+ "sides": {
+  "current": {
+   "per_pair": [
+    {
+     "pair": "white basket / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 2985.58,
+      "p95": 3125.416,
+      "max": 3125.416,
+      "mean": 3010.796
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 44,
+     "status": "multiple"
+    },
+    {
+     "pair": "new leash / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 2979.262,
+      "p95": 3176.966,
+      "max": 3176.966,
+      "mean": 2997.533
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 29,
+     "status": "multiple"
+    },
+    {
+     "pair": "silver kettle / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 2919.167,
+      "p95": 2985.63,
+      "max": 2985.63,
+      "mean": 2914.262
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 47,
+     "status": "multiple"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 2979.262,
+    "p95": 2985.58,
+    "max": 2985.58,
+    "mean": 2961.336
+   },
+   "worst_pair_p95": 3176.966,
+   "best_pair_p95": 2985.63,
+   "load_after": [
+    18.7,
+    10.94,
+    9.04
+   ]
+  },
+  "indexed": {
+   "per_pair": [
+    {
+     "pair": "white basket / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 46.214,
+      "p95": 53.398,
+      "max": 53.398,
+      "mean": 47.141
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 44,
+     "status": "multiple"
+    },
+    {
+     "pair": "new leash / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 41.076,
+      "p95": 51.441,
+      "max": 51.441,
+      "mean": 43.077
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 29,
+     "status": "multiple"
+    },
+    {
+     "pair": "silver kettle / located_in",
+     "ms": {
+      "count": 10,
+      "p50": 39.389,
+      "p95": 44.976,
+      "max": 44.976,
+      "mean": 40.299
+     },
+     "scanned_nodes": 20500,
+     "matched_records": 47,
+     "status": "multiple"
+    }
+   ],
+   "p50_of_p50": {
+    "count": 3,
+    "p50": 41.076,
+    "p95": 46.214,
+    "max": 46.214,
+    "mean": 42.226
+   },
+   "worst_pair_p95": 53.398,
+   "best_pair_p95": 44.976,
+   "load_after": [
+    18.17,
+    10.96,
+    9.06
+   ]
+  }
+ }
+}
