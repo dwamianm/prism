@@ -243,9 +243,12 @@ runs were made under different load (3.9 to 5.7 before, 17.3 to 13.2 after), so 
   receipt.
 - **The stated-store target is met only on a quiet machine, by a narrow margin in `address_first`.** It reads in
   162.5 ms (`classic`) and 195.6 ms (`address_first`) at a load average of 3.3 to 6.6, and in 213.7 to 246.6 ms at a
-  load average of 7 to 12. A deployer whose machine runs other work will see the higher number, so the margin in
-  `address_first` is 4.4 ms on an idle machine and negative on a busy one. The profile's saving over the defaults is
-  large either way.
+  load average of 7 to 12, so under `address_first` on a loaded machine the profile misses the 200 ms bar. A
+  deployer whose machine runs other work will see the higher number: the margin in `address_first` is 4.4 ms on an
+  idle machine and negative on a busy one. The profile's saving over the defaults is large either way.
+- The likely fix for the loaded-machine miss is the single receipt serialization scoped in `READ-PATH-COST.md`
+  (bounded alternative 1), which would cut about 16 to 25 ms more on the stated store. It changes
+  `source_files_sha256`, so it is a separate decision and is not in this change.
 - The receipt is still built from 1,000 scored candidates when a caller passes a large `limit`; serializing the
   receipt once (study `READ-PATH-COST.md`, bounded alternative 1) would cut about 16 to 25 ms more on the stated
   store, but it changes `source_files_sha256` and is a separate decision. Bar 1 does not need it; it would widen the
