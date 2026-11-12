@@ -205,6 +205,35 @@ it checks the refactored path's counts on a hand-built store, checks the prototy
 field, checks every stored key equals what `normalize_assertion_value` says, checks a claim stored after the
 migration is found without a backfill, and checks that rewriting a subject moves the claim to its new address.
 
+## Tests
+
+Providers blocked throughout
+(`OPENAI_API_KEY= ANTHROPIC_API_KEY=sk-ant-blocked OPENAI_BASE_URL=http://127.0.0.1:9/v1
+ANTHROPIC_BASE_URL=http://127.0.0.1:9 PRME_EXTRACTION_API_KEY=`).
+
+Targeted suites on this branch: `tests/test_assertion_state.py`, `tests/test_temporal_validity.py` and
+`tests/test_privacy_source_routing.py` give 28 passed, 19 skipped. `research/address-lookup-2026-11/test_page_seam.py`
+gives 5 passed.
+
+Full suite: `pytest tests -q --ignore=tests/test_pg_store.py` on commit `c2f50338`, providers blocked:
+**1 failed, 7,633 passed, 1,728 skipped, 127 xfailed in 2,300 s (38 min 20 s)**. A first run used `-x` and stopped at
+the same failure after 849 tests; those 849 are a prefix of this run and add nothing.
+
+The single failure is `tests/test_checkout.py::TestMainCheckout::test_a_plain_clone_resolves_to_itself`, and it is a
+harness artifact of running from a git worktree, not a result of this branch.
+
+```
+assert checkout.main_checkout() == checkout.REPO
+E   AssertionError: assert PosixPath('/Users/dwamianm/Sites/prism') == PosixPath('/Users/dwamianm/Sites/prism-address-lookup')
+```
+
+`checkout.main_checkout()` derives the main checkout from `git rev-parse --git-common-dir`, so from a worktree it
+returns the main checkout by design. The test asserts the two are equal, which only holds in a plain clone. Evidence
+that this branch did not cause it: the failure reproduces in `~/Sites/prism-working-tier`, a different worktree of the
+same repository that this branch never touched; it passes in `~/Sites/prism` itself (13 passed); and this branch
+changes neither `tests/` nor `benchmarks/checkout.py`. `tests/test_checkout.py` and that module both last changed in
+`075b5f03` on 2026-09-28, which is on `origin/main`.
+
 ## Limits, stated
 
 - One machine, one run per number. Load average moves with other sessions on this machine and is recorded beside
