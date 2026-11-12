@@ -14,6 +14,9 @@ Choices, and why:
 - The configuration is the evidence gate's (``gate_config``): current defaults, environment variables and
   ``.env`` ignored, the opportunistic organizer off. The organizer's background pass would otherwise rewrite
   the store between reads, and two runs would not read the same store.
+- Each run reads a fresh copy of the saved pack. Every read stores its receipt (about 1.5 MB here) in the
+  pack's operations table, so a run that read the saved pack itself would leave a larger store for the next
+  run, and two runs would not time the same store.
 - Warm reads. Each run opens the pack, answers one warm-up question, then answers every question
   ``--rounds`` times. The questions repeat, so the reported percentiles come from 60 questions times the
   rounds. Each read is timed around ``retrieve()`` alone.
@@ -46,6 +49,7 @@ import os
 from pathlib import Path
 import pstats
 import random
+import shutil
 import statistics
 import subprocess
 import time
@@ -54,7 +58,7 @@ from benchmarks.diagnostics.product_packing import _quiet_offline_cli, gate_conf
 from prme import MemoryEngine
 
 KIND = "prme-read-cost"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 USER = "robot-1"
 BASE = datetime(2026, 11, 2, 8, 0, tzinfo=timezone.utc)
 SPACING = timedelta(seconds=20)
@@ -289,7 +293,13 @@ async def run(label: str, sizes: list[int], seed: int, rounds: int, root: Path, 
         if not (pack / "memory.duckdb").exists():
             print(f"building {size} memories ...", flush=True)
             print(json.dumps(await build(pack, size, seed)), flush=True)
-        result = await measure(pack, size, rounds, timer, out / f"profile-n{size}.txt" if profile else None)
+        work = root / "work" / label / f"n{size}"
+        shutil.rmtree(work, ignore_errors=True)
+        shutil.copytree(pack, work)
+        try:
+            result = await measure(work, size, rounds, timer, out / f"profile-n{size}.txt" if profile else None)
+        finally:
+            shutil.rmtree(root / "work" / label, ignore_errors=True)
         report["sizes"][str(size)] = result
         print(f"N={size} reads={result['reads']} p50={result['p50_ms']} ms p95={result['p95_ms']} ms "
               f"mean={result['mean_ms']} ms max={result['max_ms']} ms", flush=True)

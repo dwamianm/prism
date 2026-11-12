@@ -131,9 +131,15 @@ class RankingProfileRepository(RelevanceRepository):
     async def latest_state(self, *, user_id: str,
                            scopes: tuple[Scope, ...] | None) -> RankingProfileState | None:
         self._owner(user_id)
+        # The latest row's id is found first and only its payload is read.
+        # Ordering whole rows made DuckDB read every operation's payload, and
+        # each retrieval adds a receipt of about 1.5 MB there, so the lookup
+        # grew with every read: 24 ms per read after 1,000 reads
+        # (READ-PATH-COST.md, 2026-11-12). The row returned is the same.
+        latest = ("op_type='RANKING_PROFILE_STATE_CHANGED' AND actor_id=$1 AND namespace_id=$2")
         rows = await self._query(
-            "SELECT payload FROM operations WHERE op_type='RANKING_PROFILE_STATE_CHANGED' "
-            "AND actor_id=$1 AND namespace_id=$2 ORDER BY created_at DESC,id DESC LIMIT 1",
+            f"SELECT payload FROM operations WHERE {latest} AND id = ("
+            f"SELECT id FROM operations WHERE {latest} ORDER BY created_at DESC,id DESC LIMIT 1)",
             user_id, scope_key(scopes),
         )
         state = self._read_state(rows[0]["payload"], user_id=user_id) if rows else None

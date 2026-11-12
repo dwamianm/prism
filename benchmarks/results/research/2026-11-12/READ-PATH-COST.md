@@ -10,8 +10,8 @@ its time with the current defaults (`memory_mode` classic), and removes the cost
 observations, object moves, visitors and a few rare events, from `random.Random(1)`, admitted with
 `ingest_fast_many()` and indexed with `process_pending()` (local embedding, no extraction, no model call). The
 configuration is the evidence gate's (`gate_config`): current defaults, environment and `.env` ignored, the
-opportunistic organizer off. Each run opens the saved pack, answers one warm-up question, then 60 questions three
-times (180 timed reads per size). Each read is timed around `retrieve()` alone. The first round fingerprints every
+opportunistic organizer off. Each run reads a fresh copy of the saved pack (schema version 2 of the tool; see "A
+second baseline" below), answers one warm-up question, then 60 questions three times (180 timed reads per size). Each read is timed around `retrieve()` alone. The first round fingerprints every
 read: ranked node ids and scores, packed node ids, rendered context, and the stored receipt with only its request id
 replaced. `compare` fails on any difference.
 
@@ -59,3 +59,103 @@ token budget. The size of the store hardly matters: the cost is per candidate, n
    (pydantic `validate_components` and `ScoreTrace` construction run about 100,000 times per round of 60 reads).
 
 Search itself (USearch, Tantivy, the embedding) is under 15 ms per read.
+
+## A second baseline
+
+The first runs read the saved pack itself. Every `retrieve()` stores its receipt, about 1.5 MB here, in the pack's
+`operations` table, so each run left a larger store for the next one: after about 1,000 reads the 20,000 pack had
+grown from 75 MB to 2.9 GB, and the ranking-profile lookup, which scanned those rows, took about 24 ms per read.
+Runs on that growing store cannot be compared fairly. The tool now copies the saved pack for each run and deletes
+the copy afterwards (schema version 2). The packs were rebuilt from the same seed (the same `text_sha256` at both
+sizes), and origin/main was measured again on fresh copies. That run, `main2`, is the baseline for bar (b). The
+rebuilt packs have new node ids, so `main2` fingerprints differ from the first `main` run; every later comparison is
+against `main2`.
+
+| Memories | Reads | p50 | p95 | Mean | Max |
+|---|---|---|---|---|---|
+| 3,000 | 180 | 222.1 ms | 293.2 ms | 225.9 ms | 369.0 ms |
+| 20,000 | 180 | 244.0 ms | 317.3 ms | 246.5 ms | 411.0 ms |
+
+Bar (b) on this baseline: p95 at 20,000 memories at most 158.7 ms (147.8 ms on the first baseline). The same code
+measured about 7% slower than the first run, on a machine with a load average of 4 to 7.
+
+## What changed
+
+Three changes in `src/prme/storage/`. None of them touch the 24 files in `src/prme/retrieval/` whose hashes the
+receipt records (`execution.features.source_files_sha256`), so receipts stay byte-identical.
+
+1. `VectorIndex._fetch_allowed_keys` writes the 1,500 USearch keys into the SQL as integer literals
+   (`str(int(key))`) instead of 1,500 bound parameters. The owner and lifecycle states stay bound.
+2. `DuckPGQGraphStore._get_nodes_sync` writes node ids as quoted literals, but only when every id is exactly
+   `str(UUID(id))`: 36 lowercase hexadecimal digits and hyphens, which cannot carry SQL. Any other string keeps the
+   bound parameters, so it reads, and fails, exactly as before (DuckDB accepts uppercase, braced and hyphen-free
+   forms through a parameter, and rejects text that is not a UUID).
+3. `RankingProfileStore` finds the latest profile state by id first (`ORDER BY created_at DESC, id DESC LIMIT 1` in a
+   subquery), and reads one payload, instead of reading every `RANKING_PROFILE_STATE_CHANGED` payload of the owner.
+   The row returned is the same; the id is the primary key, so there is no tie. The SQL runs on DuckDB and
+   PostgreSQL.
+
+One more change was tried and reverted: serializing the receipt once in `pipeline.py` (about 8 ms per read). It
+left the receipt's content unchanged, but `pipeline.py` is one of the hashed files, so `source_files_sha256` changed
+and bar (a) failed.
+
+## Results
+
+| Run | Memories | p50 | p95 | Mean | Max | Identical to `main2` |
+|---|---|---|---|---|---|---|
+| `main2` | 3,000 | 222.1 ms | 293.2 ms | 225.9 ms | 369.0 ms | |
+| cycle 2 | 3,000 | 120.6 ms | 186.2 ms (0.64x) | 125.0 ms | 302.2 ms | 60/60 |
+| `main2` | 20,000 | 244.0 ms | 317.3 ms | 246.5 ms | 411.0 ms | |
+| cycle 2 | 20,000 | 141.0 ms | 221.5 ms (0.70x) | 148.4 ms | 340.7 ms | 60/60 |
+
+"Identical" means the same ranked node ids and scores, packed node ids, rendered context and stored receipt bytes
+(request id replaced) on every question. The fingerprint digests are equal at both sizes
+(`read-cost-main2.json`, `read-cost-cycle2.json`). Candidate generation fell from 128.6 ms to 34.1 ms per read at
+20,000 memories; the vector path from 77.1 ms to 15.8 ms.
+
+Cycle 1 (vector keys only) on the growing pack: p95 192.3 ms and 201.6 ms against 276.2 ms and 295.6 ms, 60/60
+identical. Those runs read a larger store than their baseline, so they are recorded only as history.
+
+## Verdict
+
+- Bar (a): met for the stage-timing questions at both sizes (60/60 and 60/60). The defect, chat and member probes and
+  the offline evidence gate were not run, because bar (b) failed after two cycles and the brief says to stop there.
+- Bar (b): **not met.** p95 at 20,000 memories is 221.5 ms, 0.70x of `main2`; the bar is 0.50x (158.7 ms).
+- Bar (c): ruff passes on the changed files. Targeted tests pass with providers blocked: 97 passed, 27 skipped
+  (PostgreSQL), in `test_determinism_rebuild.py`, `test_packing_receipt_compatibility.py`, `test_privacy_receipts.py`,
+  `test_ranking_profiles.py`, `test_ranking_profile_interfaces.py`, `test_owner_scoped_graph_reads.py`,
+  `test_vector_filtered_recall.py`, `test_vector_recovery.py`, `test_graph_neighborhood_tenancy.py` and
+  `test_storage_cancellation.py`.
+- Distance from 50 ms: p95 221.5 ms is 171.5 ms over, 4.4 times the target. p50 is 141.0 ms.
+
+## Where the time goes now (20,000 memories, ms per read)
+
+| Step | ms per read |
+|---|---|
+| Receipt: two `model_dump_json` calls (checksum, then log) 16.4, `make_receipt` 13.5, the 1.5 MB INSERT 8.9, `json.dumps` 2.0 | about 41 |
+| Candidate generation: vector search 16.9 (allowed keys 7.2, USearch 5.0, query embedding 4.6), loading records 15 (841 rows, decoding 5.2), pinned candidates 7.7, graph seeds 4.8, lexical 3.2, merge 2.4 | 34.1 (stages run concurrently) |
+| Scoring (`score_and_rank`), mostly score-record validation (`validate_components`, about 99,000 calls per round) | 18 to 22 |
+| Packing (`pack_context`) | 18 to 20 |
+| Python garbage collection | about 14 |
+
+The tail (p95 221.5 ms against a mean of 148.4 ms) comes from garbage-collection pauses and machine load.
+
+The receipt is now the largest cost. Its serializer runs on the whole 1.5 MB receipt twice per read, and
+`make_receipt` validates the score records a second time. Removing all of the receipt and garbage-collection time
+would still leave a mean of about 93 ms: 1,000 candidates scored and packed per read is the floor at the current
+candidate limits (`vector_k=500`, `lexical_k=500`).
+
+## Bounded alternative
+
+A third cycle needs approval. Two options:
+
+1. **Receipt, with one accepted field change.** Serialize the receipt once and reuse the text for the checksum and
+   the log, and validate the score records once. The receipt content stays the same, but `source_files_sha256`
+   changes because `pipeline.py` is hashed. If that one field difference is accepted, this saves about 16 to 25 ms
+   per read. It does not reach bar (b) alone.
+2. **A robot read profile.** Reaching 50 ms needs fewer candidates and a smaller receipt per read, which changes
+   outputs. That is a design call: a setting that is off by default (for example under `memory_mode`
+   `address_first`), measured on the probes and the gate like any other option.
+
+Follow-up finding: every read stores a receipt of about 1.5 MB. At 1,000 reads that is 1.5 GB in `operations`.
+A robot that reads often fills its disk with receipts, whatever the read time.
