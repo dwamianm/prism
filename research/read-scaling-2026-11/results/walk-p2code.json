@@ -1,0 +1,1032 @@
+{
+ "400": {
+  "node_types": [
+   [
+    "entity",
+    408
+   ],
+   [
+    "fact",
+    400
+   ],
+   [
+    "note",
+    400
+   ]
+  ],
+  "edge_types": [
+   [
+    "mentions",
+    1200
+   ],
+   [
+    "has_fact",
+    400
+   ]
+  ],
+  "degree_by_type": [
+   [
+    "entity",
+    "408",
+    "3.9",
+    "20"
+   ],
+   [
+    "fact",
+    "400",
+    "2.0",
+    "2"
+   ],
+   [
+    "note",
+    "400",
+    "2.0",
+    "2"
+   ]
+  ],
+  "questions": [
+   {
+    "question": "Where is the metal bowl now?",
+    "retrieve_s": 0.385,
+    "seed_lookup_ms": 4.4,
+    "seeds": 30,
+    "seed_names": [
+     "metal umbrella",
+     "green bowl",
+     "plastic bowl",
+     "wooden bowl",
+     "metal scarf",
+     "metal leash",
+     "golden bowl",
+     "metal jacket",
+     "heavy bowl",
+     "small bowl",
+     "striped bowl",
+     "round bowl",
+     "metal screwdriver",
+     "metal towel",
+     "glass bowl",
+     "metal bowl",
+     "blue bowl",
+     "yellow bowl",
+     "metal notebook",
+     "metal tape measure",
+     "metal box",
+     "silver bowl",
+     "spare bowl",
+     "metal flashlight",
+     "white bowl",
+     "metal kettle",
+     "large bowl",
+     "metal lamp",
+     "leather bowl",
+     "metal bottle"
+    ],
+    "walk_queries": 30,
+    "walk_s": 0.188,
+    "walk_rows_total": 398,
+    "walk_rows_max": 33,
+    "walk_ms_max": 77.0,
+    "edge_reads": [
+     [
+      20.8,
+      380,
+      145
+     ]
+    ]
+   },
+   {
+    "question": "Where is the blue charger now?",
+    "retrieve_s": 0.354,
+    "seed_lookup_ms": 4.4,
+    "seeds": 27,
+    "seed_names": [
+     "green charger",
+     "folded charger",
+     "striped charger",
+     "paper charger",
+     "blue basket",
+     "blue flashlight",
+     "silver charger",
+     "blue kettle",
+     "blue bag",
+     "heavy charger",
+     "blue mug",
+     "blue charger",
+     "light charger",
+     "square charger",
+     "blue jacket",
+     "blue umbrella",
+     "black charger",
+     "old charger",
+     "spare charger",
+     "plastic charger",
+     "blue bowl",
+     "round charger",
+     "large charger",
+     "blue scarf",
+     "wooden charger",
+     "blue clipboard",
+     "blue notebook"
+    ],
+    "walk_queries": 27,
+    "walk_s": 0.196,
+    "walk_rows_total": 353,
+    "walk_rows_max": 37,
+    "walk_ms_max": 77.1,
+    "edge_reads": [
+     [
+      17.4,
+      350,
+      127
+     ]
+    ]
+   },
+   {
+    "question": "Where is the leather leash now?",
+    "retrieve_s": 0.438,
+    "seed_lookup_ms": 4.6,
+    "seeds": 31,
+    "seed_names": [
+     "round leash",
+     "leather remote",
+     "leather mug",
+     "silver leash",
+     "leather bottle",
+     "wooden leash",
+     "leather bag",
+     "golden leash",
+     "leather box",
+     "leather towel",
+     "plastic leash",
+     "metal leash",
+     "leather jacket",
+     "leather leash",
+     "light leash",
+     "leather basket",
+     "leather lamp",
+     "heavy leash",
+     "old leash",
+     "leather screwdriver",
+     "leather tape measure",
+     "leather kettle",
+     "paper leash",
+     "leather scarf",
+     "large leash",
+     "leather clipboard",
+     "leather notebook",
+     "spare leash",
+     "striped leash",
+     "glass leash",
+     "leather bowl"
+    ],
+    "walk_queries": 31,
+    "walk_s": 0.243,
+    "walk_rows_total": 418,
+    "walk_rows_max": 43,
+    "walk_ms_max": 76.6,
+    "edge_reads": [
+     [
+      20.8,
+      368,
+      149
+     ]
+    ]
+   },
+   {
+    "question": "Where is the old basket now?",
+    "retrieve_s": 0.396,
+    "seed_lookup_ms": 4.8,
+    "seeds": 26,
+    "seed_names": [
+     "old screwdriver",
+     "plastic basket",
+     "blue basket",
+     "silver basket",
+     "square basket",
+     "new basket",
+     "old tape measure",
+     "old scarf",
+     "folded basket",
+     "old remote",
+     "striped basket",
+     "old bag",
+     "leather basket",
+     "old lamp",
+     "white basket",
+     "old leash",
+     "old charger",
+     "old basket",
+     "old kettle",
+     "light basket",
+     "old jacket",
+     "old flashlight",
+     "golden basket",
+     "old notebook",
+     "round basket",
+     "old box"
+    ],
+    "walk_queries": 26,
+    "walk_s": 0.242,
+    "walk_rows_total": 328,
+    "walk_rows_max": 40,
+    "walk_ms_max": 78.2,
+    "edge_reads": [
+     [
+      18.6,
+      338,
+      131
+     ]
+    ]
+   },
+   {
+    "question": "Where is the paper scarf now?",
+    "retrieve_s": 0.345,
+    "seed_lookup_ms": 4.8,
+    "seeds": 24,
+    "seed_names": [
+     "square scarf",
+     "new scarf",
+     "golden scarf",
+     "paper charger",
+     "folded scarf",
+     "silver scarf",
+     "paper lamp",
+     "paper bag",
+     "old scarf",
+     "metal scarf",
+     "green scarf",
+     "paper scarf",
+     "paper towel",
+     "paper tape measure",
+     "paper leash",
+     "leather scarf",
+     "striped scarf",
+     "paper box",
+     "light scarf",
+     "paper remote",
+     "blue scarf",
+     "yellow scarf",
+     "round scarf",
+     "paper mug"
+    ],
+    "walk_queries": 24,
+    "walk_s": 0.181,
+    "walk_rows_total": 325,
+    "walk_rows_max": 32,
+    "walk_ms_max": 80.5,
+    "edge_reads": [
+     [
+      16.9,
+      330,
+      121
+     ]
+    ]
+   }
+  ]
+ },
+ "4000": {
+  "node_types": [
+   [
+    "fact",
+    4000
+   ],
+   [
+    "note",
+    4000
+   ],
+   [
+    "entity",
+    620
+   ]
+  ],
+  "edge_types": [
+   [
+    "mentions",
+    12000
+   ],
+   [
+    "has_fact",
+    4000
+   ],
+   [
+    "supersedes",
+    115
+   ]
+  ],
+  "degree_by_type": [
+   [
+    "fact",
+    "4000",
+    "2.1",
+    "4"
+   ],
+   [
+    "note",
+    "4000",
+    "2.0",
+    "2"
+   ],
+   [
+    "entity",
+    "620",
+    "25.8",
+    "102"
+   ]
+  ],
+  "questions": [
+   {
+    "question": "Where is the yellow bowl now?",
+    "retrieve_s": 1.425,
+    "seed_lookup_ms": 5.1,
+    "seeds": 44,
+    "seed_names": [
+     "yellow clipboard",
+     "old bowl",
+     "paper bowl",
+     "black bowl",
+     "yellow box",
+     "folded bowl",
+     "light bowl",
+     "yellow kettle",
+     "yellow flashlight",
+     "yellow basket",
+     "square bowl",
+     "yellow bag",
+     "yellow leash",
+     "new bowl",
+     "red bowl",
+     "yellow screwdriver",
+     "yellow charger",
+     "yellow remote",
+     "green bowl",
+     "plastic bowl",
+     "yellow towel",
+     "wooden bowl",
+     "golden bowl",
+     "yellow bottle",
+     "heavy bowl",
+     "yellow mug",
+     "small bowl",
+     "yellow umbrella",
+     "striped bowl",
+     "round bowl",
+     "glass bowl",
+     "metal bowl",
+     "yellow lamp",
+     "yellow jacket",
+     "blue bowl",
+     "yellow bowl",
+     "yellow tape measure",
+     "silver bowl",
+     "yellow scarf",
+     "spare bowl",
+     "white bowl",
+     "large bowl",
+     "yellow notebook",
+     "leather bowl"
+    ],
+    "walk_queries": 44,
+    "walk_s": 0.896,
+    "walk_rows_total": 24805,
+    "walk_rows_max": 1084,
+    "walk_ms_max": 105.6,
+    "edge_reads": [
+     [
+      227.7,
+      8555,
+      896
+     ]
+    ]
+   },
+   {
+    "question": "Where is the white scarf now?",
+    "retrieve_s": 1.422,
+    "seed_lookup_ms": 4.9,
+    "seeds": 44,
+    "seed_names": [
+     "white umbrella",
+     "white leash",
+     "small scarf",
+     "white bottle",
+     "spare scarf",
+     "white notebook",
+     "white charger",
+     "glass scarf",
+     "wooden scarf",
+     "white mug",
+     "white remote",
+     "heavy scarf",
+     "red scarf",
+     "white clipboard",
+     "plastic scarf",
+     "large scarf",
+     "white tape measure",
+     "white scarf",
+     "white bag",
+     "black scarf",
+     "square scarf",
+     "white flashlight",
+     "new scarf",
+     "golden scarf",
+     "folded scarf",
+     "silver scarf",
+     "old scarf",
+     "metal scarf",
+     "white box",
+     "green scarf",
+     "paper scarf",
+     "white basket",
+     "white towel",
+     "leather scarf",
+     "striped scarf",
+     "white lamp",
+     "light scarf",
+     "blue scarf",
+     "white kettle",
+     "yellow scarf",
+     "round scarf",
+     "white jacket",
+     "white bowl",
+     "white screwdriver"
+    ],
+    "walk_queries": 44,
+    "walk_s": 0.974,
+    "walk_rows_total": 25069,
+    "walk_rows_max": 958,
+    "walk_ms_max": 104.1,
+    "edge_reads": [
+     [
+      211.0,
+      8475,
+      906
+     ]
+    ]
+   },
+   {
+    "question": "Where is the striped screwdriver now?",
+    "retrieve_s": 1.41,
+    "seed_lookup_ms": 5.4,
+    "seeds": 44,
+    "seed_names": [
+     "silver screwdriver",
+     "striped mug",
+     "golden screwdriver",
+     "striped box",
+     "wooden screwdriver",
+     "striped tape measure",
+     "paper screwdriver",
+     "striped bag",
+     "plastic screwdriver",
+     "green screwdriver",
+     "striped flashlight",
+     "blue screwdriver",
+     "striped lamp",
+     "yellow screwdriver",
+     "spare screwdriver",
+     "striped jacket",
+     "striped charger",
+     "striped remote",
+     "large screwdriver",
+     "old screwdriver",
+     "red screwdriver",
+     "glass screwdriver",
+     "black screwdriver",
+     "striped clipboard",
+     "striped umbrella",
+     "striped notebook",
+     "striped basket",
+     "striped towel",
+     "light screwdriver",
+     "striped screwdriver",
+     "striped bowl",
+     "leather screwdriver",
+     "small screwdriver",
+     "metal screwdriver",
+     "striped bottle",
+     "round screwdriver",
+     "striped scarf",
+     "striped kettle",
+     "folded screwdriver",
+     "white screwdriver",
+     "new screwdriver",
+     "square screwdriver",
+     "striped leash",
+     "heavy screwdriver"
+    ],
+    "walk_queries": 44,
+    "walk_s": 0.91,
+    "walk_rows_total": 25180,
+    "walk_rows_max": 958,
+    "walk_ms_max": 100.0,
+    "edge_reads": [
+     [
+      157.3,
+      8418,
+      904
+     ]
+    ]
+   },
+   {
+    "question": "Where is the round bowl now?",
+    "retrieve_s": 1.344,
+    "seed_lookup_ms": 5.3,
+    "seeds": 44,
+    "seed_names": [
+     "old bowl",
+     "paper bowl",
+     "round remote",
+     "black bowl",
+     "round towel",
+     "round jacket",
+     "round tape measure",
+     "round kettle",
+     "folded bowl",
+     "light bowl",
+     "square bowl",
+     "round bottle",
+     "new bowl",
+     "red bowl",
+     "round bag",
+     "round leash",
+     "green bowl",
+     "plastic bowl",
+     "round mug",
+     "round lamp",
+     "round flashlight",
+     "wooden bowl",
+     "round clipboard",
+     "golden bowl",
+     "round box",
+     "heavy bowl",
+     "small bowl",
+     "striped bowl",
+     "round bowl",
+     "round notebook",
+     "glass bowl",
+     "metal bowl",
+     "round screwdriver",
+     "blue bowl",
+     "yellow bowl",
+     "round charger",
+     "round umbrella",
+     "silver bowl",
+     "spare bowl",
+     "round scarf",
+     "white bowl",
+     "large bowl",
+     "round basket",
+     "leather bowl"
+    ],
+    "walk_queries": 44,
+    "walk_s": 0.901,
+    "walk_rows_total": 23995,
+    "walk_rows_max": 990,
+    "walk_ms_max": 103.4,
+    "edge_reads": [
+     [
+      191.9,
+      8039,
+      854
+     ]
+    ]
+   },
+   {
+    "question": "Where is the green basket now?",
+    "retrieve_s": 1.366,
+    "seed_lookup_ms": 5.3,
+    "seeds": 44,
+    "seed_names": [
+     "large basket",
+     "green bag",
+     "green flashlight",
+     "wooden basket",
+     "green clipboard",
+     "green bottle",
+     "small basket",
+     "metal basket",
+     "green lamp",
+     "green leash",
+     "paper basket",
+     "heavy basket",
+     "yellow basket",
+     "green umbrella",
+     "glass basket",
+     "green screwdriver",
+     "red basket",
+     "spare basket",
+     "green tape measure",
+     "green basket",
+     "black basket",
+     "green charger",
+     "green remote",
+     "green jacket",
+     "green bowl",
+     "plastic basket",
+     "blue basket",
+     "green mug",
+     "silver basket",
+     "square basket",
+     "new basket",
+     "folded basket",
+     "green scarf",
+     "striped basket",
+     "leather basket",
+     "green towel",
+     "white basket",
+     "old basket",
+     "light basket",
+     "golden basket",
+     "green notebook",
+     "round basket",
+     "green kettle",
+     "green box"
+    ],
+    "walk_queries": 44,
+    "walk_s": 0.892,
+    "walk_rows_total": 24510,
+    "walk_rows_max": 990,
+    "walk_ms_max": 99.2,
+    "edge_reads": [
+     [
+      154.2,
+      8401,
+      883
+     ]
+    ]
+   }
+  ]
+ },
+ "20500": {
+  "node_types": [
+   [
+    "fact",
+    20500
+   ],
+   [
+    "note",
+    20500
+   ],
+   [
+    "entity",
+    620
+   ]
+  ],
+  "edge_types": [
+   [
+    "mentions",
+    61500
+   ],
+   [
+    "has_fact",
+    20500
+   ],
+   [
+    "supersedes",
+    2980
+   ]
+  ],
+  "degree_by_type": [
+   [
+    "fact",
+    "20500",
+    "2.3",
+    "4"
+   ],
+   [
+    "note",
+    "20500",
+    "2.0",
+    "2"
+   ],
+   [
+    "entity",
+    "620",
+    "132.3",
+    "434"
+   ]
+  ],
+  "questions": [
+   {
+    "question": "Where is the paper tape measure now?",
+    "retrieve_s": 18.563,
+    "seed_lookup_ms": 6.4,
+    "seeds": 44,
+    "seed_names": [
+     "paper kettle",
+     "paper notebook",
+     "paper bowl",
+     "silver tape measure",
+     "spare tape measure",
+     "paper jacket",
+     "round tape measure",
+     "red tape measure",
+     "striped tape measure",
+     "paper flashlight",
+     "paper screwdriver",
+     "paper umbrella",
+     "paper basket",
+     "blue tape measure",
+     "new tape measure",
+     "plastic tape measure",
+     "green tape measure",
+     "white tape measure",
+     "paper bottle",
+     "paper clipboard",
+     "paper charger",
+     "paper lamp",
+     "black tape measure",
+     "old tape measure",
+     "paper bag",
+     "large tape measure",
+     "paper scarf",
+     "paper towel",
+     "paper tape measure",
+     "leather tape measure",
+     "paper leash",
+     "square tape measure",
+     "paper box",
+     "yellow tape measure",
+     "paper remote",
+     "metal tape measure",
+     "small tape measure",
+     "heavy tape measure",
+     "light tape measure",
+     "wooden tape measure",
+     "glass tape measure",
+     "folded tape measure",
+     "paper mug",
+     "golden tape measure"
+    ],
+    "walk_queries": 44,
+    "walk_s": 15.488,
+    "walk_rows_total": 502012,
+    "walk_rows_max": 15295,
+    "walk_ms_max": 507.6,
+    "edge_reads": [
+     [
+      1143.3,
+      44878,
+      3558
+     ]
+    ]
+   },
+   {
+    "question": "Where is the black lamp now?",
+    "retrieve_s": 17.984,
+    "seed_lookup_ms": 5.5,
+    "seeds": 44,
+    "seed_names": [
+     "black jacket",
+     "black clipboard",
+     "black bowl",
+     "black leash",
+     "green lamp",
+     "wooden lamp",
+     "black towel",
+     "silver lamp",
+     "square lamp",
+     "folded lamp",
+     "black bottle",
+     "black bag",
+     "golden lamp",
+     "plastic lamp",
+     "black umbrella",
+     "heavy lamp",
+     "striped lamp",
+     "small lamp",
+     "black basket",
+     "blue lamp",
+     "black kettle",
+     "black flashlight",
+     "black scarf",
+     "glass lamp",
+     "paper lamp",
+     "black mug",
+     "round lamp",
+     "black tape measure",
+     "black screwdriver",
+     "spare lamp",
+     "old lamp",
+     "leather lamp",
+     "black charger",
+     "black box",
+     "large lamp",
+     "yellow lamp",
+     "red lamp",
+     "white lamp",
+     "black notebook",
+     "light lamp",
+     "new lamp",
+     "black lamp",
+     "black remote",
+     "metal lamp"
+    ],
+    "walk_queries": 44,
+    "walk_s": 14.79,
+    "walk_rows_total": 478763,
+    "walk_rows_max": 14931,
+    "walk_ms_max": 448.9,
+    "edge_reads": [
+     [
+      1318.1,
+      44693,
+      3395
+     ]
+    ]
+   },
+   {
+    "question": "Where is the green scarf now?",
+    "retrieve_s": 18.327,
+    "seed_lookup_ms": 5.6,
+    "seeds": 44,
+    "seed_names": [
+     "green bag",
+     "green flashlight",
+     "small scarf",
+     "spare scarf",
+     "green clipboard",
+     "green bottle",
+     "green lamp",
+     "glass scarf",
+     "wooden scarf",
+     "green leash",
+     "heavy scarf",
+     "red scarf",
+     "green umbrella",
+     "green screwdriver",
+     "plastic scarf",
+     "large scarf",
+     "green tape measure",
+     "white scarf",
+     "green basket",
+     "black scarf",
+     "green charger",
+     "square scarf",
+     "green remote",
+     "green jacket",
+     "new scarf",
+     "golden scarf",
+     "green bowl",
+     "folded scarf",
+     "silver scarf",
+     "green mug",
+     "old scarf",
+     "metal scarf",
+     "green scarf",
+     "paper scarf",
+     "green towel",
+     "leather scarf",
+     "striped scarf",
+     "light scarf",
+     "blue scarf",
+     "yellow scarf",
+     "round scarf",
+     "green notebook",
+     "green kettle",
+     "green box"
+    ],
+    "walk_queries": 44,
+    "walk_s": 15.053,
+    "walk_rows_total": 486465,
+    "walk_rows_max": 13666,
+    "walk_ms_max": 469.1,
+    "edge_reads": [
+     [
+      1172.4,
+      44870,
+      3495
+     ]
+    ]
+   },
+   {
+    "question": "Where is the small tape measure now?",
+    "retrieve_s": 18.979,
+    "seed_lookup_ms": 5.3,
+    "seeds": 44,
+    "seed_names": [
+     "small leash",
+     "small flashlight",
+     "small scarf",
+     "silver tape measure",
+     "small bag",
+     "spare tape measure",
+     "small basket",
+     "round tape measure",
+     "red tape measure",
+     "striped tape measure",
+     "blue tape measure",
+     "new tape measure",
+     "plastic tape measure",
+     "small charger",
+     "green tape measure",
+     "white tape measure",
+     "small lamp",
+     "black tape measure",
+     "old tape measure",
+     "large tape measure",
+     "small umbrella",
+     "small remote",
+     "paper tape measure",
+     "small towel",
+     "small clipboard",
+     "small bowl",
+     "leather tape measure",
+     "small mug",
+     "small screwdriver",
+     "square tape measure",
+     "small bottle",
+     "yellow tape measure",
+     "small kettle",
+     "metal tape measure",
+     "small tape measure",
+     "heavy tape measure",
+     "small jacket",
+     "light tape measure",
+     "wooden tape measure",
+     "small box",
+     "glass tape measure",
+     "folded tape measure",
+     "small notebook",
+     "golden tape measure"
+    ],
+    "walk_queries": 44,
+    "walk_s": 15.875,
+    "walk_rows_total": 514444,
+    "walk_rows_max": 15295,
+    "walk_ms_max": 478.9,
+    "edge_reads": [
+     [
+      1141.0,
+      44974,
+      3646
+     ]
+    ]
+   },
+   {
+    "question": "Where is the folded tape measure now?",
+    "retrieve_s": 19.079,
+    "seed_lookup_ms": 4.9,
+    "seeds": 44,
+    "seed_names": [
+     "silver tape measure",
+     "folded flashlight",
+     "folded leash",
+     "spare tape measure",
+     "folded jacket",
+     "round tape measure",
+     "folded clipboard",
+     "folded towel",
+     "folded bowl",
+     "red tape measure",
+     "striped tape measure",
+     "folded lamp",
+     "blue tape measure",
+     "new tape measure",
+     "plastic tape measure",
+     "green tape measure",
+     "white tape measure",
+     "folded charger",
+     "folded bag",
+     "folded box",
+     "folded scarf",
+     "black tape measure",
+     "folded bottle",
+     "old tape measure",
+     "large tape measure",
+     "folded basket",
+     "paper tape measure",
+     "leather tape measure",
+     "folded mug",
+     "square tape measure",
+     "folded umbrella",
+     "yellow tape measure",
+     "metal tape measure",
+     "small tape measure",
+     "heavy tape measure",
+     "folded remote",
+     "folded notebook",
+     "light tape measure",
+     "folded screwdriver",
+     "wooden tape measure",
+     "glass tape measure",
+     "folded kettle",
+     "folded tape measure",
+     "golden tape measure"
+    ],
+    "walk_queries": 44,
+    "walk_s": 15.798,
+    "walk_rows_total": 508429,
+    "walk_rows_max": 15295,
+    "walk_ms_max": 500.6,
+    "edge_reads": [
+     [
+      1228.3,
+      44933,
+      3604
+     ]
+    ]
+   }
+  ]
+ }
+}

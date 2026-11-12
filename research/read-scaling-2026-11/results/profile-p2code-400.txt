@@ -1,0 +1,126 @@
+         593924 function calls in 0.498 seconds
+
+   Ordered by: cumulative time
+   List reduced from 438 to 80 due to restriction <80>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      230    0.001    0.000    0.498    0.002 /Users/dwamianm/miniconda3/lib/python3.11/asyncio/base_events.py:1845(_run_once)
+      230    0.000    0.000    0.352    0.002 /Users/dwamianm/miniconda3/lib/python3.11/selectors.py:558(select)
+      230    0.351    0.002    0.351    0.002 {method 'control' of 'select.kqueue' objects}
+      378    0.000    0.000    0.144    0.000 /Users/dwamianm/miniconda3/lib/python3.11/asyncio/events.py:78(_run)
+      378    0.000    0.000    0.144    0.000 {method 'run' of '_contextvars.Context' objects}
+       10    0.002    0.000    0.137    0.014 /tmp/p3/profile_read.py:64(main)
+       11    0.000    0.000    0.135    0.012 /Users/dwamianm/Sites/prism-write-rate/src/prme/storage/engine.py:2793(retrieve)
+        7    0.000    0.000    0.135    0.019 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/pipeline.py:398(retrieve)
+     4478    0.001    0.000    0.084    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:240(__init__)
+     4478    0.037    0.000    0.084    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}
+        3    0.000    0.000    0.071    0.024 /tmp/p3/profile_read.py:42(wrapped)
+       48    0.000    0.000    0.042    0.001 /tmp/p3/profile_read.py:33(wrapped)
+        3    0.000    0.000    0.036    0.012 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:685(generate_candidates)
+        1    0.001    0.001    0.036    0.036 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:562(merge_candidates)
+        1    0.001    0.001    0.035    0.035 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:916(score_and_rank)
+        1    0.002    0.002    0.033    0.033 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:622(make_receipt)
+     1788    0.004    0.000    0.033    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:286(validate_components)
+        2    0.000    0.000    0.017    0.009 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:481(model_dump_json)
+        2    0.005    0.003    0.017    0.009 {method 'to_json' of 'pydantic_core._pydantic_core.SchemaSerializer' objects}
+     3582    0.001    0.000    0.015    0.000 {method 'extend' of 'list' objects}
+    32184    0.006    0.000    0.013    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:309(<genexpr>)
+        2    0.011    0.005    0.012    0.006 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:260(serialize_version)
+     3616    0.003    0.000    0.012    0.000 {built-in method builtins.all}
+        1    0.001    0.001    0.011    0.011 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:688(_rank_fused_scores)
+        1    0.000    0.000    0.009    0.009 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:560(checksum)
+        1    0.001    0.001    0.007    0.007 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:302(unique_candidates)
+    60792    0.005    0.000    0.007    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:314(<genexpr>)
+     4470    0.002    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:320(replay_base_score)
+     5364    0.003    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:236(score)
+     1788    0.001    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:37(valid_trace_and_exposure)
+    41124    0.004    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:310(<genexpr>)
+     2682    0.000    0.000    0.004    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:343(replay_score)
+       34    0.001    0.000    0.004    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:255(_generate_graph_candidates)
+        2    0.000    0.000    0.003    0.002 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/selection.py:56(with_rank_fusion_relevance)
+        2    0.000    0.000    0.003    0.002 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/selection.py:61(<listcomp>)
+        1    0.000    0.000    0.003    0.003 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:766(<listcomp>)
+       19    0.000    0.000    0.003    0.000 {built-in method builtins.any}
+      894    0.000    0.000    0.003    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:340(_current_state_recency)
+     3576    0.001    0.000    0.003    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:418(model_dump)
+        2    0.001    0.000    0.003    0.001 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/selection.py:90(select_candidates)
+        1    0.000    0.000    0.003    0.003 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:538(replay_ranking)
+      895    0.000    0.000    0.003    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:384(model_copy)
+     1795    0.001    0.000    0.003    0.000 {built-in method builtins.sorted}
+     3576    0.003    0.000    0.003    0.000 {method 'to_python' of 'pydantic_core._pydantic_core.SchemaSerializer' objects}
+     7145    0.002    0.000    0.002    0.000 /Users/dwamianm/miniconda3/lib/python3.11/uuid.py:280(__str__)
+    48699    0.002    0.000    0.002    0.000 {built-in method builtins.getattr}
+        2    0.000    0.000    0.002    0.001 /Users/dwamianm/miniconda3/lib/python3.11/json/__init__.py:183(dumps)
+        2    0.000    0.000    0.002    0.001 /Users/dwamianm/miniconda3/lib/python3.11/json/encoder.py:183(encode)
+        2    0.002    0.001    0.002    0.001 /Users/dwamianm/miniconda3/lib/python3.11/json/encoder.py:205(iterencode)
+    21456    0.002    0.000    0.002    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:39(<genexpr>)
+    80056    0.002    0.000    0.002    0.000 {built-in method math.isfinite}
+      894    0.000    0.000    0.002    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:327(_update_recency_multiplier)
+      895    0.001    0.000    0.002    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:955(__copy__)
+      898    0.000    0.000    0.002    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:221(_has_update_language)
+    42025    0.002    0.000    0.002    0.000 {built-in method builtins.isinstance}
+      914    0.002    0.000    0.002    0.000 {method 'search' of 're.Pattern' objects}
+     5700    0.001    0.000    0.002    0.000 {built-in method builtins.sum}
+        1    0.000    0.000    0.002    0.002 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:546(<dictcomp>)
+     2682    0.001    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:1028(__setattr__)
+     9998    0.001    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/uuid.py:268(__hash__)
+     1788    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/_internal/_utils.py:431(__get__)
+     5812    0.001    0.000    0.001    0.000 {built-in method builtins.max}
+        3    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/filtering.py:162(filter_candidate_types)
+        2    0.000    0.000    0.001    0.001 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:191(_seed_reach)
+     1791    0.001    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/filtering.py:178(<genexpr>)
+        2    0.000    0.000    0.001    0.001 {method 'sort' of 'list' objects}
+      894    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/selection.py:36(_source_key)
+     2685    0.001    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/copy.py:66(copy)
+     5366    0.001    0.000    0.001    0.000 {built-in method builtins.round}
+       92    0.000    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/asyncio/threads.py:12(to_thread)
+     6096    0.001    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/enum.py:193(__get__)
+    15356    0.001    0.000    0.001    0.000 {method 'get' of 'dict' objects}
+      894    0.001    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:548(key)
+     1788    0.001    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:480(rank_fusion_relevance)
+       46    0.000    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/asyncio/base_events.py:815(run_in_executor)
+     1788    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/.venv/lib/python3.11/site-packages/pydantic/main.py:262(model_fields)
+      894    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/selection.py:50(_evidence_key)
+      895    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:430(<genexpr>)
+        1    0.000    0.000    0.001    0.001 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:648(_event_time_tie_breaks)
+        4    0.000    0.000    0.001    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:382(_generate_vector_candidates)
+
+
+         593924 function calls in 0.498 seconds
+
+   Ordered by: internal time
+   List reduced from 438 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      230    0.351    0.002    0.351    0.002 {method 'control' of 'select.kqueue' objects}
+     4478    0.037    0.000    0.084    0.000 {method 'validate_python' of 'pydantic_core._pydantic_core.SchemaValidator' objects}
+        2    0.011    0.005    0.012    0.006 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:260(serialize_version)
+    32184    0.006    0.000    0.013    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:309(<genexpr>)
+        2    0.005    0.003    0.017    0.009 {method 'to_json' of 'pydantic_core._pydantic_core.SchemaSerializer' objects}
+    60792    0.005    0.000    0.007    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:314(<genexpr>)
+    41124    0.004    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:310(<genexpr>)
+     1788    0.004    0.000    0.033    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:286(validate_components)
+     5364    0.003    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:236(score)
+     3616    0.003    0.000    0.012    0.000 {built-in method builtins.all}
+     3576    0.003    0.000    0.003    0.000 {method 'to_python' of 'pydantic_core._pydantic_core.SchemaSerializer' objects}
+     7145    0.002    0.000    0.002    0.000 /Users/dwamianm/miniconda3/lib/python3.11/uuid.py:280(__str__)
+    48699    0.002    0.000    0.002    0.000 {built-in method builtins.getattr}
+        2    0.002    0.001    0.002    0.001 /Users/dwamianm/miniconda3/lib/python3.11/json/encoder.py:205(iterencode)
+    80056    0.002    0.000    0.002    0.000 {built-in method math.isfinite}
+      914    0.002    0.000    0.002    0.000 {method 'search' of 're.Pattern' objects}
+        1    0.002    0.002    0.033    0.033 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:622(make_receipt)
+    21456    0.002    0.000    0.002    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:39(<genexpr>)
+    42025    0.002    0.000    0.002    0.000 {built-in method builtins.isinstance}
+       10    0.002    0.000    0.137    0.014 /tmp/p3/profile_read.py:64(main)
+     4470    0.002    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/models.py:320(replay_base_score)
+     3582    0.001    0.000    0.015    0.000 {method 'extend' of 'list' objects}
+        1    0.001    0.001    0.035    0.035 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:916(score_and_rank)
+        1    0.001    0.001    0.011    0.011 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/scoring.py:688(_rank_fused_scores)
+     1788    0.001    0.000    0.006    0.000 /Users/dwamianm/Sites/prism-write-rate/src/prme/models/relevance.py:37(valid_trace_and_exposure)
+        1    0.001    0.001    0.036    0.036 /Users/dwamianm/Sites/prism-write-rate/src/prme/retrieval/candidates.py:562(merge_candidates)
+     5366    0.001    0.000    0.001    0.000 {built-in method builtins.round}
+     5700    0.001    0.000    0.002    0.000 {built-in method builtins.sum}
+      230    0.001    0.000    0.498    0.002 /Users/dwamianm/miniconda3/lib/python3.11/asyncio/base_events.py:1845(_run_once)
+     9998    0.001    0.000    0.001    0.000 /Users/dwamianm/miniconda3/lib/python3.11/uuid.py:268(__hash__)
+
+

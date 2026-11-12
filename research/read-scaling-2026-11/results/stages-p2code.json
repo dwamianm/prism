@@ -1,0 +1,92 @@
+{
+ "400": {
+  "seconds": [
+   0.399,
+   0.372,
+   0.409,
+   0.364,
+   0.346
+  ],
+  "median_s": 0.372,
+  "results": [
+   894,
+   935,
+   908,
+   892,
+   934
+  ],
+  "stage_ms_median": {
+   "generate_candidates": 293.0,
+   "_generate_graph_candidates": 234.7,
+   "_generate_vector_candidates": 77.8,
+   "pack_context": 19.0,
+   "score_and_rank": 14.2,
+   "_generate_pinned_candidates": 6.4,
+   "_generate_lexical_candidates": 2.2,
+   "merge_candidates": 1.9,
+   "analyze_query": 0.7,
+   "expand_session_context": 0.4,
+   "fold_claim_statements": 0.1
+  }
+ },
+ "4000": {
+  "seconds": [
+   1.326,
+   1.366,
+   1.35,
+   1.288,
+   1.34
+  ],
+  "median_s": 1.34,
+  "results": [
+   919,
+   936,
+   953,
+   882,
+   863
+  ],
+  "stage_ms_median": {
+   "generate_candidates": 1241.1,
+   "_generate_graph_candidates": 1174.2,
+   "_generate_vector_candidates": 110.3,
+   "pack_context": 19.5,
+   "score_and_rank": 16.1,
+   "_generate_pinned_candidates": 7.2,
+   "_generate_lexical_candidates": 2.7,
+   "merge_candidates": 1.9,
+   "analyze_query": 0.7,
+   "expand_session_context": 0.4,
+   "fold_claim_statements": 0.2
+  }
+ },
+ "20500": {
+  "seconds": [
+   18.519,
+   17.677,
+   17.969,
+   18.915,
+   19.16
+  ],
+  "median_s": 18.519,
+  "results": [
+   976,
+   1043,
+   1067,
+   941,
+   966
+  ],
+  "stage_ms_median": {
+   "generate_candidates": 18412.9,
+   "_generate_graph_candidates": 18329.3,
+   "_generate_vector_candidates": 327.6,
+   "pack_context": 20.6,
+   "score_and_rank": 16.6,
+   "_generate_pinned_candidates": 7.4,
+   "_generate_lexical_candidates": 5.5,
+   "merge_candidates": 1.8,
+   "analyze_query": 0.7,
+   "expand_session_context": 0.5,
+   "fold_claim_statements": 0.2
+  }
+ }
+}

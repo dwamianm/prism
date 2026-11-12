@@ -1,0 +1,32 @@
+{
+ "4000": {
+  "seconds": [
+   1.165,
+   1.337,
+   1.34,
+   1.271,
+   1.246
+  ],
+  "median_s": 1.271,
+  "results": [
+   919,
+   936,
+   953,
+   882,
+   863
+  ],
+  "stage_ms_median": {
+   "generate_candidates": 1145.7,
+   "_generate_graph_candidates": 1127.6,
+   "_generate_vector_candidates": 25.1,
+   "pack_context": 21.6,
+   "score_and_rank": 16.4,
+   "_generate_pinned_candidates": 7.1,
+   "_generate_lexical_candidates": 2.2,
+   "merge_candidates": 2.0,
+   "analyze_query": 0.8,
+   "expand_session_context": 0.4,
+   "fold_claim_statements": 0.2
+  }
+ }
+}
