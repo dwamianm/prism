@@ -2,10 +2,11 @@
 
 "What are the names of Maya's dependents?" shares no word with "My husband is Theo and my child is Nico.", and the
 claims behind that sentence carry open predicates (``is_husband_of``, ``is_child_of``). With
-``enable_relation_routing`` (off by default) the predicate normalizer maps those to ``partner_of`` and ``kin_of``,
-the router maps "dependents" to the same relations, and the walk from Maya over those claims adds a weighted rank
-fusion list. These tests cover the vocabulary, the normalizer, the concepts, the router, the walk's statement on
-DuckDB and PostgreSQL, the route list's scores and their replay, and the retrievals the option leaves unchanged.
+``enable_relation_routing`` (on through ``memory_mode`` since 2026-11-12; the tests start in ``classic``) the
+predicate normalizer maps those to ``partner_of`` and ``kin_of``, the router maps "dependents" to the same
+relations, and the walk from Maya over those claims adds a weighted rank fusion list. These tests cover the
+vocabulary, the normalizer, the concepts, the router, the walk's statement on DuckDB and PostgreSQL, the route
+list's scores and their replay, and the retrievals the option leaves unchanged.
 No model call.
 """
 

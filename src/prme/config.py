@@ -1385,17 +1385,21 @@ class PRMEConfig(_ProjectSettings):
             "and the receipt records the route and the walk's candidates. A "
             "question no word routes, a walk that reaches nothing, weighted "
             "scoring and a privacy-protected read retrieve exactly as with "
-            "the option off, receipts included. No model call. Default "
-            "False until the fast gate passes."
+            "the option off, receipts included. No model call. On by default "
+            "through memory_mode since 2026-11-12 in the alpha channel; "
+            "PRME_ENABLE_RELATION_ROUTING=false restores it."
         ),
     )
     memory_mode: Literal["classic", "address_first"] = Field(
-        default="classic",
+        default="address_first",
         description=(
             "[HYPOTHESIS] One switch for the read-time half of address-first "
             "memory (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). "
-            "'classic' (the default) changes nothing. 'address_first' turns "
-            "on, unless the configuration sets them itself: "
+            "Since 2026-11-12 the alpha channel defaults to 'address_first', "
+            "after it passed the fast tiers; 'classic' changes nothing and "
+            "restores the retrieval, contexts and receipts from before "
+            "(PRME_MEMORY_MODE=classic). 'address_first' turns on, unless the "
+            "configuration sets them itself: "
             "enable_relation_routing and enable_belief_state (a question "
             "about a relation is answered from the claims at its address, "
             "the one that holds now first within them), "
@@ -1439,7 +1443,8 @@ class PRMEConfig(_ProjectSettings):
             "computed from the stored claims at read time. A question no "
             "word routes, weighted scoring and a privacy-protected read "
             "retrieve exactly as with the option off, receipts included. "
-            "Default False until the fast gate passes."
+            "On by default through memory_mode since 2026-11-12 in the alpha "
+            "channel; PRME_ENABLE_BELIEF_STATE=false restores it."
         ),
     )
     enable_typed_extraction: bool = Field(
@@ -1792,23 +1797,7 @@ class PRMEConfig(_ProjectSettings):
 
     @model_validator(mode="after")
     def _apply_memory_mode(self) -> PRMEConfig:
-        if self.memory_mode != "address_first":
-            return self
-        # The read-time half only: nothing it turns on acts when memories are stored or calls a model.
-        for name in ("enable_relation_routing", "enable_belief_state"):
-            if name not in self.model_fields_set:
-                setattr(self, name, True)
-        packing = {
-            name: value
-            for name, value in (("session_context_direct_first", 10),
-                                ("clock_window_filter", True), ("collapse_identical_text", True))
-            if name not in self.packing.model_fields_set
-        }
-        if packing:
-            self.packing = self.packing.model_copy(update=packing)
-        if self.scoring.fusion == "rrf" and "rrf_recency_order" not in self.scoring.model_fields_set:
-            self.scoring = self.scoring.model_copy(update={"rrf_recency_order": True})
-        return self
+        return apply_memory_mode(self)
 
     @model_validator(mode="after")
     def _validate_reranker_prior_weight(self) -> PRMEConfig:
@@ -1912,6 +1901,34 @@ class PRMEConfig(_ProjectSettings):
             return with_product_retrieval_defaults(merged)
 
         return (init, environment)
+
+
+def apply_memory_mode(config: PRMEConfig) -> PRMEConfig:
+    """Turn on the settings ``memory_mode="address_first"`` implies, and only those it sets itself.
+
+    The read-time half only: nothing it turns on acts when memories are stored
+    or calls a model, so a pack may be read in either mode and ``"classic"``
+    leaves every setting as it is. A setting the configuration gives itself,
+    by an argument or an environment variable, is kept, and each of the
+    settings has its own option. The configuration audit reads the default it
+    reports from this same function, so a value the mode sets is a default.
+    """
+    if config.memory_mode != "address_first":
+        return config
+    for name in ("enable_relation_routing", "enable_belief_state"):
+        if name not in config.model_fields_set:
+            setattr(config, name, True)
+    packing = {
+        name: value
+        for name, value in (("session_context_direct_first", 10),
+                            ("clock_window_filter", True), ("collapse_identical_text", True))
+        if name not in config.packing.model_fields_set
+    }
+    if packing:
+        config.packing = config.packing.model_copy(update=packing)
+    if config.scoring.fusion == "rrf" and "rrf_recency_order" not in config.scoring.model_fields_set:
+        config.scoring = config.scoring.model_copy(update={"rrf_recency_order": True})
+    return config
 
 
 def _merged(low: dict[str, Any], high: dict[str, Any]) -> dict[str, Any]:

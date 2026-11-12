@@ -15,6 +15,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings
 
+from prme.config import PRMEConfig, apply_memory_mode
+
 
 class HypothesisSetting(BaseModel):
     """One provisional configuration value and its activation state."""
@@ -446,6 +448,9 @@ def audit_hypotheses(config: BaseModel) -> HypothesisAudit:
     whether a discovered value currently affects behavior.
     """
     settings: list[HypothesisSetting] = []
+    # The product defaults, built without the environment, so a value memory_mode sets from the field's own default
+    # is reported as a default rather than as a customization.
+    product_default = apply_memory_mode(PRMEConfig.model_construct())
 
     def visit(model: BaseModel, prefix: str = "", defaults: BaseModel | None = None) -> None:
         # ``defaults`` is the default a parent model gives this nested model.
@@ -465,6 +470,10 @@ def audit_hypotheses(config: BaseModel) -> HypothesisAudit:
                     if defaults is not None
                     else field.get_default(call_default_factory=True)
                 )
+                if isinstance(model, PRMEConfig):
+                    # memory_mode sets these when the configuration does not, so the default an audit reports is
+                    # the product default after the mode, not each field's own.
+                    default = getattr(product_default, name)
             if "[HYPOTHESIS" in description:
                 gate = _ACTIVATION_GATES.get(path)
                 effective = True

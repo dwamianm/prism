@@ -116,9 +116,18 @@ def test_default_hypothesis_audit_is_complete_and_reports_dormant_features(monke
     # Speaker references, claim sentence text and folding became defaults together, so they apply,
     # and batched extraction became a default later (#254), then the group links (prism-monorepo #275), then the
     # seed count graph list with its weight (prism-monorepo #276), then the pronoun repair (2026-10-22), then the
-    # current-state observations (dwamianm/prism#387, 2026-11-02).
-    assert report.effective_count == 31
+    # current-state observations (dwamianm/prism#387, 2026-11-02), then address-first memory (2026-11-12), which
+    # makes the six read-time settings it turns on defaults too (and with relation routing, scoring.rrf_route_weight).
+    assert report.effective_count == 39
     assert report.customized_count == 0
+    for name in ("memory_mode", "enable_relation_routing", "enable_belief_state",
+                 "packing.clock_window_filter", "packing.collapse_identical_text",
+                 "packing.session_context_direct_first", "scoring.rrf_recency_order",
+                 "scoring.rrf_route_weight"):
+        setting = settings[name]
+        assert setting.effective and setting.customized is False, name
+        assert setting.value == setting.default, name
+    assert settings["memory_mode"].value == "address_first"
     for name in ("enable_speaker_references", "enable_claim_sentence_text", "packing.fold_repeated_text"):
         setting = settings[name]
         assert (setting.effective, setting.value, setting.default, setting.customized) == (True, True, True, False)
@@ -226,9 +235,14 @@ def test_hypothesis_audit_resolves_feature_gates_and_custom_values(monkeypatch):
     # A PackingConfig built in code has no rank fusion session decay, does not fold, and keeps the three structure
     # options off (graph seed words, folded records keep rank, session context skips entities) and the current-state
     # observations off (issue #387), which the audit reports as customized. The default scoring's seed count list and
-    # its weight apply (prism-monorepo #276), and so does the pronoun repair (2026-10-22).
-    assert report.effective_count == 37
+    # its weight apply (prism-monorepo #276), and so does the pronoun repair (2026-10-22). This PackingConfig names
+    # none of memory_mode's three packing settings, so the mode turns them on and the audit reports them as defaults.
+    assert report.effective_count == 45
     assert report.customized_count == 10
+    for name in ("packing.clock_window_filter", "packing.collapse_identical_text",
+                 "packing.session_context_direct_first"):
+        assert settings[name].customized is False and settings[name].effective is True, name
+    assert settings["enable_belief_state"].customized is False and settings["enable_belief_state"].effective is True
     observations = settings["packing.current_state_observations"]
     assert (observations.effective, observations.customized) == (False, True)
     assert settings["packing.session_context_skip_entities"].customized is True

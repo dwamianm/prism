@@ -711,6 +711,7 @@ product defaults) still match.
 | `packing.session_context_skip_entities` (`PRME_PACKING__SESSION_CONTEXT_SKIP_ENTITIES`), alpha channel since 0.16.0a4 (2026-10-19) | `true` in `PRMEConfig` | `false` |
 | `packing.observation_timeline` (`PRME_PACKING__OBSERVATION_TIMELINE`), since 2026-11-02 by the owner's decision, without the fast-tier evidence | `true`, also in a `PackingConfig` built in code | did not exist (observations read in relevance order, to the minute) |
 | `packing.current_state_observations` (`PRME_PACKING__CURRENT_STATE_OBSERVATIONS`), since 2026-11-02 by the owner's decision, without fast-tier evidence | `true` in `PRMEConfig` | did not exist (`false`) |
+| `memory_mode` (`PRME_MEMORY_MODE`), alpha channel since 2026-11-12 on the fast tiers | `address_first`, which also sets `enable_relation_routing`, `enable_belief_state`, `packing.session_context_direct_first=10`, `packing.clock_window_filter`, `packing.collapse_identical_text` and `scoring.rrf_recency_order` | did not exist (`classic`) |
 
 The settings changed in two steps on 2026-09-25, and each step passed the
 project's default-change test twice on the DeepSeek answer track. The first
@@ -785,7 +786,13 @@ What else changes with these defaults:
   context) or use the `auditable` format for those callers.
 - Retrieval receipts are written as version 22 by default, since folding became
   a default on 2026-10-06, and as version 19 with
-  `PRME_PACKING__FOLD_REPEATED_TEXT=false`.
+  `PRME_PACKING__FOLD_REPEATED_TEXT=false`. Since the alpha channel turned
+  `memory_mode` on (2026-11-12), a default receipt also records
+  `scoring.rrf_recency_order` and the packing settings the mode sets
+  (`clock_window_filter`, `collapse_identical_text` and
+  `session_context_direct_first`); the schema version stays 22, while the
+  scoring configuration version a response reports changes with those
+  weights. `PRME_MEMORY_MODE=classic` writes the receipts from before.
 
 To go back to the v0.12.0 defaults, set all three:
 

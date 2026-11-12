@@ -133,9 +133,10 @@ def product_config(directory: str, *, mode: str = "classic", extraction: dict | 
     lexical = os.path.join(pack, "lexical_index")
     os.makedirs(lexical, exist_ok=True)
     settings: dict = {"db_path": os.path.join(pack, "memory.duckdb"),
-                      "vector_path": os.path.join(pack, "vectors.usearch"), "lexical_path": lexical, "pack_path": None}
-    if mode != "classic":
-        settings["memory_mode"] = mode
+                      "vector_path": os.path.join(pack, "vectors.usearch"), "lexical_path": lexical, "pack_path": None,
+                      # Named outright: the product default is address_first since 2026-11-12, and the scorecard's
+                      # recorded expectations are the classic mode's.
+                      "memory_mode": mode}
     if extraction is not None:
         settings["extraction"] = extraction
     settings.update(settings_given)

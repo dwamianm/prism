@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Address-first memory, read-time half, behind one switch that is off by default: `memory_mode`
-  (`PRME_MEMORY_MODE`), `classic` unless set (memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first`
+- Address-first memory, read-time half, behind one switch: `memory_mode`
+  (`PRME_MEMORY_MODE`; `address_first` by default since 2026-11-12, see Changed below, and `classic` when this entry
+  was written; memory_bank/THESIS-2026-11-10-EMBODIED-MEMORY.md). `address_first`
   turns on relation routing (`enable_relation_routing`) and the settings below, and nothing else. Each acts only when
   a question is asked: the mode changes nothing at write time, makes no model call, and rewrites no stored memory,
   so the same pack can be read with it on or off, and turning it on reads no memory as stale for `reingest()`. A
@@ -34,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     question is read on the question's own time scale, so memories minutes apart are ordered as clearly as
     memories months apart.
 
-  Every one of these options is off by default. With the defaults, the contract scorecard below gives the same
+  Every one of these options was off by default when this entry was written; the mode is on by default in the alpha
+  channel since 2026-11-12 (Changed below), and with the mode off the contract scorecard below gives the same
   result on each of its checks as on 0.17.0a6. Relation routing gains the concept `pet` (`owns`), a rule that reads
   a typed role on the claim's subject when the quote puts it there, and the two rules under Fixed below, so
   `ROUTING_VERSION` is 3.
@@ -93,6 +95,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through `store()` and through `ingest()` replaying a recorded extraction, with which claims its corrections
   retire), with no model call and no network. `uv run pytest tests/contract -q`; `--memory-mode address_first` runs
   it under the switch, and `--stated` adds the moves written as stated facts.
+
+### Changed
+
+- Address-first memory is on by default in the alpha channel: `memory_mode` is `address_first` unless set, after
+  the mode passed the fast tiers (the owner's directive of 2026-10-19 to ship what passes them, and the owner's
+  decision of 2026-11-12 to turn it on). `PRME_MEMORY_MODE=classic` restores the retrieval, contexts and receipts
+  from before. It is a read-time change only: no stored memory is rewritten, no model is called, and
+  `DERIVATION_VERSION` does not move, so `reingest()` reads no memory as stale. A configuration that sets one of the
+  mode's settings itself keeps it, so each option above still turns off alone, and a `PackingConfig` or
+  `ScoringWeights` built in code keeps its own field defaults. On the defaults, the configuration dump now names
+  `memory_mode`, `enable_relation_routing`, `enable_belief_state`, `packing.clock_window_filter`,
+  `packing.collapse_identical_text`, `packing.session_context_direct_first` and `scoring.rrf_recency_order`, and a
+  default receipt records those packing settings and `scoring.rrf_recency_order`; the receipt's schema version stays
+  22, while the scoring configuration version a response reports moves with the weights.
+- Evidence on the defaults the mode now sets, `deepseek-v4.1-flash:cloud` (`e04da138`, Ollama 0.40.16) on a local
+  server, extraction replayed from the cache, so no model call. Off against on: the answers in the top 3 and the
+  top 5 were 7 and 7 against 7 and 7 of 7 on `defects-v1`, 14 and 15 against 15 and 16 of 18 on `chat-v1`, and 10
+  and 11 against 11 and 12 of 12 on `member-v1`, and the user claims on the named owner stayed 12, 35 and 7. No
+  measure is worse in its good direction; four ranks moved (job title 8 to 2, sister city 3 to 2, preferred
+  language 2 to 3, title now 10 to 11). The fast cycle's default stages, store and ingest, pass against the previous
+  baseline: 0 failed, 7 moved, 126 unchanged, the same 7 as the probe ranks (the store-extract stage, which runs only
+  when named, moves 11 measures; Changed below records them). The corrections probe gives the same result either
+  way. On the
+  mid tier of 2026-11-11 the mode packed more of the evidence (+0.8 points of all evidence packed, +0.6 of
+  projected accuracy, both intervals above zero) and lost 0.2 points of evidence in the top 25 (6 of 1,536
+  questions, both intervals below zero), all 6 lost by relation routing's route list. That row is a known
+  weakness, recorded in `benchmarks/results/research/2026-11-11/ADDRESS-FIRST-MID-TIER.md`, and the mode is on in
+  an alpha channel, where the audit at a stable release re-examines it. The offline evidence gate has no interval
+  below zero.
+- Read cost, three LoCoMo `ingest()` packs opened with the gate's configuration on copies, in interleaved pairs,
+  the reads of every run on a pack pooled (115 to 155 timed reads a side): the mode raised the median by 2.2 to 4.2
+  percent and the 95th percentile by 7.8 to 11.7 percent (369 turns: off 396.8 ms median and 777.9 ms p95, on 406.3
+  and 838.2; 419 turns: 381.9 and 624.4, on 390.2 and 673.4; 689 turns: 522.1 and 1,043.1, on 544.1 and 1,165.3).
+  One earlier run of the smallest pack under load averages of 16 to 34 measured 21.7 percent at p95; a repeat on a
+  quiet machine measured 4.1 percent, and the pooled reads are the numbers above.
+- The benchmark harness builds the same defaults, so the committed fast cycle baseline is a replay of them
+  (`benchmarks/fixtures/fast-cycle/baseline-main.json`, taken at this change). The default stages, store and
+  ingest, pass against the previous baseline (0 failed, 7 moved, 126 unchanged); the store-extract stage, which
+  only runs when named, moves 11 measures with the mode (4 better, 7 worse: answers in the top 1 12 to 10 of 17 and
+  mean reciprocal rank 0.776 to 0.714), and the retake records them. That stage's movement is the mode: a run of it
+  with `memory_mode=classic` on the same tree reproduces the previous baseline exactly, and each of the mode's six
+  settings off alone changes nothing. The answer track's check that a baseline's packs hold the defaults ignores
+  the settings that change no stored record (`memory_mode`, `enable_relation_routing` and `enable_belief_state`, as
+  it already ignored extraction, scoring and packing), and the mid tier's `--reuse-build` accepts `memory_mode`. A
+  pair over address-first memory names the mode, or a setting it turns on, among its variant's settings, and the
+  baseline a flip starts is prepared against it. The hosted request profile pins `memory_mode="classic"`, since it
+  measures the service as deployed, and the contract scorecard names its mode outright so `--memory-mode classic`
+  still builds the classic packs.
 
 ### Fixed
 
