@@ -1,0 +1,53 @@
+{
+ "pack": "/tmp/p8/m3-pack",
+ "stored": 20500,
+ "questions": 8,
+ "repeats": 3,
+ "load_before": [
+  5.31,
+  4.18,
+  3.93
+ ],
+ "load_after": [
+  7.17,
+  4.62,
+  4.09
+ ],
+ "parts": {
+  "cur_sql": {
+   "count": 24,
+   "p50": 40.81,
+   "mean": 41.54
+  },
+  "cur_decode": {
+   "count": 24,
+   "p50": 89.73,
+   "mean": 81.3
+  },
+  "cur_filter_sort": {
+   "count": 24,
+   "p50": 20.35,
+   "mean": 29.29
+  },
+  "cheap_sql": {
+   "count": 24,
+   "p50": 52.02,
+   "mean": 50.65
+  },
+  "cheap_split": {
+   "count": 24,
+   "p50": 4.78,
+   "mean": 4.89
+  },
+  "hydrate": {
+   "count": 48,
+   "p50": 7.81,
+   "mean": 7.78
+  },
+  "reach": {
+   "count": 48,
+   "p50": 114.91,
+   "mean": 100.89
+  }
+ }
+}

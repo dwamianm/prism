@@ -1,0 +1,495 @@
+{
+ "pack": "/tmp/p8/n20000-s1",
+ "label": "flat",
+ "stored": 20000,
+ "questions": 20,
+ "rounds": 3,
+ "reads": 60,
+ "backlog": 0,
+ "reference_time": "2026-11-05T00:00:00+00:00",
+ "load_before": [
+  3.04,
+  3.25,
+  3.25
+ ],
+ "load_after": [
+  3.11,
+  3.26,
+  3.25
+ ],
+ "total_ms": {
+  "count": 60,
+  "p50": 113.23,
+  "p95": 144.615,
+  "mean": 113.815,
+  "values": [
+   134.8,
+   122.3,
+   93.2,
+   91.0,
+   118.4,
+   94.5,
+   119.4,
+   95.2,
+   90.2,
+   117.7,
+   100.8,
+   107.7,
+   125.6,
+   102.9,
+   123.0,
+   105.9,
+   141.4,
+   109.9,
+   95.8,
+   113.2,
+   106.4,
+   118.4,
+   90.2,
+   138.8,
+   129.0,
+   98.0,
+   125.3,
+   100.9,
+   90.3,
+   123.3,
+   100.6,
+   94.7,
+   126.7,
+   106.8,
+   124.3,
+   106.4,
+   177.8,
+   119.5,
+   74.3,
+   138.0,
+   104.4,
+   97.3,
+   125.2,
+   93.7,
+   124.3,
+   99.9,
+   98.1,
+   127.0,
+   93.9,
+   154.2,
+   139.1,
+   105.7,
+   127.2,
+   110.3,
+   129.8,
+   116.2,
+   121.0,
+   144.6,
+   74.0,
+   150.7
+  ]
+ },
+ "inclusive_ms_per_read": {
+  "engine.retrieve": {
+   "count": 60,
+   "p50": 112.51,
+   "p95": 143.314,
+   "mean": 112.651
+  },
+  "retrieve: pipeline.retrieve": {
+   "count": 60,
+   "p50": 110.458,
+   "p95": 139.994,
+   "mean": 110.492
+  },
+  "S2-3 generate_candidates": {
+   "count": 60,
+   "p50": 27.931,
+   "p95": 53.258,
+   "mean": 29.595
+  },
+  "S6 pack_context": {
+   "count": 60,
+   "p50": 17.306,
+   "p95": 20.061,
+   "mean": 18.714
+  },
+  "S5 score_and_rank": {
+   "count": 60,
+   "p50": 13.936,
+   "p95": 40.371,
+   "mean": 17.607
+  },
+  "    graph: get_nodes": {
+   "count": 60,
+   "p50": 12.181,
+   "p95": 14.832,
+   "mean": 13.204
+  },
+  "  S2-3 vector candidates": {
+   "count": 60,
+   "p50": 11.89,
+   "p95": 14.834,
+   "mean": 12.574
+  },
+  "    vector: search": {
+   "count": 60,
+   "p50": 11.886,
+   "p95": 14.829,
+   "mean": 12.569
+  },
+  "    graph: query_nodes": {
+   "count": 60,
+   "p50": 10.89,
+   "p95": 14.281,
+   "mean": 11.034
+  },
+  "S1b current_state_observations": {
+   "count": 3,
+   "p50": 6.648,
+   "p95": 6.731,
+   "mean": 6.675
+  },
+  "  S2-3 pinned candidates": {
+   "count": 60,
+   "p50": 4.586,
+   "p95": 5.58,
+   "mean": 4.637
+  },
+  "  S2-3 merge_candidates": {
+   "count": 60,
+   "p50": 1.618,
+   "p95": 27.437,
+   "mean": 3.33
+  },
+  "  S2-3 graph candidates": {
+   "count": 60,
+   "p50": 2.544,
+   "p95": 3.825,
+   "mean": 2.534
+  },
+  "  S2-3 lexical candidates": {
+   "count": 60,
+   "p50": 2.43,
+   "p95": 3.749,
+   "mean": 2.533
+  },
+  "    graph: _find_seed_entities": {
+   "count": 60,
+   "p50": 2.542,
+   "p95": 3.822,
+   "mean": 2.532
+  },
+  "    lexical: search": {
+   "count": 60,
+   "p50": 2.379,
+   "p95": 3.7,
+   "mean": 2.495
+  },
+  "  S5 rrf relevance": {
+   "count": 60,
+   "p50": 1.129,
+   "p95": 1.545,
+   "mean": 2.06
+  },
+  "S5.4 select_candidates": {
+   "count": 60,
+   "p50": 1.153,
+   "p95": 1.449,
+   "mean": 1.171
+  },
+  "retrieve: prepare_retrieval": {
+   "count": 60,
+   "p50": 1.146,
+   "p95": 1.235,
+   "mean": 1.143
+  },
+  "retrieve: ranking profile lookup": {
+   "count": 60,
+   "p50": 0.667,
+   "p95": 1.215,
+   "mean": 0.755
+  },
+  "S1 analyze_query": {
+   "count": 60,
+   "p50": 0.079,
+   "p95": 0.637,
+   "mean": 0.65
+  },
+  "S5.5b session_context": {
+   "count": 60,
+   "p50": 0.389,
+   "p95": 0.474,
+   "mean": 0.393
+  },
+  "S3.5 filter_candidate_types": {
+   "count": 60,
+   "p50": 0.324,
+   "p95": 0.398,
+   "mean": 0.329
+  },
+  "retrieve: queue.debt": {
+   "count": 60,
+   "p50": 0.238,
+   "p95": 0.26,
+   "mean": 0.236
+  },
+  "S4 filter_epistemic": {
+   "count": 60,
+   "p50": 0.14,
+   "p95": 0.168,
+   "mean": 0.14
+  },
+  "S5.5e claim folding": {
+   "count": 60,
+   "p50": 0.057,
+   "p95": 0.07,
+   "mean": 0.057
+  }
+ },
+ "own_ms_per_read": {
+  "retrieve: pipeline.retrieve": {
+   "count": 60,
+   "p50": 37.227,
+   "p95": 67.472,
+   "mean": 41.502
+  },
+  "S2-3 generate_candidates": {
+   "count": 60,
+   "p50": 25.569,
+   "p95": 29.202,
+   "mean": 26.265
+  },
+  "S6 pack_context": {
+   "count": 60,
+   "p50": 17.306,
+   "p95": 20.061,
+   "mean": 18.714
+  },
+  "S5 score_and_rank": {
+   "count": 60,
+   "p50": 12.508,
+   "p95": 39.3,
+   "mean": 15.547
+  },
+  "S1b current_state_observations": {
+   "count": 3,
+   "p50": 6.648,
+   "p95": 6.731,
+   "mean": 6.675
+  },
+  "  S2-3 merge_candidates": {
+   "count": 60,
+   "p50": 1.618,
+   "p95": 27.437,
+   "mean": 3.33
+  },
+  "  S5 rrf relevance": {
+   "count": 60,
+   "p50": 1.129,
+   "p95": 1.545,
+   "mean": 2.06
+  },
+  "S5.4 select_candidates": {
+   "count": 60,
+   "p50": 1.153,
+   "p95": 1.449,
+   "mean": 1.171
+  },
+  "retrieve: prepare_retrieval": {
+   "count": 60,
+   "p50": 1.146,
+   "p95": 1.235,
+   "mean": 1.143
+  },
+  "retrieve: ranking profile lookup": {
+   "count": 60,
+   "p50": 0.667,
+   "p95": 1.215,
+   "mean": 0.755
+  },
+  "S1 analyze_query": {
+   "count": 60,
+   "p50": 0.079,
+   "p95": 0.637,
+   "mean": 0.65
+  },
+  "S5.5b session_context": {
+   "count": 60,
+   "p50": 0.389,
+   "p95": 0.474,
+   "mean": 0.393
+  },
+  "S3.5 filter_candidate_types": {
+   "count": 60,
+   "p50": 0.324,
+   "p95": 0.398,
+   "mean": 0.329
+  },
+  "retrieve: queue.debt": {
+   "count": 60,
+   "p50": 0.238,
+   "p95": 0.26,
+   "mean": 0.236
+  },
+  "S4 filter_epistemic": {
+   "count": 60,
+   "p50": 0.14,
+   "p95": 0.168,
+   "mean": 0.14
+  },
+  "S5.5e claim folding": {
+   "count": 60,
+   "p50": 0.057,
+   "p95": 0.07,
+   "mean": 0.057
+  },
+  "engine.retrieve": {
+   "count": 60,
+   "p50": 0.026,
+   "p95": 0.03,
+   "mean": 0.026
+  }
+ },
+ "own_sum_ms_per_read": 118.993,
+ "own_share": {
+  "retrieve: prepare_retrieval": 0.0096,
+  "retrieve: ranking profile lookup": 0.0063,
+  "retrieve: queue.debt": 0.002,
+  "S1 analyze_query": 0.0055,
+  "S3.5 filter_candidate_types": 0.0028,
+  "S4 filter_epistemic": 0.0012,
+  "S1b current_state_observations": 0.0561,
+  "  S2-3 merge_candidates": 0.028,
+  "S2-3 generate_candidates": 0.2207,
+  "S5 score_and_rank": 0.1307,
+  "S5.5b session_context": 0.0033,
+  "S5.5e claim folding": 0.0005,
+  "  S5 rrf relevance": 0.0173,
+  "S5.4 select_candidates": 0.0098,
+  "S6 pack_context": 0.1573,
+  "retrieve: pipeline.retrieve": 0.3488,
+  "engine.retrieve": 0.0002
+ },
+ "overlap_labels": [
+  "    graph: _find_seed_entities",
+  "    graph: _seed_reach",
+  "    graph: get_nodes",
+  "    graph: query_nodes",
+  "    graph: walk_from_seeds",
+  "    graph: walk_links",
+  "    lexical: search",
+  "    vector: search",
+  "  S2-3 graph candidates",
+  "  S2-3 lexical candidates",
+  "  S2-3 pinned candidates",
+  "  S2-3 vector candidates"
+ ],
+ "gather": {
+  "gather_wall_ms_p50": 27.931,
+  "branches_sum_ms_p50": 21.45,
+  "parts": {
+   "  S2-3 graph candidates": {
+    "count": 60,
+    "p50": 2.544,
+    "p95": 3.825,
+    "mean": 2.534,
+    "share_of_gather": 0.0911
+   },
+   "    graph: _find_seed_entities": {
+    "count": 60,
+    "p50": 2.542,
+    "p95": 3.822,
+    "mean": 2.532,
+    "share_of_gather": 0.091
+   },
+   "    graph: get_nodes": {
+    "count": 60,
+    "p50": 12.181,
+    "p95": 14.832,
+    "mean": 13.204,
+    "share_of_gather": 0.4361
+   },
+   "    graph: query_nodes": {
+    "count": 60,
+    "p50": 10.89,
+    "p95": 14.281,
+    "mean": 11.034,
+    "share_of_gather": 0.3899
+   },
+   "  S2-3 vector candidates": {
+    "count": 60,
+    "p50": 11.89,
+    "p95": 14.834,
+    "mean": 12.574,
+    "share_of_gather": 0.4257
+   },
+   "    vector: search": {
+    "count": 60,
+    "p50": 11.886,
+    "p95": 14.829,
+    "mean": 12.569,
+    "share_of_gather": 0.4255
+   },
+   "  S2-3 lexical candidates": {
+    "count": 60,
+    "p50": 2.43,
+    "p95": 3.749,
+    "mean": 2.533,
+    "share_of_gather": 0.087
+   },
+   "    lexical: search": {
+    "count": 60,
+    "p50": 2.379,
+    "p95": 3.7,
+    "mean": 2.495,
+    "share_of_gather": 0.0852
+   },
+   "  S2-3 pinned candidates": {
+    "count": 60,
+    "p50": 4.586,
+    "p95": 5.58,
+    "mean": 4.637,
+    "share_of_gather": 0.1642
+   }
+  }
+ },
+ "calls_per_read": {
+  "    graph: _find_seed_entities": 1.0,
+  "    graph: get_nodes": 1.0,
+  "    graph: query_nodes": 3.05,
+  "    lexical: search": 1.0,
+  "    vector: search": 1.0,
+  "  S2-3 graph candidates": 1.0,
+  "  S2-3 lexical candidates": 1.0,
+  "  S2-3 merge_candidates": 1.0,
+  "  S2-3 pinned candidates": 1.0,
+  "  S2-3 vector candidates": 1.0,
+  "  S5 rrf relevance": 2.0,
+  "S1 analyze_query": 1.0,
+  "S1b current_state_observations": 1.0,
+  "S2-3 generate_candidates": 1.0,
+  "S3.5 filter_candidate_types": 2.05,
+  "S4 filter_epistemic": 1.05,
+  "S5 score_and_rank": 1.0,
+  "S5.4 select_candidates": 2.0,
+  "S5.5b session_context": 1.0,
+  "S5.5e claim folding": 1.0,
+  "S6 pack_context": 1.0,
+  "engine.retrieve": 1.0,
+  "retrieve: pipeline.retrieve": 1.0,
+  "retrieve: prepare_retrieval": 1.0,
+  "retrieve: queue.debt": 1.0,
+  "retrieve: ranking profile lookup": 1.0
+ },
+ "results_per_read": {
+  "count": 60,
+  "p50": 817.0,
+  "p95": 1000.0,
+  "mean": 828.8
+ },
+ "candidates_generated": [
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  }
+ ]
+}

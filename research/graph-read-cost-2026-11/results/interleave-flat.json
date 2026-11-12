@@ -1,0 +1,828 @@
+{
+ "pack": "/tmp/p8/n20000-s1",
+ "stored": 20000,
+ "questions": 20,
+ "rounds": 2,
+ "pairs": 40,
+ "reads_per_side": 40,
+ "backlog": 0,
+ "reference_time": "2026-11-05T00:00:00+00:00",
+ "load_before": [
+  8.36,
+  4.91,
+  4.2
+ ],
+ "load_after": [
+  7.97,
+  4.94,
+  4.22
+ ],
+ "current_ms": {
+  "count": 40,
+  "p50": 111.816,
+  "p95": 138.276,
+  "mean": 111.546,
+  "values": [
+   138.3,
+   88.5,
+   92.9,
+   135.8,
+   149.7,
+   104.5,
+   95.5,
+   89.9,
+   93.5,
+   129.5,
+   129.7,
+   92.8,
+   112.7,
+   100.5,
+   98.9,
+   105.2,
+   113.6,
+   112.2,
+   129.8,
+   114.3,
+   111.7,
+   95.4,
+   126.2,
+   132.3,
+   98.6,
+   93.8,
+   97.2,
+   98.1,
+   122.7,
+   93.8,
+   129.1,
+   111.8,
+   97.6,
+   108.4,
+   134.2,
+   147.1,
+   118.0,
+   127.0,
+   73.4,
+   117.7
+  ]
+ },
+ "cheap_ms": {
+  "count": 40,
+  "p50": 116.605,
+  "p95": 155.162,
+  "mean": 117.148,
+  "values": [
+   133.0,
+   92.7,
+   125.4,
+   94.3,
+   100.8,
+   101.1,
+   131.9,
+   128.9,
+   87.3,
+   91.2,
+   97.5,
+   97.4,
+   134.0,
+   135.9,
+   127.9,
+   140.6,
+   155.2,
+   117.2,
+   77.1,
+   144.0,
+   143.8,
+   97.6,
+   98.1,
+   95.0,
+   128.4,
+   149.8,
+   96.9,
+   126.2,
+   92.1,
+   91.9,
+   98.4,
+   166.4,
+   136.4,
+   104.7,
+   103.2,
+   107.9,
+   119.8,
+   191.3,
+   108.1,
+   116.6
+  ]
+ },
+ "identity": {
+  "pairs_checked": 40,
+  "ranked_same": 40,
+  "packed_same": 40,
+  "context_same": 40,
+  "tokens_same": 40,
+  "receipt_same": 20,
+  "receipt_pairs": 20,
+  "differences": []
+ },
+ "timings": [
+  {
+   "round": 0,
+   "question": "Where is the red mug now?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 138.3,
+   "cheap_ms": 133.0,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where are the house keys?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 88.5,
+   "cheap_ms": 92.7,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where did I leave the blue notebook?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 92.9,
+   "cheap_ms": 125.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the phone charger?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 135.8,
+   "cheap_ms": 94.3,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where are the reading glasses?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 149.7,
+   "cheap_ms": 100.8,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the tv remote?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 104.5,
+   "cheap_ms": 101.1,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the black umbrella?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 95.5,
+   "cheap_ms": 131.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the dog leash?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 89.9,
+   "cheap_ms": 128.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the screwdriver set?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 93.5,
+   "cheap_ms": 87.3,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Where is the first aid kit?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 129.5,
+   "cheap_ms": 91.2,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What is on the kitchen counter?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 129.7,
+   "cheap_ms": 97.5,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What is on the office desk?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 92.8,
+   "cheap_ms": 97.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What is in the garage workbench area?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 112.7,
+   "cheap_ms": 134.0,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Is the front porch clear?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 100.5,
+   "cheap_ms": 135.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What is in the laundry room?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 98.9,
+   "cheap_ms": 127.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What changed since the last pass?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 105.2,
+   "cheap_ms": 140.6,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Summarize the last hour.",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 113.6,
+   "cheap_ms": 155.2,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "What happened in the hallway this morning?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 112.2,
+   "cheap_ms": 117.2,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Did a delivery arrive?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 129.8,
+   "cheap_ms": 77.1,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 0,
+   "question": "Is there a leak anywhere?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 114.3,
+   "cheap_ms": 144.0,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   },
+   "receipt_identity": {
+    "receipt_sha256": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the red mug now?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 111.7,
+   "cheap_ms": 143.8,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where are the house keys?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 95.4,
+   "cheap_ms": 97.6,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where did I leave the blue notebook?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 126.2,
+   "cheap_ms": 98.1,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the phone charger?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 132.3,
+   "cheap_ms": 95.0,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where are the reading glasses?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 98.6,
+   "cheap_ms": 128.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the tv remote?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 93.8,
+   "cheap_ms": 149.8,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the black umbrella?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 97.2,
+   "cheap_ms": 96.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the dog leash?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 98.1,
+   "cheap_ms": 126.2,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the screwdriver set?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 122.7,
+   "cheap_ms": 92.1,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Where is the first aid kit?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 93.8,
+   "cheap_ms": 91.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What is on the kitchen counter?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 129.1,
+   "cheap_ms": 98.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What is on the office desk?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 111.8,
+   "cheap_ms": 166.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What is in the garage workbench area?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 97.6,
+   "cheap_ms": 136.4,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Is the front porch clear?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 108.4,
+   "cheap_ms": 104.7,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What is in the laundry room?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 134.2,
+   "cheap_ms": 103.2,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What changed since the last pass?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 147.1,
+   "cheap_ms": 107.9,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Summarize the last hour.",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 118.0,
+   "cheap_ms": 119.8,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "What happened in the hallway this morning?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 127.0,
+   "cheap_ms": 191.3,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Did a delivery arrive?",
+   "order": [
+    "current",
+    "cheap"
+   ],
+   "current_ms": 73.4,
+   "cheap_ms": 108.1,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  },
+  {
+   "round": 1,
+   "question": "Is there a leak anywhere?",
+   "order": [
+    "cheap",
+    "current"
+   ],
+   "current_ms": 117.7,
+   "cheap_ms": 116.6,
+   "identity": {
+    "ranked": "same",
+    "packed": "same",
+    "context_sha256": "same",
+    "tokens_used": "same"
+   }
+  }
+ ]
+}

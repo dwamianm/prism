@@ -1,0 +1,461 @@
+{
+ "pack": "/tmp/p8/m3-pack",
+ "label": "m3",
+ "stored": 20500,
+ "rounds": 1,
+ "reads": 20,
+ "load_before": [
+  3.0,
+  3.85,
+  3.81
+ ],
+ "load_after": [
+  3.15,
+  3.85,
+  3.81
+ ],
+ "total_ms": {
+  "count": 20,
+  "p50": 324.751,
+  "p95": 486.462,
+  "mean": 300.76
+ },
+ "per_read": [
+  {
+   "question": "Where is the red mug now?",
+   "query_nodes.ms": 31.837791961152107,
+   "seed_query_rows": 244.0,
+   "seed_query_calls": 4.0,
+   "walk_from_seeds.ms": 137.93887497740798,
+   "walk_calls": 1.0,
+   "walk_seeds": 44.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 33.8722080050502,
+   "get_nodes_rows": 1042.0,
+   "walk_links.ms": 37.38774999510497,
+   "walk_links_rows": 44760.0,
+   "walk_links_nodes": 3452.0,
+   "graph_branch.ms": 345.6433750106953
+  },
+  {
+   "question": "Where are the house keys?",
+   "query_nodes.ms": 12.051083002006635,
+   "seed_query_rows": 0.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 3.0702080111950636,
+   "get_nodes.ms": 18.712458986556157,
+   "get_nodes_rows": 993.0
+  },
+  {
+   "question": "Where did I leave the blue notebook?",
+   "query_nodes.ms": 15.987124992534518,
+   "seed_query_rows": 44.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 125.4571670142468,
+   "walk_calls": 1.0,
+   "walk_seeds": 44.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 32.9082089883741,
+   "get_nodes_rows": 1075.0,
+   "walk_links.ms": 36.77037497982383,
+   "walk_links_rows": 44794.0,
+   "walk_links_nodes": 3493.0,
+   "graph_branch.ms": 314.45070801419206
+  },
+  {
+   "question": "Where is the phone charger?",
+   "query_nodes.ms": 15.469292004127055,
+   "seed_query_rows": 25.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 129.56025000312366,
+   "walk_calls": 1.0,
+   "walk_seeds": 25.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 32.56862401030958,
+   "get_nodes_rows": 994.0,
+   "walk_links.ms": 27.96487501473166,
+   "walk_links_rows": 43209.0,
+   "walk_links_nodes": 2053.0,
+   "graph_branch.ms": 299.67479201150127
+  },
+  {
+   "question": "Where are the reading glasses?",
+   "query_nodes.ms": 12.70850101718679,
+   "seed_query_rows": 0.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 3.327625017846003,
+   "get_nodes.ms": 18.275749986059964,
+   "get_nodes_rows": 916.0
+  },
+  {
+   "question": "Where is the tv remote?",
+   "query_nodes.ms": 13.797208026517183,
+   "seed_query_rows": 25.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 122.75733400019817,
+   "walk_calls": 1.0,
+   "walk_seeds": 25.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 32.40954197826795,
+   "get_nodes_rows": 1064.0,
+   "walk_links.ms": 26.285833009751514,
+   "walk_links_rows": 43160.0,
+   "walk_links_nodes": 2043.0,
+   "graph_branch.ms": 275.4295420018025
+  },
+  {
+   "question": "Where is the black umbrella?",
+   "query_nodes.ms": 15.784583985805511,
+   "seed_query_rows": 44.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 122.5182079942897,
+   "walk_calls": 1.0,
+   "walk_seeds": 44.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 31.953125027939677,
+   "get_nodes_rows": 1069.0,
+   "walk_links.ms": 35.777084005530924,
+   "walk_links_rows": 44734.0,
+   "walk_links_nodes": 3423.0,
+   "graph_branch.ms": 337.5739170005545
+  },
+  {
+   "question": "Where is the dog leash?",
+   "query_nodes.ms": 14.256791007937863,
+   "seed_query_rows": 25.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 133.32024999544956,
+   "walk_calls": 1.0,
+   "walk_seeds": 25.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 32.52695797709748,
+   "get_nodes_rows": 995.0,
+   "walk_links.ms": 26.934458990581334,
+   "walk_links_rows": 43068.0,
+   "walk_links_nodes": 1941.0,
+   "graph_branch.ms": 299.75987499346957
+  },
+  {
+   "question": "Where is the screwdriver set?",
+   "query_nodes.ms": 15.954249975038692,
+   "seed_query_rows": 25.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 140.2285830117762,
+   "walk_calls": 1.0,
+   "walk_seeds": 25.0,
+   "walk_rows": 38140.0,
+   "get_nodes.ms": 33.50200000568293,
+   "get_nodes_rows": 1020.0,
+   "walk_links.ms": 27.50374999595806,
+   "walk_links_rows": 43253.0,
+   "walk_links_nodes": 2096.0,
+   "graph_branch.ms": 320.85674998234026
+  },
+  {
+   "question": "Where is the first aid kit?",
+   "query_nodes.ms": 15.066832973388955,
+   "seed_query_rows": 12.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 4.089791007572785,
+   "get_nodes.ms": 19.965457991929725,
+   "get_nodes_rows": 997.0
+  },
+  {
+   "question": "What is on the kitchen counter?",
+   "query_nodes.ms": 13.043290993664414,
+   "seed_query_rows": 21.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 134.83270900906064,
+   "walk_calls": 1.0,
+   "walk_seeds": 21.0,
+   "walk_rows": 38439.0,
+   "get_nodes.ms": 29.427957982989028,
+   "get_nodes_rows": 835.0,
+   "graph_branch.ms": 216.11620800103992
+  },
+  {
+   "question": "What is on the office desk?",
+   "query_nodes.ms": 14.865667006233707,
+   "seed_query_rows": 21.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 140.83920797565952,
+   "walk_calls": 1.0,
+   "walk_seeds": 21.0,
+   "walk_rows": 38520.0,
+   "get_nodes.ms": 30.03954200539738,
+   "get_nodes_rows": 906.0,
+   "graph_branch.ms": 220.80383301363327
+  },
+  {
+   "question": "What is in the garage workbench area?",
+   "query_nodes.ms": 14.591791958082467,
+   "seed_query_rows": 12.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 128.15358402440324,
+   "walk_calls": 1.0,
+   "walk_seeds": 12.0,
+   "walk_rows": 38075.0,
+   "get_nodes.ms": 32.12295798584819,
+   "get_nodes_rows": 1081.0,
+   "walk_links.ms": 42.70545800682157,
+   "walk_links_rows": 44854.0,
+   "walk_links_nodes": 4309.0,
+   "graph_branch.ms": 287.13608300313354
+  },
+  {
+   "question": "Is the front porch clear?",
+   "query_nodes.ms": 12.78329297201708,
+   "seed_query_rows": 0.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 3.302207973320037,
+   "get_nodes.ms": 18.91295801033266,
+   "get_nodes_rows": 997.0
+  },
+  {
+   "question": "What is in the laundry room?",
+   "query_nodes.ms": 15.94408298842609,
+   "seed_query_rows": 48.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 132.4910419934895,
+   "walk_calls": 1.0,
+   "walk_seeds": 24.0,
+   "walk_rows": 38520.0,
+   "get_nodes.ms": 32.054083014372736,
+   "get_nodes_rows": 1087.0,
+   "graph_branch.ms": 210.47683397773653
+  },
+  {
+   "question": "What changed since the last pass?",
+   "query_nodes.ms": 13.213250000262633,
+   "seed_query_rows": 20.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 3.5309590166434646,
+   "get_nodes.ms": 18.428167008096352,
+   "get_nodes_rows": 996.0
+  },
+  {
+   "question": "Summarize the last hour.",
+   "query_nodes.ms": 14.265166013501585,
+   "seed_query_rows": 20.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 4.027167015010491,
+   "get_nodes.ms": 19.06241598771885,
+   "get_nodes_rows": 998.0
+  },
+  {
+   "question": "What happened in the hallway this morning?",
+   "query_nodes.ms": 15.0859160348773,
+   "seed_query_rows": 12.0,
+   "seed_query_calls": 3.0,
+   "walk_from_seeds.ms": 123.18129098275676,
+   "walk_calls": 1.0,
+   "walk_seeds": 12.0,
+   "walk_rows": 38054.0,
+   "get_nodes.ms": 32.27741701994091,
+   "get_nodes_rows": 1072.0,
+   "walk_links.ms": 43.401791976066306,
+   "walk_links_rows": 45061.0,
+   "walk_links_nodes": 4422.0,
+   "graph_branch.ms": 283.1787499890197
+  },
+  {
+   "question": "Did a delivery arrive?",
+   "query_nodes.ms": 7.896040973719209,
+   "seed_query_rows": 0.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 1.7289579845964909,
+   "get_nodes.ms": 12.35166599508375,
+   "get_nodes_rows": 500.0
+  },
+  {
+   "question": "Is there any leak anywhere?",
+   "query_nodes.ms": 13.399040995864198,
+   "seed_query_rows": 0.0,
+   "seed_query_calls": 3.0,
+   "graph_branch.ms": 3.6064169835299253,
+   "get_nodes.ms": 45.15808299765922,
+   "get_nodes_rows": 1000.0
+  }
+ ],
+ "columns": {
+  "walk_seeds": {
+   "count": 20,
+   "p50": 21.0,
+   "p95": 44.0,
+   "mean": 16.1
+  },
+  "walk_rows": {
+   "count": 20,
+   "p50": 38140.0,
+   "p95": 38520.0,
+   "mean": 22929.4
+  },
+  "walk_links_rows": {
+   "count": 20,
+   "p50": 0.0,
+   "p95": 44854.0,
+   "mean": 19844.65
+  },
+  "walk_links_nodes": {
+   "count": 20,
+   "p50": 0.0,
+   "p95": 4309.0,
+   "mean": 1361.6
+  },
+  "get_nodes_rows": {
+   "count": 20,
+   "p50": 998.0,
+   "p95": 1081.0,
+   "mean": 981.85
+  },
+  "seed_query_rows": {
+   "count": 20,
+   "p50": 21.0,
+   "p95": 48.0,
+   "mean": 29.9
+  },
+  "seed_query_calls": {
+   "count": 20,
+   "p50": 3.0,
+   "p95": 3.0,
+   "mean": 3.05
+  },
+  "walk_from_seeds.ms": {
+   "count": 20,
+   "p50": 123.181,
+   "p95": 140.229,
+   "mean": 78.564
+  },
+  "walk_links.ms": {
+   "count": 20,
+   "p50": 0.0,
+   "p95": 42.705,
+   "mean": 15.237
+  },
+  "get_nodes.ms": {
+   "count": 20,
+   "p50": 32.054,
+   "p95": 33.872,
+   "mean": 27.826
+  },
+  "query_nodes.ms": {
+   "count": 20,
+   "p50": 14.592,
+   "p95": 15.987,
+   "mean": 14.9
+  },
+  "graph_branch.ms": {
+   "count": 20,
+   "p50": 220.804,
+   "p95": 337.574,
+   "mean": 171.889
+  }
+ },
+ "walk_replay": {
+  "questions": 12,
+  "sql_ms": {
+   "count": 12,
+   "p50": 38.666,
+   "p95": 43.045,
+   "mean": 39.274
+  },
+  "decode_ms": {
+   "count": 12,
+   "p50": 85.233,
+   "p95": 90.398,
+   "mean": 86.007
+  },
+  "rows": {
+   "count": 12,
+   "p50": 38140.0,
+   "p95": 38520.0,
+   "mean": 38215.667
+  },
+  "detail": [
+   {
+    "question": "Where is the red mug now?",
+    "sql_ms": 42.68825001781806,
+    "decode_ms": 81.253625015961,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where did I leave the blue notebook?",
+    "sql_ms": 43.045375001383945,
+    "decode_ms": 90.39758399012499,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where is the phone charger?",
+    "sql_ms": 36.49616701295599,
+    "decode_ms": 84.19304201379418,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where is the tv remote?",
+    "sql_ms": 37.72154200123623,
+    "decode_ms": 81.57733298139647,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where is the black umbrella?",
+    "sql_ms": 44.902458001160994,
+    "decode_ms": 90.3626249928493,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where is the dog leash?",
+    "sql_ms": 36.96825000224635,
+    "decode_ms": 86.11429200391285,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "Where is the screwdriver set?",
+    "sql_ms": 38.32349998992868,
+    "decode_ms": 92.66387499519624,
+    "rows": 38140,
+    "decoded": 38140
+   },
+   {
+    "question": "What is on the kitchen counter?",
+    "sql_ms": 40.42916599428281,
+    "decode_ms": 89.03212498989888,
+    "rows": 38439,
+    "decoded": 38439
+   },
+   {
+    "question": "What is on the office desk?",
+    "sql_ms": 39.46837497642264,
+    "decode_ms": 85.23275001789443,
+    "rows": 38520,
+    "decoded": 38520
+   },
+   {
+    "question": "What is in the garage workbench area?",
+    "sql_ms": 36.1746660200879,
+    "decode_ms": 84.09274998120964,
+    "rows": 38075,
+    "decoded": 38075
+   },
+   {
+    "question": "What is in the laundry room?",
+    "sql_ms": 38.66608301177621,
+    "decode_ms": 85.01874998910353,
+    "rows": 38520,
+    "decoded": 38520
+   },
+   {
+    "question": "What happened in the hallway this morning?",
+    "sql_ms": 36.406584025826305,
+    "decode_ms": 82.14904202031903,
+    "rows": 38054,
+    "decoded": 38054
+   }
+  ]
+ }
+}
