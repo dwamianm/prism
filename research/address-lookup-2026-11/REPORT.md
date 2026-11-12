@@ -45,7 +45,7 @@ a subject stored with doubled spacing and mixed case.
 
 Mismatches: **0**.
 
-One defect was found and fixed while building this. The first run mismatched on 224 of 222 pairs, all on
+One defect was found and fixed while building this. The first run mismatched on almost every pair, all on
 `exclusions`, because the prototype reported `missing_structured_assertion: 0` where the current path omits the key.
 The current path builds a `Counter` and only ever increments it, so a zero is absent rather than present. The
 prototype now sets a count only when it is non-zero.
@@ -114,7 +114,9 @@ scan grows with the store, which is why the current path grows three times faste
 ## Bar (c): write cost, and nothing lost or changed
 
 Probe: `probes/write_cost.py`, result `results/write-cost-4050.json`, pack `/tmp/p6/build/current-4050/pack`, 150
-facts, 10 `store()` calls.
+facts, 10 `store()` calls. `results/write-cost.json` is an earlier run of the same probe under heavier load, where a
+`store()` call measured 576.8 ms instead of 150.4 ms and the same in-statement key measured 0.67 ms. The two runs
+agree in shape; the numbers above are the quieter one. Neither is a claim about absolute speed on a loaded machine.
 
 | shape | added per fact, p50 | added per fact, mean |
 |---|---|---|
