@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0a8] - 2026-11-12
+
+This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
+request; this version bump changes no code. The one default it changes, `memory_mode="address_first"`,
+passed the fast tiers in its own pull request, and the mode's read-time settings were measured on the
+mid tier on 2026-11-11. The release has not been through the full benchmark. The stable release stays
+at 0.16.1 until the full benchmark audit, so `pip install prme` still installs 0.16.1. Install the
+alpha with `pip install --pre prme` or `pip install prme==0.17.0a8`.
+
+What is new since 0.17.0a7: address-first memory, on by default in the alpha channel, which turns on
+relation routing (`ROUTING_VERSION` 3), the belief ledger (`BELIEF_VERSION` 4) and four packing and
+scoring settings when a question is asked (dwamianm/prism#561, dwamianm/prism#565); stated facts,
+`ingest(content, assertions=[...])`, which write the claim typed extraction would make with no model
+call (`ASSERTION_VERSION` 2, dwamianm/prism#561); an opt-in read profile, `read_profile="robot"`
+(dwamianm/prism#564); and four changes that make reads cheaper and return the same results: one graph
+walk from all seeds (dwamianm/prism#562), SQL literals and a one-row profile lookup
+(dwamianm/prism#563), a `get_assertion_state` that reads one address through stored key columns on
+DuckDB (dwamianm/prism#566), and graph candidates read in one store query (dwamianm/prism#567).
+
+Upgrade notes:
+
+- Address-first memory is on by default. `PRME_MEMORY_MODE=classic` (or `memory_mode="classic"`)
+  restores the retrieval and contexts of 0.17.0a7. Two differences remain: graph candidates tied on
+  confidence and creation time are now ordered by node id (dwamianm/prism#562), and a receipt's
+  `source_files_sha256` changes because the candidate module it hashes changed (dwamianm/prism#567);
+  receipts made before still replay. The mode acts only when a question is asked: it rewrites no
+  stored memory and calls no model. A configuration that sets one of the mode's settings itself keeps
+  it, so each setting still turns off alone.
+- On the defaults, the configuration dump names seven more values (`memory_mode`,
+  `enable_relation_routing`, `enable_belief_state`, `packing.clock_window_filter`,
+  `packing.collapse_identical_text`, `packing.session_context_direct_first` and
+  `scoring.rrf_recency_order`), and a default receipt records the four packing and scoring settings.
+  The receipt schema version stays 22; the `scoring_config_version` a response reports moves from
+  `749fbac50bd1` to `048bd236ac10`.
+- The first open of a DuckDB pack made before this release adds three columns to `nodes`
+  (`assertion_subject_key`, `assertion_predicate_key` and `has_privacy_marker`) and one to `events`
+  (`has_privacy_marker`, except in a protected store), fills them once and checkpoints. On a pack of
+  41,620 nodes this took about 22 to 23 s once, on one laptop under load; later opens cost the same as
+  before. No migration command and no rebuild are needed.
+- PostgreSQL stores get no schema change, and the runtime schema fingerprint is unchanged.
+  `get_assertion_state` keeps its full scan on PostgreSQL.
+- `DERIVATION_VERSION` is unchanged from 0.17.0a7 (it stays 2), so this upgrade makes no stored
+  memory stale, and turning the mode on or off makes no memory stale for `reingest()`.
+
 ### Added
 
 - Address-first memory, read-time half, behind one switch: `memory_mode`
@@ -3802,7 +3846,8 @@ the alpha with `pip install --pre prme` or `pip install prme==0.16.0a1`.
 - Terminal chat example with persistent memory
 - Quickstart example
 
-[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a7...HEAD
+[Unreleased]: https://github.com/dwamianm/prism/compare/v0.17.0a8...HEAD
+[0.17.0a8]: https://github.com/dwamianm/prism/compare/v0.17.0a7...v0.17.0a8
 [0.17.0a7]: https://github.com/dwamianm/prism/compare/v0.17.0a6...v0.17.0a7
 [0.17.0a6]: https://github.com/dwamianm/prism/compare/v0.17.0a5...v0.17.0a6
 [0.17.0a5]: https://github.com/dwamianm/prism/compare/v0.17.0a4...v0.17.0a5
