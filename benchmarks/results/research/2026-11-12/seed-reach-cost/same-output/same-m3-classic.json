@@ -1,0 +1,369 @@
+{
+ "label": "same-m3-classic",
+ "pack": "m3",
+ "set": {
+  "memory_mode": "classic"
+ },
+ "rounds": 1,
+ "questions": 20,
+ "pairs": 20,
+ "prme": {
+  "main": "/tmp/task26/main/src/prme/__init__.py",
+  "change": "/Users/dwamianm/Sites/prism-seed-reach/src/prme/__init__.py"
+ },
+ "load_1m": {
+  "min": 12.49,
+  "median": 13.15,
+  "max": 13.51
+ },
+ "same_of_20": {
+  "ranked": 20,
+  "packed": 20,
+  "context_sha256": 20,
+  "receipt_sha256": 0,
+  "tokens_used": 20,
+  "candidates_generated": 20,
+  "stored_receipt_sha256": 0,
+  "stored_receipt_masked_sha256": 20,
+  "stored_log_fields_sha256": 20,
+  "replay_ok": 20
+ },
+ "replay_ok": {
+  "main": 20,
+  "change": 20
+ },
+ "source_files_changed": [
+  "candidates"
+ ],
+ "median_paired_saving_ms": 27.8,
+ "saving": {
+  "all": {
+   "pairs": 20,
+   "questions": 20,
+   "median_ms": 27.8,
+   "interval_95_pairs": [
+    7.3,
+    49.0
+   ],
+   "interval_95_questions": [
+    7.3,
+    49.0
+   ]
+  },
+  "walked": {
+   "pairs": 9,
+   "questions": 9,
+   "median_ms": 54.3,
+   "interval_95_pairs": [
+    29.2,
+    112.0
+   ],
+   "interval_95_questions": [
+    29.2,
+    112.0
+   ]
+  },
+  "limit": {
+   "pairs": 3,
+   "questions": 3,
+   "median_ms": 7.5,
+   "interval_95_pairs": [
+    -48.5,
+    37.6
+   ],
+   "interval_95_questions": [
+    -48.5,
+    37.6
+   ]
+  },
+  "no_walk": {
+   "pairs": 8,
+   "questions": 8,
+   "median_ms": 6.1,
+   "interval_95_pairs": [
+    -38.4,
+    19.9
+   ],
+   "interval_95_questions": [
+    -38.4,
+    19.9
+   ]
+  }
+ },
+ "seed_reach_metadata": {
+  "main": {
+   "Where is the red mug now?": null,
+   "Where are the house keys?": null,
+   "Where did I leave the blue notebook?": null,
+   "Where is the phone charger?": null,
+   "Where are the reading glasses?": null,
+   "Where is the tv remote?": null,
+   "Where is the black umbrella?": null,
+   "Where is the dog leash?": null,
+   "Where is the screwdriver set?": null,
+   "Where is the first aid kit?": null,
+   "What is on the kitchen counter?": "neighborhood_limit",
+   "What is on the office desk?": "neighborhood_limit",
+   "What is in the garage workbench area?": null,
+   "Is the front porch clear?": null,
+   "What is in the laundry room?": "neighborhood_limit",
+   "What changed since the last pass?": null,
+   "Summarize the last hour.": null,
+   "What happened in the hallway this morning?": null,
+   "Did a delivery arrive?": null,
+   "Is there a leak anywhere?": null
+  },
+  "change": {
+   "Where is the red mug now?": null,
+   "Where are the house keys?": null,
+   "Where did I leave the blue notebook?": null,
+   "Where is the phone charger?": null,
+   "Where are the reading glasses?": null,
+   "Where is the tv remote?": null,
+   "Where is the black umbrella?": null,
+   "Where is the dog leash?": null,
+   "Where is the screwdriver set?": null,
+   "Where is the first aid kit?": null,
+   "What is on the kitchen counter?": "neighborhood_limit",
+   "What is on the office desk?": "neighborhood_limit",
+   "What is in the garage workbench area?": null,
+   "Is the front porch clear?": null,
+   "What is in the laundry room?": "neighborhood_limit",
+   "What changed since the last pass?": null,
+   "Summarize the last hour.": null,
+   "What happened in the hallway this morning?": null,
+   "Did a delivery arrive?": null,
+   "Is there a leak anywhere?": null
+  }
+ },
+ "candidates_generated_main": [
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 150,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 0,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  }
+ ],
+ "main": {
+  "p50_ms": 203.5,
+  "walked_p50_ms": 323.1,
+  "limit_p50_ms": 201.3,
+  "no_walk_p50_ms": 157.3,
+  "p95_ms": 416.5,
+  "mean_ms": 246.2,
+  "reads": 20
+ },
+ "change": {
+  "p50_ms": 207.5,
+  "walked_p50_ms": 272.6,
+  "limit_p50_ms": 193.9,
+  "no_walk_p50_ms": 159.1,
+  "p95_ms": 318.9,
+  "mean_ms": 214.4,
+  "reads": 20
+ },
+ "loads": [
+  13.51,
+  13.51,
+  13.51,
+  13.51,
+  13.51,
+  13.51,
+  13.15,
+  13.15,
+  13.15,
+  13.15,
+  13.15,
+  13.15,
+  13.15,
+  12.49,
+  12.49,
+  12.49,
+  12.49,
+  12.49,
+  12.49,
+  12.49
+ ],
+ "paired_saving_ms": [
+  112.02,
+  47.6,
+  180.56,
+  49.44,
+  8.61,
+  86.18,
+  72.92,
+  48.51,
+  29.21,
+  -30.69,
+  7.46,
+  37.6,
+  26.35,
+  -38.66,
+  -48.49,
+  -38.43,
+  7.22,
+  54.31,
+  19.9,
+  4.93
+ ],
+ "ms": {
+  "main": [
+   430.88,
+   172.67,
+   415.72,
+   297.37,
+   126.86,
+   300.04,
+   374.52,
+   367.39,
+   301.8,
+   170.54,
+   201.34,
+   205.69,
+   301.42,
+   134.78,
+   179.14,
+   139.42,
+   166.34,
+   323.12,
+   150.61,
+   164.01
+  ],
+  "change": [
+   318.86,
+   125.07,
+   235.15,
+   247.93,
+   118.25,
+   213.86,
+   301.6,
+   318.88,
+   272.59,
+   201.23,
+   193.88,
+   168.09,
+   275.07,
+   173.44,
+   227.63,
+   177.85,
+   159.12,
+   268.81,
+   130.71,
+   159.08
+  ]
+ }
+}

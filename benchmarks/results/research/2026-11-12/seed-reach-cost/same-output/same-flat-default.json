@@ -1,0 +1,322 @@
+{
+ "label": "same-flat-default",
+ "pack": "flat",
+ "set": {},
+ "rounds": 1,
+ "questions": 20,
+ "pairs": 20,
+ "prme": {
+  "main": "/tmp/task26/main/src/prme/__init__.py",
+  "change": "/Users/dwamianm/Sites/prism-seed-reach/src/prme/__init__.py"
+ },
+ "load_1m": {
+  "min": 12.33,
+  "median": 12.33,
+  "max": 12.33
+ },
+ "same_of_20": {
+  "ranked": 20,
+  "packed": 20,
+  "context_sha256": 20,
+  "receipt_sha256": 0,
+  "tokens_used": 20,
+  "candidates_generated": 20,
+  "stored_receipt_sha256": 0,
+  "stored_receipt_masked_sha256": 20,
+  "stored_log_fields_sha256": 20,
+  "replay_ok": 20
+ },
+ "replay_ok": {
+  "main": 20,
+  "change": 20
+ },
+ "source_files_changed": [
+  "candidates"
+ ],
+ "median_paired_saving_ms": -0.7,
+ "saving": {
+  "all": {
+   "pairs": 20,
+   "questions": 20,
+   "median_ms": -0.7,
+   "interval_95_pairs": [
+    -1.4,
+    0.4
+   ],
+   "interval_95_questions": [
+    -1.4,
+    0.4
+   ]
+  }
+ },
+ "seed_reach_metadata": {
+  "main": {
+   "Where is the red mug now?": null,
+   "Where are the house keys?": null,
+   "Where did I leave the blue notebook?": null,
+   "Where is the phone charger?": null,
+   "Where are the reading glasses?": null,
+   "Where is the tv remote?": null,
+   "Where is the black umbrella?": null,
+   "Where is the dog leash?": null,
+   "Where is the screwdriver set?": null,
+   "Where is the first aid kit?": null,
+   "What is on the kitchen counter?": null,
+   "What is on the office desk?": null,
+   "What is in the garage workbench area?": null,
+   "Is the front porch clear?": null,
+   "What is in the laundry room?": null,
+   "What changed since the last pass?": null,
+   "Summarize the last hour.": null,
+   "What happened in the hallway this morning?": null,
+   "Did a delivery arrive?": null,
+   "Is there a leak anywhere?": null
+  },
+  "change": {
+   "Where is the red mug now?": null,
+   "Where are the house keys?": null,
+   "Where did I leave the blue notebook?": null,
+   "Where is the phone charger?": null,
+   "Where are the reading glasses?": null,
+   "Where is the tv remote?": null,
+   "Where is the black umbrella?": null,
+   "Where is the dog leash?": null,
+   "Where is the screwdriver set?": null,
+   "Where is the first aid kit?": null,
+   "What is on the kitchen counter?": null,
+   "What is on the office desk?": null,
+   "What is in the garage workbench area?": null,
+   "Is the front porch clear?": null,
+   "What is in the laundry room?": null,
+   "What changed since the last pass?": null,
+   "Summarize the last hour.": null,
+   "What happened in the hallway this morning?": null,
+   "Did a delivery arrive?": null,
+   "Is there a leak anywhere?": null
+  }
+ },
+ "candidates_generated_main": [
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 13,
+   "PINNED": 0
+  },
+  {
+   "GRAPH": 0,
+   "VECTOR": 500,
+   "LEXICAL": 500,
+   "PINNED": 0
+  }
+ ],
+ "main": {
+  "p50_ms": 65.9,
+  "p95_ms": 93.5,
+  "mean_ms": 72.2,
+  "reads": 20
+ },
+ "change": {
+  "p50_ms": 66.9,
+  "p95_ms": 97.2,
+  "mean_ms": 73.0,
+  "reads": 20
+ },
+ "loads": [
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33,
+  12.33
+ ],
+ "paired_saving_ms": [
+  3.19,
+  0.0,
+  0.72,
+  -1.03,
+  -0.57,
+  7.88,
+  -2.2,
+  1.12,
+  -1.72,
+  1.26,
+  -0.67,
+  -1.45,
+  -3.39,
+  -0.73,
+  -7.26,
+  0.37,
+  -1.29,
+  0.35,
+  -8.78,
+  -1.22
+ ],
+ "ms": {
+  "main": [
+   101.37,
+   62.1,
+   62.75,
+   59.46,
+   61.29,
+   93.07,
+   63.83,
+   65.28,
+   92.3,
+   63.21,
+   66.6,
+   92.15,
+   61.13,
+   68.71,
+   89.84,
+   62.76,
+   65.22,
+   67.76,
+   76.38,
+   68.56
+  ],
+  "change": [
+   98.19,
+   62.1,
+   62.03,
+   60.49,
+   61.86,
+   85.19,
+   66.04,
+   64.16,
+   94.02,
+   61.95,
+   67.27,
+   93.6,
+   64.52,
+   69.43,
+   97.1,
+   62.39,
+   66.51,
+   67.4,
+   85.15,
+   69.79
+  ]
+ }
+}

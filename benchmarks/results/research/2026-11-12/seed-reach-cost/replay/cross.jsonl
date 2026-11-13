@@ -1,0 +1,4 @@
+{"checked_with": "/tmp/task26/main", "receipts_from": "/tmp/task26/replay/main.jsonl", "replayed": 20, "of": 20, "candidates_sha256": ["1f309b34d6a612b3aa17b6f2162a8381c518f13482adc79034abdc27270c4c53"]}
+{"checked_with": "/tmp/task26/main", "receipts_from": "/tmp/task26/replay/change.jsonl", "replayed": 20, "of": 20, "candidates_sha256": ["1b6f8c87bead1cb08234e6d7421e4b788e465c2c246456f4c3425e7aed35fb44"]}
+{"checked_with": "/Users/dwamianm/Sites/prism-seed-reach", "receipts_from": "/tmp/task26/replay/main.jsonl", "replayed": 20, "of": 20, "candidates_sha256": ["1f309b34d6a612b3aa17b6f2162a8381c518f13482adc79034abdc27270c4c53"]}
+{"checked_with": "/Users/dwamianm/Sites/prism-seed-reach", "receipts_from": "/tmp/task26/replay/change.jsonl", "replayed": 20, "of": 20, "candidates_sha256": ["1b6f8c87bead1cb08234e6d7421e4b788e465c2c246456f4c3425e7aed35fb44"]}
