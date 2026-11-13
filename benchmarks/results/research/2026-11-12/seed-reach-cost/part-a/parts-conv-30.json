@@ -1,0 +1,1903 @@
+{
+ "pack": "/tmp/task26/packs/conv-30",
+ "kind": "locomo",
+ "commit": "56b51d53aa48d0c79a7a6d8b3a94c063273d31d4",
+ "settings": {
+  "memory_mode": "address_first",
+  "fusion": "rrf",
+  "rrf_graph_seed_count": true,
+  "rrf_graph_weight": 0.5,
+  "graph_max_hops": 3,
+  "graph_max_candidates": 150,
+  "graph_seed_words": true
+ },
+ "timed_questions": 20,
+ "repeats": 3,
+ "load_before": [
+  2.53,
+  3.53,
+  4.19
+ ],
+ "load_after": [
+  3.73,
+  3.75,
+  4.26
+ ],
+ "summary": {
+  "reads": 60,
+  "seed_reach_calls": 60,
+  "outcomes": {
+   "walked": 60,
+   "limit": 0,
+   "fewer_than_two_seeds": 0
+  },
+  "total": {
+   "p50": 5.35,
+   "p95": 7.09,
+   "mean": 5.36,
+   "sum": 321.3
+  },
+  "setup": {
+   "p50": 0.11,
+   "p95": 0.14,
+   "mean": 0.11,
+   "sum": 6.5
+  },
+  "links_await": {
+   "p50": 4.03,
+   "p95": 5.32,
+   "mean": 3.96,
+   "sum": 237.3
+  },
+  "links_sql": {
+   "p50": 3.8,
+   "p95": 4.97,
+   "mean": 3.72,
+   "sum": 223.4
+  },
+  "links_convert": {
+   "p50": 0.11,
+   "p95": 0.25,
+   "mean": 0.1,
+   "sum": 5.9
+  },
+  "adjacency": {
+   "p50": 0.2,
+   "p95": 0.36,
+   "mean": 0.21,
+   "sum": 12.9
+  },
+  "walk": {
+   "p50": 0.42,
+   "p95": 0.93,
+   "mean": 0.49,
+   "sum": 29.3
+  },
+  "result": {
+   "p50": 0.13,
+   "p95": 0.19,
+   "mean": 0.14,
+   "sum": 8.2
+  },
+  "seeds_range": [
+   2,
+   12.0,
+   37
+  ],
+  "known_range": [
+   426,
+   771.0,
+   828
+  ],
+  "owners_range": [
+   0,
+   1.0,
+   1
+  ],
+  "expandable_range": [
+   17,
+   538.0,
+   794
+  ],
+  "links_range": [
+   455,
+   1127.5,
+   1295
+  ],
+  "adjacency_nodes_range": [
+   426,
+   727.0,
+   828
+  ],
+  "edge_visits_range": [
+   465,
+   5275.5,
+   13613
+  ],
+  "reached_range": [
+   422,
+   722.5,
+   828
+  ],
+  "verified_calls": 20,
+  "read_ms": {
+   "p50": 136.9,
+   "p95": 164.9
+  },
+  "graph_stage_ms": {
+   "p50": 26.4,
+   "p95": 39.6
+  }
+ },
+ "limit_count_all_questions": {
+  "questions": 81,
+  "limit": 0,
+  "walked": 77,
+  "fewer_than_two_seeds": 3,
+  "no_seed_reach_call": 1,
+  "limit_expandable": [],
+  "metadata_neighborhood_limit": 0
+ },
+ "per_question": [
+  {
+   "repeat": 0,
+   "question": "What does Jon's dance make him?",
+   "read_ms": 135.97329100593925,
+   "graph_stage_ms": 32.989458995871246,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.14445799752138555,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 4.058083985000849,
+     "links_convert": 0.09495799895375967,
+     "links_await": 4.288333002477884,
+     "links": 1074,
+     "adjacency": 0.1663750153966248,
+     "walk": 0.6973749841563404,
+     "result": 0.15641702339053154,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 6.017582985805348,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Jon go to a fair to get more exposure for his dance studio?",
+   "read_ms": 177.20966698834673,
+   "graph_stage_ms": 43.806874979054555,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 32,
+     "reached_nodes": 779,
+     "setup": 0.16266698366962373,
+     "known": 784,
+     "owners": 1,
+     "expandable": 611,
+     "links_sql": 4.420875018695369,
+     "links_convert": 0.034707976737990975,
+     "links_await": 4.607207985827699,
+     "links": 1082,
+     "adjacency": 0.23454200709238648,
+     "walk": 0.9247499983757734,
+     "result": 0.1829999964684248,
+     "adjacency_nodes": 692,
+     "edge_visits": 12749,
+     "reached": 687,
+     "total": 6.6622080048546195,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What does Jon plan to do at the grand opening of his dance studio?",
+   "read_ms": 147.41862498340197,
+   "graph_stage_ms": 35.32987498329021,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 37,
+     "reached_nodes": 786,
+     "setup": 0.15558398445136845,
+     "known": 794,
+     "owners": 1,
+     "expandable": 622,
+     "links_sql": 4.267249983968213,
+     "links_convert": 0.03254201146773994,
+     "links_await": 4.423874983331189,
+     "links": 1089,
+     "adjacency": 0.18304199329577386,
+     "walk": 0.9592499991413206,
+     "result": 0.2008749870583415,
+     "adjacency_nodes": 702,
+     "edge_visits": 13613,
+     "reached": 694,
+     "total": 6.475875008618459,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Gina design a limited collection of hoodies?",
+   "read_ms": 131.29975000629202,
+   "graph_stage_ms": 30.588333000196144,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 752,
+     "setup": 0.1254590169992298,
+     "known": 753,
+     "owners": 1,
+     "expandable": 431,
+     "links_sql": 3.360792004968971,
+     "links_convert": 0.16529200365766883,
+     "links_await": 3.6810409801546484,
+     "links": 1167,
+     "adjacency": 0.22429099772125483,
+     "walk": 0.1654170046094805,
+     "result": 0.09287497960031033,
+     "adjacency_nodes": 753,
+     "edge_visits": 1870,
+     "reached": 752,
+     "total": 4.671125003369525,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How does Gina describe the feeling that dance brings?",
+   "read_ms": 173.2347089855466,
+   "graph_stage_ms": 34.18591700028628,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.13166698045097291,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 3.9789579750504345,
+     "links_convert": 0.04595902282744646,
+     "links_await": 4.177041002549231,
+     "links": 1216,
+     "adjacency": 0.2460000105202198,
+     "walk": 0.7747089839540422,
+     "result": 0.18587501836009324,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 6.005542003549635,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What is Jon working on opening?",
+   "read_ms": 132.52229100908153,
+   "graph_stage_ms": 30.045999999856576,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 771,
+     "setup": 0.10379200102761388,
+     "known": 775,
+     "owners": 1,
+     "expandable": 547,
+     "links_sql": 3.8159159885253757,
+     "links_convert": 0.12050001532770693,
+     "links_await": 4.061499988893047,
+     "links": 1030,
+     "adjacency": 0.1964579860214144,
+     "walk": 0.15145799261517823,
+     "result": 0.08095899829640985,
+     "adjacency_nodes": 672,
+     "edge_visits": 1766,
+     "reached": 668,
+     "total": 5.08345800335519,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When is Jon's group performing at a festival?",
+   "read_ms": 132.70908300182782,
+   "graph_stage_ms": 31.77512501133606,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 766,
+     "setup": 0.10462501086294651,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.7959170003887266,
+     "links_convert": 0.0329999893438071,
+     "links_await": 3.9771670126356184,
+     "links": 1024,
+     "adjacency": 0.43849999201484025,
+     "walk": 0.3131669946014881,
+     "result": 0.10883301729336381,
+     "adjacency_nodes": 663,
+     "edge_visits": 3844,
+     "reached": 663,
+     "total": 5.40066699613817,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Jon visit networking events for his store?",
+   "read_ms": 156.78770901286043,
+   "graph_stage_ms": 33.76133300480433,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 15,
+     "reached_nodes": 770,
+     "setup": 0.11299998732283711,
+     "known": 774,
+     "owners": 1,
+     "expandable": 573,
+     "links_sql": 4.0557499742135406,
+     "links_convert": 0.17054102499969304,
+     "links_await": 4.3655829795170575,
+     "links": 1060,
+     "adjacency": 0.2029579773079604,
+     "walk": 0.4649170150514692,
+     "result": 0.13137501082383096,
+     "adjacency_nodes": 678,
+     "edge_visits": 6194,
+     "reached": 674,
+     "total": 5.764916975749657,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How does Gina stay confident in her business?",
+   "read_ms": 120.73724999208935,
+   "graph_stage_ms": 30.78520900453441,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 8,
+     "reached_nodes": 758,
+     "setup": 0.1034580054692924,
+     "known": 762,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.7608749989885837,
+     "links_convert": 0.12845799210481346,
+     "links_await": 4.020124993985519,
+     "links": 1191,
+     "adjacency": 0.417709001339972,
+     "walk": 0.3694159968290478,
+     "result": 0.13000000035390258,
+     "adjacency_nodes": 762,
+     "edge_visits": 4823,
+     "reached": 758,
+     "total": 5.446333001600578,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did Jon take a trip to Rome for?",
+   "read_ms": 135.12212497880682,
+   "graph_stage_ms": 32.1451670024544,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 766,
+     "setup": 0.10141698294319212,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.8495830085594207,
+     "links_convert": 0.040749990148469806,
+     "links_await": 4.046249989187345,
+     "links": 1024,
+     "adjacency": 0.2385829866398126,
+     "walk": 0.17908299923874438,
+     "result": 0.08420899393968284,
+     "adjacency_nodes": 663,
+     "edge_visits": 2187,
+     "reached": 663,
+     "total": 5.110416997922584,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What does Gina say about the dancers in the photo?",
+   "read_ms": 154.90083399345167,
+   "graph_stage_ms": 31.316292006522417,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 760,
+     "setup": 0.09912499808706343,
+     "known": 763,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.475792007520795,
+     "links_convert": 0.16075000166893005,
+     "links_await": 3.7697920051869005,
+     "links": 1192,
+     "adjacency": 0.21041699801571667,
+     "walk": 0.2842910180334002,
+     "result": 0.11420898954384029,
+     "adjacency_nodes": 763,
+     "edge_visits": 3624,
+     "reached": 760,
+     "total": 4.8780829820316285,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of dance piece did Gina's team perform to win first place?",
+   "read_ms": 149.07174999825656,
+   "graph_stage_ms": 37.13941699243151,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.13366699567995965,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 4.035374993691221,
+     "links_convert": 0.17350001144222915,
+     "links_await": 4.379124991828576,
+     "links": 1216,
+     "adjacency": 0.23054200573824346,
+     "walk": 0.7766250055283308,
+     "result": 0.1822079939302057,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 6.182500015711412,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did Gina find for her clothing store on 1 February, 2023?",
+   "read_ms": 227.90987501502968,
+   "graph_stage_ms": 42.8135420079343,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 13,
+     "reached_nodes": 751,
+     "setup": 0.11129098129458725,
+     "known": 753,
+     "owners": 1,
+     "expandable": 438,
+     "links_sql": 3.4779160050675273,
+     "links_convert": 0.12149999383836985,
+     "links_await": 3.763999993680045,
+     "links": 1168,
+     "adjacency": 0.20208401838317513,
+     "walk": 0.7133329927455634,
+     "result": 0.1455830060876906,
+     "adjacency_nodes": 753,
+     "edge_visits": 5499,
+     "reached": 751,
+     "total": 5.333917011739686,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What is the general sentiment about the upcoming grand opening?",
+   "read_ms": 129.12966599105857,
+   "graph_stage_ms": 22.775166988139972,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 422,
+     "setup": 0.04733400419354439,
+     "known": 426,
+     "owners": 0,
+     "expandable": 17,
+     "links_sql": 0.8582920127082616,
+     "links_convert": 0.014457997167482972,
+     "links_await": 1.0086249967571348,
+     "links": 455,
+     "adjacency": 0.08129200432449579,
+     "walk": 0.1308330101892352,
+     "result": 0.06399999256245792,
+     "adjacency_nodes": 426,
+     "edge_visits": 465,
+     "reached": 422,
+     "total": 1.3829999952577055,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Jon host a dance competition?",
+   "read_ms": 160.64625000581145,
+   "graph_stage_ms": 36.22416700818576,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.12479099677875638,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 4.270708013791591,
+     "links_convert": 0.03637498593889177,
+     "links_await": 4.445042024599388,
+     "links": 1074,
+     "adjacency": 0.25675000506453216,
+     "walk": 0.7137919892556965,
+     "result": 0.1604999997653067,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 6.215791974682361,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What plans does Jon have after receiving advice at the networking event?",
+   "read_ms": 126.60349998623133,
+   "graph_stage_ms": 34.788165998179466,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 7,
+     "reached_nodes": 768,
+     "setup": 0.1069169957190752,
+     "known": 768,
+     "owners": 1,
+     "expandable": 544,
+     "links_sql": 3.647499979706481,
+     "links_convert": 0.2576660190243274,
+     "links_await": 4.039499995997176,
+     "links": 1030,
+     "adjacency": 0.1894999877549708,
+     "walk": 0.32245900365523994,
+     "result": 0.10466598905622959,
+     "adjacency_nodes": 667,
+     "edge_visits": 4272,
+     "reached": 667,
+     "total": 5.296041985275224,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Did Jon and Gina both participate in dance competitions?",
+   "read_ms": 143.7214170000516,
+   "graph_stage_ms": 46.510707994457334,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 27,
+     "reached_nodes": 828,
+     "setup": 0.12745900312438607,
+     "known": 828,
+     "owners": 1,
+     "expandable": 794,
+     "links_sql": 5.075958993984386,
+     "links_convert": 0.1346660137642175,
+     "links_await": 5.34087501000613,
+     "links": 1295,
+     "adjacency": 0.2033339987974614,
+     "walk": 0.7843750063329935,
+     "result": 0.17824998940341175,
+     "adjacency_nodes": 828,
+     "edge_visits": 11876,
+     "reached": 828,
+     "total": 7.289041997864842,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How did Gina promote her clothes store?",
+   "read_ms": 175.78799999319017,
+   "graph_stage_ms": 61.32337500457652,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 751,
+     "setup": 0.09987500379793346,
+     "known": 752,
+     "owners": 1,
+     "expandable": 436,
+     "links_sql": 3.132124984404072,
+     "links_convert": 0.13800000306218863,
+     "links_await": 3.3950830111280084,
+     "links": 1167,
+     "adjacency": 0.2007500152103603,
+     "walk": 0.3699160006362945,
+     "result": 0.12304200208745897,
+     "adjacency_nodes": 752,
+     "edge_visits": 5052,
+     "reached": 751,
+     "total": 4.556625004624948,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How does Gina describe the studio that Jon has opened?",
+   "read_ms": 132.84775000647642,
+   "graph_stage_ms": 36.36650001863018,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 826,
+     "setup": 0.11504199937917292,
+     "known": 826,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 5.142790992977098,
+     "links_convert": 0.049833994125947356,
+     "links_await": 5.317582981660962,
+     "links": 1293,
+     "adjacency": 0.22516699391417205,
+     "walk": 0.595749996136874,
+     "result": 0.1628330210223794,
+     "adjacency_nodes": 826,
+     "edge_visits": 8305,
+     "reached": 826,
+     "total": 7.075291010551155,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Gina get accepted for the design internship?",
+   "read_ms": 127.01466600992717,
+   "graph_stage_ms": 29.672999982722104,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 751,
+     "setup": 0.09204199886880815,
+     "known": 752,
+     "owners": 1,
+     "expandable": 429,
+     "links_sql": 3.009790991200134,
+     "links_convert": 0.1283750170841813,
+     "links_await": 3.2574999786447734,
+     "links": 1166,
+     "adjacency": 0.20441599190235138,
+     "walk": 0.18320902017876506,
+     "result": 0.09695798507891595,
+     "adjacency_nodes": 752,
+     "edge_visits": 2275,
+     "reached": 751,
+     "total": 4.224458010867238,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What does Jon's dance make him?",
+   "read_ms": 151.48374999989755,
+   "graph_stage_ms": 26.126042008399963,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.12137499288655818,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 4.086250002728775,
+     "links_convert": 0.14304200885817409,
+     "links_await": 4.340332990977913,
+     "links": 1074,
+     "adjacency": 0.1999999803956598,
+     "walk": 0.6735000060871243,
+     "result": 0.1629579928703606,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 5.979999987175688,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Jon go to a fair to get more exposure for his dance studio?",
+   "read_ms": 121.68400001246482,
+   "graph_stage_ms": 27.233958011493087,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 32,
+     "reached_nodes": 779,
+     "setup": 0.1228329783771187,
+     "known": 784,
+     "owners": 1,
+     "expandable": 611,
+     "links_sql": 3.9746670227032155,
+     "links_convert": 0.10658300016075373,
+     "links_await": 4.192791995592415,
+     "links": 1082,
+     "adjacency": 0.17345798551104963,
+     "walk": 0.8988750050775707,
+     "result": 0.41974999476224184,
+     "adjacency_nodes": 692,
+     "edge_visits": 12749,
+     "reached": 687,
+     "total": 6.310416996711865,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What does Jon plan to do at the grand opening of his dance studio?",
+   "read_ms": 137.6589160063304,
+   "graph_stage_ms": 34.813374979421496,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 37,
+     "reached_nodes": 786,
+     "setup": 0.13562501408159733,
+     "known": 794,
+     "owners": 1,
+     "expandable": 622,
+     "links_sql": 4.341541993198916,
+     "links_convert": 0.036500015994533896,
+     "links_await": 4.511791979894042,
+     "links": 1089,
+     "adjacency": 0.24066702462732792,
+     "walk": 0.9773749916348606,
+     "result": 0.20083299023099244,
+     "adjacency_nodes": 702,
+     "edge_visits": 13613,
+     "reached": 694,
+     "total": 6.735333998221904,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Gina design a limited collection of hoodies?",
+   "read_ms": 147.7807909832336,
+   "graph_stage_ms": 24.40437499899417,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 752,
+     "setup": 0.09341700933873653,
+     "known": 753,
+     "owners": 1,
+     "expandable": 431,
+     "links_sql": 3.2631250214762986,
+     "links_convert": 0.3096669970545918,
+     "links_await": 3.7109160039108247,
+     "links": 1167,
+     "adjacency": 0.20837498595938087,
+     "walk": 0.15875001554377377,
+     "result": 0.0959169992711395,
+     "adjacency_nodes": 753,
+     "edge_visits": 1870,
+     "reached": 752,
+     "total": 4.63370798388496,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How does Gina describe the feeling that dance brings?",
+   "read_ms": 117.05683302716352,
+   "graph_stage_ms": 25.712749978993088,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.11424999684095383,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 3.71541699860245,
+     "links_convert": 0.12045801850035787,
+     "links_await": 3.958499990403652,
+     "links": 1216,
+     "adjacency": 0.21137500880286098,
+     "walk": 0.7172079931478947,
+     "result": 0.1756249985191971,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 5.621709016850218,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What is Jon working on opening?",
+   "read_ms": 122.24716701894067,
+   "graph_stage_ms": 22.218291996978223,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 771,
+     "setup": 0.09912499808706343,
+     "known": 775,
+     "owners": 1,
+     "expandable": 547,
+     "links_sql": 3.728917014086619,
+     "links_convert": 0.1417500025127083,
+     "links_await": 3.985874995123595,
+     "links": 1030,
+     "adjacency": 0.15037498087622225,
+     "walk": 0.1857080205809325,
+     "result": 0.082874990766868,
+     "adjacency_nodes": 672,
+     "edge_visits": 1766,
+     "reached": 668,
+     "total": 4.972041002474725,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When is Jon's group performing at a festival?",
+   "read_ms": 149.73620799719356,
+   "graph_stage_ms": 23.9756669907365,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 766,
+     "setup": 0.1043330121319741,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.8730000087525696,
+     "links_convert": 0.033958989661186934,
+     "links_await": 4.035041987663135,
+     "links": 1024,
+     "adjacency": 0.24487500195391476,
+     "walk": 0.3099169989582151,
+     "result": 0.10608299635350704,
+     "adjacency_nodes": 663,
+     "edge_visits": 3844,
+     "reached": 663,
+     "total": 5.438833002699539,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Jon visit networking events for his store?",
+   "read_ms": 114.56649997853674,
+   "graph_stage_ms": 23.937457997817546,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 15,
+     "reached_nodes": 770,
+     "setup": 0.10704199667088687,
+     "known": 774,
+     "owners": 1,
+     "expandable": 573,
+     "links_sql": 3.8105839921627194,
+     "links_convert": 0.09733298793435097,
+     "links_await": 4.0339999832212925,
+     "links": 1060,
+     "adjacency": 0.16845899517647922,
+     "walk": 0.6360829866025597,
+     "result": 0.12016700929962099,
+     "adjacency_nodes": 678,
+     "edge_visits": 6194,
+     "reached": 674,
+     "total": 5.543584004044533,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How does Gina stay confident in her business?",
+   "read_ms": 149.7225420025643,
+   "graph_stage_ms": 43.724666989874095,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 8,
+     "reached_nodes": 758,
+     "setup": 0.09724998380988836,
+     "known": 762,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.3585409983061254,
+     "links_convert": 0.13141700765118003,
+     "links_await": 3.6215419822838157,
+     "links": 1191,
+     "adjacency": 0.19645801512524486,
+     "walk": 0.5430419987533242,
+     "result": 0.12729197624139488,
+     "adjacency_nodes": 762,
+     "edge_visits": 4823,
+     "reached": 758,
+     "total": 4.959042009431869,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did Jon take a trip to Rome for?",
+   "read_ms": 156.8962079763878,
+   "graph_stage_ms": 23.696499993093312,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 766,
+     "setup": 0.09658298222348094,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.5015830071642995,
+     "links_convert": 0.03616700996644795,
+     "links_await": 3.6626660148613155,
+     "links": 1024,
+     "adjacency": 0.22354201064445078,
+     "walk": 0.17833299352787435,
+     "result": 0.08425000123679638,
+     "adjacency_nodes": 663,
+     "edge_visits": 2187,
+     "reached": 663,
+     "total": 4.686208005296066,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What does Gina say about the dancers in the photo?",
+   "read_ms": 114.57945802249014,
+   "graph_stage_ms": 23.546500015072525,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 760,
+     "setup": 0.09483401663601398,
+     "known": 763,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.176833997713402,
+     "links_convert": 0.07512501906603575,
+     "links_await": 3.3685420057736337,
+     "links": 1192,
+     "adjacency": 0.1940829970408231,
+     "walk": 0.2773340092971921,
+     "result": 0.11162500595673919,
+     "adjacency_nodes": 763,
+     "edge_visits": 3624,
+     "reached": 760,
+     "total": 4.426667001098394,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of dance piece did Gina's team perform to win first place?",
+   "read_ms": 130.75158398714848,
+   "graph_stage_ms": 25.76724998652935,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.11820800136774778,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 3.517875011311844,
+     "links_convert": 0.03774999640882015,
+     "links_await": 3.6776250053662807,
+     "links": 1216,
+     "adjacency": 0.2249169920105487,
+     "walk": 0.7021250203251839,
+     "result": 0.1658329856581986,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 5.344375007553026,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did Gina find for her clothing store on 1 February, 2023?",
+   "read_ms": 147.73645799141377,
+   "graph_stage_ms": 24.010749999433756,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 13,
+     "reached_nodes": 751,
+     "setup": 0.09654200403019786,
+     "known": 753,
+     "owners": 1,
+     "expandable": 438,
+     "links_sql": 3.0373339832294732,
+     "links_convert": 0.03908301005139947,
+     "links_await": 3.192874981323257,
+     "links": 1168,
+     "adjacency": 0.3343749849591404,
+     "walk": 0.4228750185575336,
+     "result": 0.13249999028630555,
+     "adjacency_nodes": 753,
+     "edge_visits": 5499,
+     "reached": 751,
+     "total": 4.558375017950311,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What is the general sentiment about the upcoming grand opening?",
+   "read_ms": 106.00762499962002,
+   "graph_stage_ms": 18.348957994021475,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 422,
+     "setup": 0.04295801045373082,
+     "known": 426,
+     "owners": 0,
+     "expandable": 17,
+     "links_sql": 0.6058750150259584,
+     "links_convert": 0.014249992091208696,
+     "links_await": 0.7262909784913063,
+     "links": 455,
+     "adjacency": 0.1331249950453639,
+     "walk": 0.05345902172848582,
+     "result": 0.05429098382592201,
+     "adjacency_nodes": 426,
+     "edge_visits": 465,
+     "reached": 422,
+     "total": 1.0529159917496145,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Jon host a dance competition?",
+   "read_ms": 142.0517080114223,
+   "graph_stage_ms": 47.50950000016019,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.12629199773073196,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 3.9450000040233135,
+     "links_convert": 0.10725000174716115,
+     "links_await": 4.174166999291629,
+     "links": 1074,
+     "adjacency": 0.19141598022542894,
+     "walk": 0.6912920216564089,
+     "result": 0.1564999984111637,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 5.859375,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What plans does Jon have after receiving advice at the networking event?",
+   "read_ms": 147.8431670111604,
+   "graph_stage_ms": 25.135375006357208,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 7,
+     "reached_nodes": 768,
+     "setup": 0.09862499427981675,
+     "known": 768,
+     "owners": 1,
+     "expandable": 544,
+     "links_sql": 3.6257080209907144,
+     "links_convert": 0.04445799277164042,
+     "links_await": 3.791583003476262,
+     "links": 1030,
+     "adjacency": 0.24616700829938054,
+     "walk": 0.32154101063497365,
+     "result": 0.11054199421778321,
+     "adjacency_nodes": 667,
+     "edge_visits": 4272,
+     "reached": 667,
+     "total": 5.026124999858439,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Did Jon and Gina both participate in dance competitions?",
+   "read_ms": 132.15929199941456,
+   "graph_stage_ms": 29.905500006861985,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 27,
+     "reached_nodes": 828,
+     "setup": 0.1297089911531657,
+     "known": 828,
+     "owners": 1,
+     "expandable": 794,
+     "links_sql": 4.969375004293397,
+     "links_convert": 0.25766697945073247,
+     "links_await": 5.408999975770712,
+     "links": 1295,
+     "adjacency": 0.20520799444057047,
+     "walk": 0.7852920098230243,
+     "result": 0.1919170026667416,
+     "adjacency_nodes": 828,
+     "edge_visits": 11876,
+     "reached": 828,
+     "total": 7.382540992693976,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How did Gina promote her clothes store?",
+   "read_ms": 110.41424999712035,
+   "graph_stage_ms": 23.83529199869372,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 751,
+     "setup": 0.09670801227912307,
+     "known": 752,
+     "owners": 1,
+     "expandable": 436,
+     "links_sql": 3.255415998864919,
+     "links_convert": 0.1372499973513186,
+     "links_await": 3.5152500204276294,
+     "links": 1167,
+     "adjacency": 0.19958298071287572,
+     "walk": 0.38683300954289734,
+     "result": 0.1262500009033829,
+     "adjacency_nodes": 752,
+     "edge_visits": 5052,
+     "reached": 751,
+     "total": 4.69133400474675,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How does Gina describe the studio that Jon has opened?",
+   "read_ms": 152.51933300169185,
+   "graph_stage_ms": 27.13066598516889,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 826,
+     "setup": 0.11945900041610003,
+     "known": 826,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 4.845666990149766,
+     "links_convert": 0.028375012334436178,
+     "links_await": 5.053083994425833,
+     "links": 1293,
+     "adjacency": 0.2168749924749136,
+     "walk": 0.545166025403887,
+     "result": 0.14762498904019594,
+     "adjacency_nodes": 826,
+     "edge_visits": 8305,
+     "reached": 826,
+     "total": 6.706791988108307,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Gina get accepted for the design internship?",
+   "read_ms": 119.97504098690115,
+   "graph_stage_ms": 23.18066600128077,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 751,
+     "setup": 0.09154199506156147,
+     "known": 752,
+     "owners": 1,
+     "expandable": 429,
+     "links_sql": 3.1487079977523535,
+     "links_convert": 0.07808400550857186,
+     "links_await": 3.3538329880684614,
+     "links": 1166,
+     "adjacency": 0.184957985766232,
+     "walk": 0.19520800560712814,
+     "result": 0.09158399188891053,
+     "adjacency_nodes": 752,
+     "edge_visits": 2275,
+     "reached": 751,
+     "total": 4.273915983503684,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What does Jon's dance make him?",
+   "read_ms": 127.40141700487584,
+   "graph_stage_ms": 28.514541976619512,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.11758299660868943,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 4.0307499875780195,
+     "links_convert": 0.13266599853523076,
+     "links_await": 4.282957990653813,
+     "links": 1074,
+     "adjacency": 0.19933297880925238,
+     "walk": 0.6740840035490692,
+     "result": 0.16908301040530205,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 5.943708005361259,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Jon go to a fair to get more exposure for his dance studio?",
+   "read_ms": 161.275917023886,
+   "graph_stage_ms": 29.309417004697025,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 32,
+     "reached_nodes": 779,
+     "setup": 0.12337500811554492,
+     "known": 784,
+     "owners": 1,
+     "expandable": 611,
+     "links_sql": 4.471708001801744,
+     "links_convert": 0.029874994652345777,
+     "links_await": 4.616958991391584,
+     "links": 1082,
+     "adjacency": 0.2141250006388873,
+     "walk": 0.9124169882852584,
+     "result": 0.18783300765790045,
+     "adjacency_nodes": 692,
+     "edge_visits": 12749,
+     "reached": 687,
+     "total": 6.550541002070531,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What does Jon plan to do at the grand opening of his dance studio?",
+   "read_ms": 131.17320800665766,
+   "graph_stage_ms": 28.522292006528005,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 37,
+     "reached_nodes": 786,
+     "setup": 0.1275000104214996,
+     "known": 794,
+     "owners": 1,
+     "expandable": 622,
+     "links_sql": 4.264500021236017,
+     "links_convert": 0.1263330050278455,
+     "links_await": 4.512792016612366,
+     "links": 1089,
+     "adjacency": 0.17429201398044825,
+     "walk": 0.9547910012770444,
+     "result": 0.18808399909175932,
+     "adjacency_nodes": 702,
+     "edge_visits": 13613,
+     "reached": 694,
+     "total": 6.50108401896432,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Gina design a limited collection of hoodies?",
+   "read_ms": 148.8052089989651,
+   "graph_stage_ms": 22.262790997046977,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 752,
+     "setup": 0.09241598309017718,
+     "known": 753,
+     "owners": 1,
+     "expandable": 431,
+     "links_sql": 3.1719580001663417,
+     "links_convert": 0.24550000671297312,
+     "links_await": 3.55616700835526,
+     "links": 1167,
+     "adjacency": 0.19237500964663923,
+     "walk": 0.15054200775921345,
+     "result": 0.09175000013783574,
+     "adjacency_nodes": 753,
+     "edge_visits": 1870,
+     "reached": 752,
+     "total": 4.45112498709932,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How does Gina describe the feeling that dance brings?",
+   "read_ms": 164.73662501084618,
+   "graph_stage_ms": 28.40700000524521,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.11716698645614088,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 4.049041017424315,
+     "links_convert": 0.039834005292505026,
+     "links_await": 4.212250001728535,
+     "links": 1216,
+     "adjacency": 0.2273749851156026,
+     "walk": 0.7439170149154961,
+     "result": 0.1651250058785081,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 5.919499992160127,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What is Jon working on opening?",
+   "read_ms": 130.14991601812653,
+   "graph_stage_ms": 23.799499991582707,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 771,
+     "setup": 0.09445799514651299,
+     "known": 775,
+     "owners": 1,
+     "expandable": 547,
+     "links_sql": 3.6527920165099204,
+     "links_convert": 0.11524997535161674,
+     "links_await": 3.874291985994205,
+     "links": 1030,
+     "adjacency": 0.17666700296103954,
+     "walk": 0.15241699293255806,
+     "result": 0.08279099711216986,
+     "adjacency_nodes": 672,
+     "edge_visits": 1766,
+     "reached": 668,
+     "total": 4.81691601453349,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When is Jon's group performing at a festival?",
+   "read_ms": 138.90533399535343,
+   "graph_stage_ms": 37.45545801939443,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 766,
+     "setup": 0.09874999523162842,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.8919590006116778,
+     "links_convert": 0.04249997437000275,
+     "links_await": 4.0524590003769845,
+     "links": 1024,
+     "adjacency": 0.359416997525841,
+     "walk": 0.3049169899895787,
+     "result": 0.10183299309574068,
+     "adjacency_nodes": 663,
+     "edge_visits": 3844,
+     "reached": 663,
+     "total": 5.353999993531033,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Jon visit networking events for his store?",
+   "read_ms": 149.29637499153614,
+   "graph_stage_ms": 25.141249992884696,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 15,
+     "reached_nodes": 770,
+     "setup": 0.108584004919976,
+     "known": 774,
+     "owners": 1,
+     "expandable": 573,
+     "links_sql": 3.729749994818121,
+     "links_convert": 0.14433299656957388,
+     "links_await": 3.9861669938545674,
+     "links": 1060,
+     "adjacency": 0.19429202075116336,
+     "walk": 0.4732079978566617,
+     "result": 0.13141697854734957,
+     "adjacency_nodes": 678,
+     "edge_visits": 6194,
+     "reached": 674,
+     "total": 5.3536669875029474,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How does Gina stay confident in her business?",
+   "read_ms": 115.90766700101085,
+   "graph_stage_ms": 26.68516698759049,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 8,
+     "reached_nodes": 758,
+     "setup": 0.09879199205897748,
+     "known": 762,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.511207993142307,
+     "links_convert": 0.11574997915886343,
+     "links_await": 3.7448329967446625,
+     "links": 1191,
+     "adjacency": 0.2211660030297935,
+     "walk": 0.36445900332182646,
+     "result": 0.1242909929715097,
+     "adjacency_nodes": 762,
+     "edge_visits": 4823,
+     "reached": 758,
+     "total": 4.933292017085478,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did Jon take a trip to Rome for?",
+   "read_ms": 130.5527089862153,
+   "graph_stage_ms": 27.609041979303584,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 766,
+     "setup": 0.09695801418274641,
+     "known": 766,
+     "owners": 1,
+     "expandable": 538,
+     "links_sql": 3.9530409849248827,
+     "links_convert": 0.037084013456478715,
+     "links_await": 4.113125003641471,
+     "links": 1024,
+     "adjacency": 0.2324590168427676,
+     "walk": 0.1829999964684248,
+     "result": 0.0805830059107393,
+     "adjacency_nodes": 663,
+     "edge_visits": 2187,
+     "reached": 663,
+     "total": 5.159624997759238,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What does Gina say about the dancers in the photo?",
+   "read_ms": 148.7080839870032,
+   "graph_stage_ms": 25.237167021259665,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 760,
+     "setup": 0.09987500379793346,
+     "known": 763,
+     "owners": 1,
+     "expandable": 451,
+     "links_sql": 3.5490000154823065,
+     "links_convert": 0.1399999891873449,
+     "links_await": 3.8007500115782022,
+     "links": 1192,
+     "adjacency": 0.19291701028123498,
+     "walk": 0.28395801200531423,
+     "result": 0.11320799239911139,
+     "adjacency_nodes": 763,
+     "edge_visits": 3624,
+     "reached": 760,
+     "total": 4.883416986558586,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of dance piece did Gina's team perform to win first place?",
+   "read_ms": 136.11391599988565,
+   "graph_stage_ms": 29.137167002772912,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 771,
+     "setup": 0.11654102127067745,
+     "known": 776,
+     "owners": 1,
+     "expandable": 531,
+     "links_sql": 4.0130419947672635,
+     "links_convert": 0.1185830042231828,
+     "links_await": 4.259791981894523,
+     "links": 1216,
+     "adjacency": 0.20658300491049886,
+     "walk": 0.7012499845586717,
+     "result": 0.16724999295547605,
+     "adjacency_nodes": 776,
+     "edge_visits": 10122,
+     "reached": 771,
+     "total": 5.9150829911231995,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did Gina find for her clothing store on 1 February, 2023?",
+   "read_ms": 128.57112498022616,
+   "graph_stage_ms": 26.091165986144915,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 13,
+     "reached_nodes": 751,
+     "setup": 0.1022910000756383,
+     "known": 753,
+     "owners": 1,
+     "expandable": 438,
+     "links_sql": 3.4865420020651072,
+     "links_convert": 0.034791999496519566,
+     "links_await": 3.710541990585625,
+     "links": 1168,
+     "adjacency": 0.3667499986477196,
+     "walk": 0.4244169977027923,
+     "result": 0.1295830006711185,
+     "adjacency_nodes": 753,
+     "edge_visits": 5499,
+     "reached": 751,
+     "total": 5.102374998386949,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What is the general sentiment about the upcoming grand opening?",
+   "read_ms": 151.41883300384507,
+   "graph_stage_ms": 29.12116699735634,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 422,
+     "setup": 0.044082989916205406,
+     "known": 426,
+     "owners": 0,
+     "expandable": 17,
+     "links_sql": 0.9659590141382068,
+     "links_convert": 0.012874981621280313,
+     "links_await": 1.0812919936142862,
+     "links": 455,
+     "adjacency": 0.06887500057928264,
+     "walk": 0.21875000675208867,
+     "result": 0.05583401070907712,
+     "adjacency_nodes": 426,
+     "edge_visits": 465,
+     "reached": 422,
+     "total": 1.5135419962462038,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Jon host a dance competition?",
+   "read_ms": 124.84475001110695,
+   "graph_stage_ms": 27.031750010792166,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 26,
+     "reached_nodes": 778,
+     "setup": 0.11845800327137113,
+     "known": 783,
+     "owners": 1,
+     "expandable": 600,
+     "links_sql": 4.251333011779934,
+     "links_convert": 0.03500000457279384,
+     "links_await": 4.407291009556502,
+     "links": 1074,
+     "adjacency": 0.1814170100260526,
+     "walk": 0.6725830025970936,
+     "result": 0.1526669948361814,
+     "adjacency_nodes": 691,
+     "edge_visits": 10020,
+     "reached": 686,
+     "total": 6.017750012688339,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What plans does Jon have after receiving advice at the networking event?",
+   "read_ms": 123.55670900433324,
+   "graph_stage_ms": 26.85941700474359,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 7,
+     "reached_nodes": 768,
+     "setup": 0.10375000420026481,
+     "known": 768,
+     "owners": 1,
+     "expandable": 544,
+     "links_sql": 4.239792004227638,
+     "links_convert": 0.04333298420533538,
+     "links_await": 4.519459005678073,
+     "links": 1030,
+     "adjacency": 0.1354999840259552,
+     "walk": 0.35070799640379846,
+     "result": 0.1163340057246387,
+     "adjacency_nodes": 667,
+     "edge_visits": 4272,
+     "reached": 667,
+     "total": 5.685042007826269,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Did Jon and Gina both participate in dance competitions?",
+   "read_ms": 168.10954100219533,
+   "graph_stage_ms": 39.40154198789969,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 27,
+     "reached_nodes": 828,
+     "setup": 0.13187501463107765,
+     "known": 828,
+     "owners": 1,
+     "expandable": 794,
+     "links_sql": 5.615917005343363,
+     "links_convert": 0.13537498307414353,
+     "links_await": 5.87208301294595,
+     "links": 1295,
+     "adjacency": 0.22712498321197927,
+     "walk": 0.8450830064248294,
+     "result": 0.1867079990915954,
+     "adjacency_nodes": 828,
+     "edge_visits": 11876,
+     "reached": 828,
+     "total": 7.901500008301809,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How did Gina promote her clothes store?",
+   "read_ms": 119.43808299838565,
+   "graph_stage_ms": 27.37775002606213,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 751,
+     "setup": 0.10266600293107331,
+     "known": 752,
+     "owners": 1,
+     "expandable": 436,
+     "links_sql": 3.443291992880404,
+     "links_convert": 0.13891601702198386,
+     "links_await": 3.7034580018371344,
+     "links": 1167,
+     "adjacency": 0.1923329837154597,
+     "walk": 0.36866700975224376,
+     "result": 0.11708299280144274,
+     "adjacency_nodes": 752,
+     "edge_visits": 5052,
+     "reached": 751,
+     "total": 4.866957984631881,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How does Gina describe the studio that Jon has opened?",
+   "read_ms": 168.17150000133552,
+   "graph_stage_ms": 27.74975000647828,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 826,
+     "setup": 0.11758299660868943,
+     "known": 826,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 4.9189999990630895,
+     "links_convert": 0.03012499655596912,
+     "links_await": 5.136457999469712,
+     "links": 1293,
+     "adjacency": 0.22808299399912357,
+     "walk": 0.588875001994893,
+     "result": 0.15641699428670108,
+     "adjacency_nodes": 826,
+     "edge_visits": 8305,
+     "reached": 826,
+     "total": 6.859249988337979,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Gina get accepted for the design internship?",
+   "read_ms": 158.2575830107089,
+   "graph_stage_ms": 24.630458996398374,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 751,
+     "setup": 0.09250000584870577,
+     "known": 752,
+     "owners": 1,
+     "expandable": 429,
+     "links_sql": 2.9555830114986748,
+     "links_convert": 0.1352079852949828,
+     "links_await": 3.2095839851535857,
+     "links": 1166,
+     "adjacency": 0.19008299568668008,
+     "walk": 0.36533299135044217,
+     "result": 0.09858398698270321,
+     "adjacency_nodes": 752,
+     "edge_visits": 2275,
+     "reached": 751,
+     "total": 4.314958991017193,
+     "outcome": "walked"
+    }
+   ]
+  }
+ ]
+}

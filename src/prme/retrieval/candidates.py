@@ -12,7 +12,7 @@ import asyncio
 import logging
 import re
 from collections import defaultdict
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -200,6 +200,7 @@ async def _seed_reach(
     nodes: dict[str, MemoryNode],
     max_hops: int,
     depths: dict[str, int] | None = None,
+    targets: Iterable[str] | None = None,
 ) -> dict[str, tuple[int, int, int]] | None:
     """How many seeds reach each node, their total hop count and the fewest hops (``rrf_graph_seed_count``).
 
@@ -217,9 +218,22 @@ async def _seed_reach(
     from. With fewer than two seeds no node can count two, so nothing is read.
     Returns None, having read nothing, when more than
     ``SEED_REACH_MAX_NODES`` nodes would be read.
+
+    Only ``targets`` are measured (every known node when None): the stage
+    reads the count for its kept candidates alone. The count comes from the
+    fewest hops from each seed to each target, found from both ends instead
+    of by a walk from every seed through the whole neighborhood. A path of at
+    most three links has at most two inner nodes, and none of them may be an
+    owner entity, so a seed reaches a target in one hop when they are linked,
+    in two when a node that is not an owner is linked to both, and in three
+    when such a node next to the seed is linked to such a node next to the
+    target. That is what the walk found, for any ``max_hops`` from 1 to 3
+    (the stage caps it at 3), from the same links.
     """
     if len(seeds) < 2:
         return {}
+    if not 1 <= max_hops <= 3:
+        raise ValueError(f"seed reach counts paths of 1 to 3 hops, not {max_hops}")
     from prme.ingestion.owner_name import OWNER_NAME_KEY
 
     known = {**nodes, **{str(seed.id): seed for seed in seeds}}
@@ -230,8 +244,11 @@ async def _seed_reach(
         else seed_ids | {node_id for node_id, depth in depths.items() if depth < max_hops}
     ) - (owners - seed_ids)
     if len(expandable) > SEED_REACH_MAX_NODES:
+        logger.warning(
+            "Graph seed reach skipped: %d nodes would be read, more than the limit of %d; "
+            "no graph candidate gets a seed count rank", len(expandable), SEED_REACH_MAX_NODES,
+        )
         return None
-    adjacency: dict[str, set[str]] = defaultdict(set)
     if _walks_once(graph_store):
         # Only the two ends of each link the walk can step along, not records.
         links = await graph_store.walk_links(list(expandable))
@@ -241,29 +258,54 @@ async def _seed_reach(
             for edge in await graph_store.get_edges(node_ids=list(expandable))
             if edge.source_id != edge.target_id and not _unverified_alias(edge)
         ]
+    wanted = known.keys() if targets is None else {node_id for node_id in targets if node_id in known}
+    # A link from a node to itself is never a step of a shortest path.
+    near_seed: dict[str, set[str]] = defaultdict(set)  # node -> the seeds linked to it
+    near_target: dict[str, set[str]] = defaultdict(set)  # target -> the nodes linked to it
     for source, target in links:
-        if source in known and target in known:
-            adjacency[source].add(target)
-            adjacency[target].add(source)
-    hops: dict[str, dict[str, int]] = defaultdict(dict)
-    for seed in seeds:
-        seed_id = str(seed.id)
-        seen, frontier = {seed_id}, [seed_id]
-        for depth in range(1, max_hops + 1):
-            reached = []
-            for node_id in frontier:
-                if node_id in owners and node_id != seed_id:
-                    continue
-                for other in adjacency[node_id]:
-                    if other not in seen:
-                        seen.add(other)
-                        reached.append(other)
-                        hops[other][seed_id] = depth
-            frontier = reached
-    return {
-        node_id: (len(by_seed), sum(by_seed.values()), min(by_seed.values()))
-        for node_id, by_seed in hops.items()
-    }
+        if source != target and source in known and target in known:
+            if source in seed_ids:
+                near_seed[target].add(source)
+            if target in seed_ids:
+                near_seed[source].add(target)
+            if source in wanted:
+                near_target[source].add(target)
+            if target in wanted:
+                near_target[target].add(source)
+    # For three hops: each node next to a target that is not an owner, and the
+    # nodes next to a seed, not owners either, that it is linked to.
+    between: dict[str, set[str]] = defaultdict(set)
+    if max_hops == 3:
+        seed_side = {node_id for node_id in near_seed if node_id not in owners}
+        target_side = {node_id for linked in near_target.values() for node_id in linked if node_id not in owners}
+        for source, target in links:
+            if source != target:
+                if source in seed_side and target in target_side:
+                    between[target].add(source)
+                if target in seed_side and source in target_side:
+                    between[source].add(target)
+    reach: dict[str, tuple[int, int, int]] = {}
+    for node_id in wanted:
+        linked = near_target.get(node_id)
+        if not linked:
+            continue
+        # Fewest hops from each seed, nearest first, so a nearer path is never replaced.
+        best = dict.fromkeys(linked & seed_ids, 1)
+        if max_hops >= 2:
+            middles = [middle for middle in linked if middle not in owners]
+            for middle in middles:
+                for seed_id in near_seed.get(middle, ()):
+                    if seed_id != node_id:
+                        best.setdefault(seed_id, 2)
+            if max_hops == 3:
+                for middle in middles:
+                    for first in between.get(middle, ()):
+                        for seed_id in near_seed[first]:
+                            if seed_id != node_id:
+                                best.setdefault(seed_id, 3)
+        if best:
+            reach[node_id] = (len(best), sum(best.values()), min(best.values()))
+    return reach
 
 
 def _walks_once(graph_store: GraphStore) -> bool:
@@ -511,7 +553,8 @@ async def _generate_graph_candidates(
     candidates, node_map, node_depth = found
     if seed_reach:
         try:
-            reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)
+            reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth,
+                                      targets=[str(candidate["node"].id) for candidate in candidates])
         except PrivacyDenied:
             raise
         except Exception:

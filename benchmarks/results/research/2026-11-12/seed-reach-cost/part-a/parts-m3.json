@@ -1,0 +1,1411 @@
+{
+ "pack": "/tmp/task26/packs/m3",
+ "kind": "m3",
+ "commit": "56b51d53aa48d0c79a7a6d8b3a94c063273d31d4",
+ "settings": {
+  "memory_mode": "address_first",
+  "fusion": "rrf",
+  "rrf_graph_seed_count": true,
+  "rrf_graph_weight": 0.5,
+  "graph_max_hops": 3,
+  "graph_max_candidates": 150,
+  "graph_seed_words": true
+ },
+ "timed_questions": 20,
+ "repeats": 3,
+ "load_before": [
+  2.38,
+  3.89,
+  4.4
+ ],
+ "load_after": [
+  3.68,
+  4.05,
+  4.44
+ ],
+ "summary": {
+  "reads": 60,
+  "seed_reach_calls": 36,
+  "outcomes": {
+   "walked": 27,
+   "limit": 9,
+   "fewer_than_two_seeds": 0
+  },
+  "total": {
+   "p50": 126.19,
+   "p95": 168.38,
+   "mean": 126.69,
+   "sum": 3420.7
+  },
+  "setup": {
+   "p50": 3.3,
+   "p95": 4.38,
+   "mean": 3.55,
+   "sum": 95.9
+  },
+  "links_await": {
+   "p50": 34.21,
+   "p95": 42.96,
+   "mean": 33.59,
+   "sum": 906.9
+  },
+  "links_sql": {
+   "p50": 32.19,
+   "p95": 41.05,
+   "mean": 31.64,
+   "sum": 854.4
+  },
+  "links_convert": {
+   "p50": 1.3,
+   "p95": 1.49,
+   "mean": 1.33,
+   "sum": 35.9
+  },
+  "adjacency": {
+   "p50": 49.17,
+   "p95": 59.5,
+   "mean": 36.07,
+   "sum": 974.0
+  },
+  "walk": {
+   "p50": 32.12,
+   "p95": 66.35,
+   "mean": 39.85,
+   "sum": 1075.9
+  },
+  "result": {
+   "p50": 8.54,
+   "p95": 11.64,
+   "mean": 9.03,
+   "sum": 243.9
+  },
+  "seeds_range": [
+   12,
+   25,
+   44
+  ],
+  "known_range": [
+   38066,
+   38165,
+   38184
+  ],
+  "owners_range": [
+   0,
+   0,
+   0
+  ],
+  "expandable_range": [
+   1941,
+   3423,
+   4422
+  ],
+  "links_range": [
+   43068,
+   44734,
+   45061
+  ],
+  "adjacency_nodes_range": [
+   38066,
+   38165,
+   38184
+  ],
+  "edge_visits_range": [
+   148239,
+   286447,
+   501946
+  ],
+  "reached_range": [
+   38054,
+   38140,
+   38140
+  ],
+  "limit": {
+   "expandable": [
+    7187,
+    7187,
+    7187,
+    7232,
+    7232,
+    7232,
+    8039,
+    8039,
+    8039
+   ],
+   "links_await": 59.07,
+   "links_sql": 57.09,
+   "links_convert": 1.41,
+   "adjacency": 15.53,
+   "walk": 32.78,
+   "result": 8.31,
+   "links_median": 48636
+  },
+  "verified_calls": 12,
+  "read_ms": {
+   "p50": 324.9,
+   "p95": 429.1
+  },
+  "graph_stage_ms": {
+   "p50": 183.9,
+   "p95": 229.0
+  }
+ },
+ "limit_count_all_questions": {
+  "questions": 0,
+  "limit": 0,
+  "walked": 0,
+  "fewer_than_two_seeds": 0,
+  "no_seed_reach_call": 0,
+  "limit_expandable": [],
+  "metadata_neighborhood_limit": 0
+ },
+ "per_question": [
+  {
+   "repeat": 0,
+   "question": "Where is the red mug now?",
+   "read_ms": 496.92395798047073,
+   "graph_stage_ms": 354.3665000179317,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 4.2859170062001795,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3452,
+     "links_sql": 33.553624991327524,
+     "links_convert": 1.32845900952816,
+     "links_await": 35.41795801720582,
+     "links": 44760,
+     "adjacency": 14.107666007475927,
+     "walk": 54.13216698798351,
+     "result": 11.41595802619122,
+     "adjacency_nodes": 38184,
+     "edge_visits": 494934,
+     "reached": 38140,
+     "total": 124.95754199335352,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where are the house keys?",
+   "read_ms": 176.22570900130086,
+   "graph_stage_ms": 1.7210840014740825,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "Where did I leave the blue notebook?",
+   "read_ms": 545.8858750062063,
+   "graph_stage_ms": 378.843666985631,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 4.365082975709811,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3493,
+     "links_sql": 34.74266699049622,
+     "links_convert": 1.4439579972531646,
+     "links_await": 36.88241698546335,
+     "links": 44794,
+     "adjacency": 17.018415994243696,
+     "walk": 106.71708401059732,
+     "result": 11.735040985513479,
+     "adjacency_nodes": 38184,
+     "edge_visits": 501946,
+     "reached": 38140,
+     "total": 182.95995800872333,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the phone charger?",
+   "read_ms": 400.4034169774968,
+   "graph_stage_ms": 282.41245800745673,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 4.355208977358416,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2053,
+     "links_sql": 24.413959006778896,
+     "links_convert": 1.2116660072933882,
+     "links_await": 26.156249979976565,
+     "links": 43209,
+     "adjacency": 13.192749989684671,
+     "walk": 31.760457990458235,
+     "result": 8.43908402021043,
+     "adjacency_nodes": 38165,
+     "edge_visits": 284136,
+     "reached": 38140,
+     "total": 88.07612501550466,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where are the reading glasses?",
+   "read_ms": 157.5295419897884,
+   "graph_stage_ms": 4.057625017594546,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the tv remote?",
+   "read_ms": 404.86258402233943,
+   "graph_stage_ms": 277.58858300512657,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 4.384125000797212,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2043,
+     "links_sql": 24.077582987956703,
+     "links_convert": 1.1483330163173378,
+     "links_await": 25.773540983209386,
+     "links": 43160,
+     "adjacency": 13.183167000534013,
+     "walk": 32.056208001449704,
+     "result": 8.254457992734388,
+     "adjacency_nodes": 38165,
+     "edge_visits": 286447,
+     "reached": 38140,
+     "total": 87.1026249951683,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the black umbrella?",
+   "read_ms": 527.5801249954384,
+   "graph_stage_ms": 344.43179101799615,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 4.372166004031897,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3423,
+     "links_sql": 32.18558299704455,
+     "links_convert": 1.3825000205542892,
+     "links_await": 34.21470898319967,
+     "links": 44734,
+     "adjacency": 52.09108401322737,
+     "walk": 50.23950000759214,
+     "result": 10.457124997628853,
+     "adjacency_nodes": 38184,
+     "edge_visits": 489699,
+     "reached": 38140,
+     "total": 156.63291601231322,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the dog leash?",
+   "read_ms": 502.9486670100596,
+   "graph_stage_ms": 288.8754159794189,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 4.390332993352786,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 1941,
+     "links_sql": 23.25991599354893,
+     "links_convert": 1.224459003424272,
+     "links_await": 25.105415988946334,
+     "links": 43068,
+     "adjacency": 13.279749982757494,
+     "walk": 69.69537501572631,
+     "result": 8.604500006185845,
+     "adjacency_nodes": 38165,
+     "edge_visits": 269222,
+     "reached": 38140,
+     "total": 124.6475410007406,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the screwdriver set?",
+   "read_ms": 412.0102080050856,
+   "graph_stage_ms": 286.8684999994002,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 4.294375015888363,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2096,
+     "links_sql": 23.997249983949587,
+     "links_convert": 1.2342080008238554,
+     "links_await": 25.779624993447214,
+     "links": 43253,
+     "adjacency": 12.65691700973548,
+     "walk": 31.217291980283335,
+     "result": 8.46895799622871,
+     "adjacency_nodes": 38165,
+     "edge_visits": 290344,
+     "reached": 38140,
+     "total": 86.02325001265854,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Where is the first aid kit?",
+   "read_ms": 168.83079099352472,
+   "graph_stage_ms": 4.081541992491111,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "What is on the kitchen counter?",
+   "read_ms": 420.8659589930903,
+   "graph_stage_ms": 222.56370799732395,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38439,
+     "setup": 3.5732919932343066,
+     "known": 38460,
+     "owners": 0,
+     "expandable": 7232,
+     "total": 3.5806669911835343,
+     "outcome": "limit",
+     "limit_links_sql": 57.818957982817665,
+     "limit_links_convert": 1.3973340101074427,
+     "limit_links_await": 59.90250001195818,
+     "limit_links": 48601,
+     "limit_adjacency": 15.065375017002225,
+     "limit_walk": 31.669374991906807,
+     "limit_result": 8.163791993865743,
+     "limit_adjacency_nodes": 38460,
+     "limit_edge_visits": 259277,
+     "limit_reached": 38439,
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What is on the office desk?",
+   "read_ms": 398.8686660013627,
+   "graph_stage_ms": 233.18554100114852,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38520,
+     "setup": 3.401541995117441,
+     "known": 38541,
+     "owners": 0,
+     "expandable": 7187,
+     "total": 3.4094160073436797,
+     "outcome": "limit",
+     "limit_links_sql": 56.4360830176156,
+     "limit_links_convert": 1.359166984912008,
+     "limit_links_await": 58.44358299509622,
+     "limit_links": 48636,
+     "limit_adjacency": 55.52075000014156,
+     "limit_walk": 32.77816699119285,
+     "limit_result": 8.352083008503541,
+     "limit_adjacency_nodes": 38541,
+     "limit_edge_visits": 257997,
+     "limit_reached": 38520,
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What is in the garage workbench area?",
+   "read_ms": 456.4335829927586,
+   "graph_stage_ms": 286.14637500140816,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38075,
+     "setup": 3.270250017521903,
+     "known": 38087,
+     "owners": 0,
+     "expandable": 4309,
+     "links_sql": 38.40608400059864,
+     "links_convert": 1.2547909864224494,
+     "links_await": 40.316332975635305,
+     "links": 44854,
+     "adjacency": 51.025374996243045,
+     "walk": 19.90158300031908,
+     "result": 6.904999987455085,
+     "adjacency_nodes": 38087,
+     "edge_visits": 148239,
+     "reached": 38075,
+     "total": 126.60224997671321,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Is the front porch clear?",
+   "read_ms": 163.81558397551998,
+   "graph_stage_ms": 3.4792499791365117,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "What is in the laundry room?",
+   "read_ms": 404.48508301051334,
+   "graph_stage_ms": 217.4338749900926,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 24,
+     "reached_nodes": 38520,
+     "setup": 3.4650420129764825,
+     "known": 38544,
+     "owners": 0,
+     "expandable": 8039,
+     "total": 3.472833981504664,
+     "outcome": "limit",
+     "limit_links_sql": 62.81333399238065,
+     "limit_links_convert": 1.7658330034464598,
+     "limit_links_await": 65.31674999860115,
+     "limit_links": 49631,
+     "limit_adjacency": 15.533249999862164,
+     "limit_walk": 39.68708400498144,
+     "limit_result": 9.136333013884723,
+     "limit_adjacency_nodes": 38544,
+     "limit_edge_visits": 291145,
+     "limit_reached": 38520,
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What changed since the last pass?",
+   "read_ms": 143.48441699985415,
+   "graph_stage_ms": 4.219166992697865,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "Summarize the last hour.",
+   "read_ms": 177.02391601051204,
+   "graph_stage_ms": 3.5730829986277968,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "What happened in the hallway this morning?",
+   "read_ms": 509.891207999317,
+   "graph_stage_ms": 313.6754579900298,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38054,
+     "setup": 3.3009999897331,
+     "known": 38066,
+     "owners": 0,
+     "expandable": 4422,
+     "links_sql": 40.82304201438092,
+     "links_convert": 1.4084579888731241,
+     "links_await": 42.90587498690002,
+     "links": 45061,
+     "adjacency": 62.56354201468639,
+     "walk": 22.57183298934251,
+     "result": 7.927667000330985,
+     "adjacency_nodes": 38066,
+     "edge_visits": 150458,
+     "reached": 38054,
+     "total": 145.05829199333675,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Did a delivery arrive?",
+   "read_ms": 128.2030830043368,
+   "graph_stage_ms": 2.1345420100260526,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 0,
+   "question": "Is there a leak anywhere?",
+   "read_ms": 128.17054099286906,
+   "graph_stage_ms": 3.127749980194494,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the red mug now?",
+   "read_ms": 389.98091701068915,
+   "graph_stage_ms": 213.0562920065131,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.2066249987110496,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3452,
+     "links_sql": 65.8553329994902,
+     "links_convert": 1.2799170217476785,
+     "links_await": 67.74270802270621,
+     "links": 44760,
+     "adjacency": 13.164874981157482,
+     "walk": 50.8818750095088,
+     "result": 10.900332999881357,
+     "adjacency_nodes": 38184,
+     "edge_visits": 494934,
+     "reached": 38140,
+     "total": 151.02429201942869,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where are the house keys?",
+   "read_ms": 123.06858398369513,
+   "graph_stage_ms": 1.459708990296349,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "Where did I leave the blue notebook?",
+   "read_ms": 360.60350001207553,
+   "graph_stage_ms": 228.63512497860938,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.191665979102254,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3493,
+     "links_sql": 33.256332972086966,
+     "links_convert": 1.4564170269295573,
+     "links_await": 35.48379198764451,
+     "links": 44794,
+     "adjacency": 52.97574997530319,
+     "walk": 53.93616601941176,
+     "result": 10.274625004967675,
+     "adjacency_nodes": 38184,
+     "edge_visits": 501946,
+     "reached": 38140,
+     "total": 160.94004199840128,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the phone charger?",
+   "read_ms": 343.6592079815455,
+   "graph_stage_ms": 182.92550000478514,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.1936250161379576,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2053,
+     "links_sql": 24.20179100590758,
+     "links_convert": 1.2386669986881316,
+     "links_await": 26.048165978863835,
+     "links": 43209,
+     "adjacency": 48.62833401421085,
+     "walk": 31.236582988640293,
+     "result": 8.53625001036562,
+     "adjacency_nodes": 38165,
+     "edge_visits": 284136,
+     "reached": 38140,
+     "total": 121.2987499893643,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where are the reading glasses?",
+   "read_ms": 119.12145902169868,
+   "graph_stage_ms": 2.806957985740155,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the tv remote?",
+   "read_ms": 319.5896660035942,
+   "graph_stage_ms": 190.69600000511855,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.138458007015288,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2043,
+     "links_sql": 23.60124999540858,
+     "links_convert": 1.4889169833622873,
+     "links_await": 25.689124973723665,
+     "links": 43160,
+     "adjacency": 55.139708012575284,
+     "walk": 32.11737499805167,
+     "result": 8.218041999498382,
+     "adjacency_nodes": 38165,
+     "edge_visits": 286447,
+     "reached": 38140,
+     "total": 127.72512499941513,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the black umbrella?",
+   "read_ms": 391.28037498448975,
+   "graph_stage_ms": 240.0611249904614,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.2599580008536577,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3423,
+     "links_sql": 32.72820799611509,
+     "links_convert": 1.2781670084223151,
+     "links_await": 34.608916990691796,
+     "links": 44734,
+     "adjacency": 58.86020802427083,
+     "walk": 58.54566697962582,
+     "result": 11.043000005884096,
+     "adjacency_nodes": 38184,
+     "edge_visits": 489699,
+     "reached": 38140,
+     "total": 171.56704200897366,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the dog leash?",
+   "read_ms": 335.62429100857116,
+   "graph_stage_ms": 188.90008400194347,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.193999989889562,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 1941,
+     "links_sql": 23.49079097621143,
+     "links_convert": 1.259292010217905,
+     "links_await": 25.354000012157485,
+     "links": 43068,
+     "adjacency": 55.068957997718826,
+     "walk": 29.485250008292496,
+     "result": 9.28487500641495,
+     "adjacency_nodes": 38165,
+     "edge_visits": 269222,
+     "reached": 38140,
+     "total": 126.18866699631326,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the screwdriver set?",
+   "read_ms": 365.00637501012534,
+   "graph_stage_ms": 199.40645899623632,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.366916993400082,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2096,
+     "links_sql": 24.73104200907983,
+     "links_convert": 1.3069580018054694,
+     "links_await": 26.63350000511855,
+     "links": 43253,
+     "adjacency": 56.97829098789953,
+     "walk": 33.83225001743995,
+     "result": 9.500291984295473,
+     "adjacency_nodes": 38165,
+     "edge_visits": 290344,
+     "reached": 38140,
+     "total": 134.3671669892501,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Where is the first aid kit?",
+   "read_ms": 184.77374999201857,
+   "graph_stage_ms": 2.9179580160416663,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "What is on the kitchen counter?",
+   "read_ms": 407.70991597673856,
+   "graph_stage_ms": 235.13966600876302,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38439,
+     "setup": 3.503708983771503,
+     "known": 38460,
+     "owners": 0,
+     "expandable": 7232,
+     "total": 3.5124580026604235,
+     "outcome": "limit",
+     "limit_links_sql": 56.702917005168274,
+     "limit_links_convert": 1.4051249891053885,
+     "limit_links_await": 58.77633299678564,
+     "limit_links": 48601,
+     "limit_adjacency": 58.2507090002764,
+     "limit_walk": 33.2171659974847,
+     "limit_result": 8.177374984370545,
+     "limit_adjacency_nodes": 38460,
+     "limit_edge_visits": 259277,
+     "limit_reached": 38439
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What is on the office desk?",
+   "read_ms": 427.8929170104675,
+   "graph_stage_ms": 222.32016699854285,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38520,
+     "setup": 3.4547079994808882,
+     "known": 38541,
+     "owners": 0,
+     "expandable": 7187,
+     "total": 3.4631659800652415,
+     "outcome": "limit",
+     "limit_links_sql": 57.08950001280755,
+     "limit_links_convert": 1.3509999844245613,
+     "limit_links_await": 59.07433299580589,
+     "limit_links": 48636,
+     "limit_adjacency": 50.48420900129713,
+     "limit_walk": 31.76249997341074,
+     "limit_result": 8.359958010260016,
+     "limit_adjacency_nodes": 38541,
+     "limit_edge_visits": 257997,
+     "limit_reached": 38520
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What is in the garage workbench area?",
+   "read_ms": 340.5174580111634,
+   "graph_stage_ms": 199.91170900175348,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38075,
+     "setup": 3.312624990940094,
+     "known": 38087,
+     "owners": 0,
+     "expandable": 4309,
+     "links_sql": 38.904333021491766,
+     "links_convert": 1.29441698663868,
+     "links_await": 40.86245800135657,
+     "links": 44854,
+     "adjacency": 59.776917012641206,
+     "walk": 20.145832997513935,
+     "result": 6.8605419946834445,
+     "adjacency_nodes": 38087,
+     "edge_visits": 148239,
+     "reached": 38075,
+     "total": 136.24270900618285,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Is the front porch clear?",
+   "read_ms": 164.6097920020111,
+   "graph_stage_ms": 1.5229590062517673,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "What is in the laundry room?",
+   "read_ms": 381.385583023075,
+   "graph_stage_ms": 199.2554589814972,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 24,
+     "reached_nodes": 38520,
+     "setup": 4.042042011860758,
+     "known": 38544,
+     "owners": 0,
+     "expandable": 8039,
+     "total": 4.0495840075891465,
+     "outcome": "limit",
+     "limit_links_sql": 61.6962919884827,
+     "limit_links_convert": 1.6512910078745335,
+     "limit_links_await": 64.04875000589527,
+     "limit_links": 49631,
+     "limit_adjacency": 14.995999983511865,
+     "limit_walk": 36.78320802282542,
+     "limit_result": 8.528249978553504,
+     "limit_adjacency_nodes": 38544,
+     "limit_edge_visits": 291145,
+     "limit_reached": 38520
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What changed since the last pass?",
+   "read_ms": 140.98887500585988,
+   "graph_stage_ms": 3.0370840104296803,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "Summarize the last hour.",
+   "read_ms": 166.90450001624413,
+   "graph_stage_ms": 2.9687499918509275,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "What happened in the hallway this morning?",
+   "read_ms": 337.3487920034677,
+   "graph_stage_ms": 197.03737497911789,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38054,
+     "setup": 3.3696249884087592,
+     "known": 38066,
+     "owners": 0,
+     "expandable": 4422,
+     "links_sql": 39.18875000090338,
+     "links_convert": 1.2561659968923777,
+     "links_await": 41.072791995247826,
+     "links": 45061,
+     "adjacency": 57.5374590116553,
+     "walk": 20.69499998469837,
+     "result": 6.954458018299192,
+     "adjacency_nodes": 38066,
+     "edge_visits": 150458,
+     "reached": 38054,
+     "total": 135.02595899626613,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Did a delivery arrive?",
+   "read_ms": 83.69575001415797,
+   "graph_stage_ms": 2.1447079780045897,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 1,
+   "question": "Is there a leak anywhere?",
+   "read_ms": 158.40029198443517,
+   "graph_stage_ms": 1.5439169947057962,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the red mug now?",
+   "read_ms": 434.0572500077542,
+   "graph_stage_ms": 187.04154097940773,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.299832984339446,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3452,
+     "links_sql": 32.16395800700411,
+     "links_convert": 1.2738330115098506,
+     "links_await": 34.04487497755326,
+     "links": 44760,
+     "adjacency": 13.393749977694824,
+     "walk": 53.02508402382955,
+     "result": 10.343415982788429,
+     "adjacency_nodes": 38184,
+     "edge_visits": 494934,
+     "reached": 38140,
+     "total": 119.01612501242198,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where are the house keys?",
+   "read_ms": 183.13995900098234,
+   "graph_stage_ms": 1.6054160078056157,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "Where did I leave the blue notebook?",
+   "read_ms": 374.2910829896573,
+   "graph_stage_ms": 194.3207499862183,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.2590419868938625,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3493,
+     "links_sql": 32.39983299863525,
+     "links_convert": 1.355874992441386,
+     "links_await": 34.439792012562975,
+     "links": 44794,
+     "adjacency": 14.209666987881064,
+     "walk": 55.06395798875019,
+     "result": 11.858334008138627,
+     "adjacency_nodes": 38184,
+     "edge_visits": 501946,
+     "reached": 38140,
+     "total": 124.31450001895428,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the phone charger?",
+   "read_ms": 316.55316599062644,
+   "graph_stage_ms": 156.2456670217216,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.257042000768706,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2053,
+     "links_sql": 25.01283399760723,
+     "links_convert": 1.4017499925103039,
+     "links_await": 27.048499992815778,
+     "links": 43209,
+     "adjacency": 14.282915974035859,
+     "walk": 30.156125023495406,
+     "result": 8.19904200034216,
+     "adjacency_nodes": 38165,
+     "edge_visits": 284136,
+     "reached": 38140,
+     "total": 86.61745800054632,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where are the reading glasses?",
+   "read_ms": 120.6687499943655,
+   "graph_stage_ms": 1.502875005826354,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the tv remote?",
+   "read_ms": 321.19641700410284,
+   "graph_stage_ms": 192.27100000716746,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.17445897962898,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2043,
+     "links_sql": 23.673249990679324,
+     "links_convert": 1.448584022000432,
+     "links_await": 25.70016699610278,
+     "links": 43160,
+     "adjacency": 49.78608398232609,
+     "walk": 32.752041006460786,
+     "result": 8.375667006475851,
+     "adjacency_nodes": 38165,
+     "edge_visits": 286447,
+     "reached": 38140,
+     "total": 123.35612499737181,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the black umbrella?",
+   "read_ms": 415.73862501536496,
+   "graph_stage_ms": 227.95745800249279,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 44,
+     "reached_nodes": 38140,
+     "setup": 3.3728749840520322,
+     "known": 38184,
+     "owners": 0,
+     "expandable": 3423,
+     "links_sql": 32.40504200221039,
+     "links_convert": 1.4940830005798489,
+     "links_await": 34.46845899452455,
+     "links": 44734,
+     "adjacency": 49.89483399549499,
+     "walk": 52.68958298256621,
+     "result": 10.36695801303722,
+     "adjacency_nodes": 38184,
+     "edge_visits": 489699,
+     "reached": 38140,
+     "total": 155.66791698802263,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the dog leash?",
+   "read_ms": 328.6961250123568,
+   "graph_stage_ms": 145.9197079821024,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.2464999821968377,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 1941,
+     "links_sql": 23.59295799396932,
+     "links_convert": 1.5635840245522559,
+     "links_await": 25.77254199422896,
+     "links": 43068,
+     "adjacency": 13.187540986109525,
+     "walk": 30.00945900566876,
+     "result": 8.13699999707751,
+     "adjacency_nodes": 38165,
+     "edge_visits": 269222,
+     "reached": 38140,
+     "total": 83.7198749941308,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the screwdriver set?",
+   "read_ms": 315.79687498742715,
+   "graph_stage_ms": 155.43370798695832,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 25,
+     "reached_nodes": 38140,
+     "setup": 3.2264999754261225,
+     "known": 38165,
+     "owners": 0,
+     "expandable": 2096,
+     "links_sql": 24.609833024442196,
+     "links_convert": 1.3727919722441584,
+     "links_await": 26.637749979272485,
+     "links": 43253,
+     "adjacency": 12.554457993246615,
+     "walk": 33.794375020079315,
+     "result": 8.860791975166649,
+     "adjacency_nodes": 38165,
+     "edge_visits": 290344,
+     "reached": 38140,
+     "total": 88.72104200418107,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Where is the first aid kit?",
+   "read_ms": 123.90987502294593,
+   "graph_stage_ms": 2.91891599772498,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "What is on the kitchen counter?",
+   "read_ms": 428.880666004261,
+   "graph_stage_ms": 224.67404100461863,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38439,
+     "setup": 3.4024589986074716,
+     "known": 38460,
+     "owners": 0,
+     "expandable": 7232,
+     "total": 3.409124998142943,
+     "outcome": "limit",
+     "limit_links_sql": 55.7296659972053,
+     "limit_links_convert": 1.4718750026077032,
+     "limit_links_await": 57.85662500420585,
+     "limit_links": 48601,
+     "limit_adjacency": 52.65512500773184,
+     "limit_walk": 31.331832986325026,
+     "limit_result": 8.298291999381036,
+     "limit_adjacency_nodes": 38460,
+     "limit_edge_visits": 259277,
+     "limit_reached": 38439
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What is on the office desk?",
+   "read_ms": 455.09524998487905,
+   "graph_stage_ms": 184.77937500574626,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 38520,
+     "setup": 3.4334170049987733,
+     "known": 38541,
+     "owners": 0,
+     "expandable": 7187,
+     "total": 3.4426669881213456,
+     "outcome": "limit",
+     "limit_links_sql": 55.824499984737486,
+     "limit_links_convert": 1.299499999731779,
+     "limit_links_await": 57.75854201056063,
+     "limit_links": 48636,
+     "limit_adjacency": 13.841584004694596,
+     "limit_walk": 31.052707985509187,
+     "limit_result": 8.309416996780783,
+     "limit_adjacency_nodes": 38541,
+     "limit_edge_visits": 257997,
+     "limit_reached": 38520
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What is in the garage workbench area?",
+   "read_ms": 340.10533400578424,
+   "graph_stage_ms": 186.8146250199061,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38075,
+     "setup": 3.6050420021638274,
+     "known": 38087,
+     "owners": 0,
+     "expandable": 4309,
+     "links_sql": 37.95654099667445,
+     "links_convert": 1.2482499878387898,
+     "links_await": 39.7696660074871,
+     "links": 44854,
+     "adjacency": 50.24683297961019,
+     "walk": 19.686250016093254,
+     "result": 6.714416987961158,
+     "adjacency_nodes": 38087,
+     "edge_visits": 148239,
+     "reached": 38075,
+     "total": 125.40545800584368,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Is the front porch clear?",
+   "read_ms": 159.1691659996286,
+   "graph_stage_ms": 1.584624988026917,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "What is in the laundry room?",
+   "read_ms": 361.1417500069365,
+   "graph_stage_ms": 190.20441701286472,
+   "graph_seed_reach_metadata": "neighborhood_limit",
+   "calls": [
+    {
+     "seeds": 24,
+     "reached_nodes": 38520,
+     "setup": 3.4323339932598174,
+     "known": 38544,
+     "owners": 0,
+     "expandable": 8039,
+     "total": 3.437749983277172,
+     "outcome": "limit",
+     "limit_links_sql": 59.77849999908358,
+     "limit_links_convert": 1.5397499955724925,
+     "limit_links_await": 61.902457993710414,
+     "limit_links": 49631,
+     "limit_adjacency": 12.699042010353878,
+     "limit_walk": 34.32429098756984,
+     "limit_result": 8.224874996813014,
+     "limit_adjacency_nodes": 38544,
+     "limit_edge_visits": 291145,
+     "limit_reached": 38520
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What changed since the last pass?",
+   "read_ms": 168.62499999115244,
+   "graph_stage_ms": 2.6187919720541686,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "Summarize the last hour.",
+   "read_ms": 129.55404201056808,
+   "graph_stage_ms": 3.427792020374909,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "What happened in the hallway this morning?",
+   "read_ms": 332.9701669863425,
+   "graph_stage_ms": 186.92883299081586,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 38054,
+     "setup": 3.2354580180253834,
+     "known": 38066,
+     "owners": 0,
+     "expandable": 4422,
+     "links_sql": 41.151082987198606,
+     "links_convert": 1.295082998694852,
+     "links_await": 42.98162498162128,
+     "links": 45061,
+     "adjacency": 49.16550000780262,
+     "walk": 19.532542006345466,
+     "result": 7.254958007251844,
+     "adjacency_nodes": 38066,
+     "edge_visits": 150458,
+     "reached": 38054,
+     "total": 127.47787500848062,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Did a delivery arrive?",
+   "read_ms": 87.20254199579358,
+   "graph_stage_ms": 1.6235000221058726,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  },
+  {
+   "repeat": 2,
+   "question": "Is there a leak anywhere?",
+   "read_ms": 154.0817089844495,
+   "graph_stage_ms": 1.396042003761977,
+   "graph_seed_reach_metadata": null,
+   "calls": []
+  }
+ ]
+}

@@ -1,0 +1,1819 @@
+{
+ "pack": "/tmp/task26/packs/conv-26",
+ "kind": "locomo",
+ "commit": "56b51d53aa48d0c79a7a6d8b3a94c063273d31d4",
+ "settings": {
+  "memory_mode": "address_first",
+  "fusion": "rrf",
+  "rrf_graph_seed_count": true,
+  "rrf_graph_weight": 0.5,
+  "graph_max_hops": 3,
+  "graph_max_candidates": 150,
+  "graph_seed_words": true
+ },
+ "timed_questions": 20,
+ "repeats": 3,
+ "load_before": [
+  3.6,
+  3.72,
+  4.24
+ ],
+ "load_after": [
+  6.48,
+  4.37,
+  4.45
+ ],
+ "summary": {
+  "reads": 60,
+  "seed_reach_calls": 60,
+  "outcomes": {
+   "walked": 54,
+   "limit": 0,
+   "fewer_than_two_seeds": 6
+  },
+  "total": {
+   "p50": 5.94,
+   "p95": 7.2,
+   "mean": 5.39,
+   "sum": 291.0
+  },
+  "setup": {
+   "p50": 0.11,
+   "p95": 0.13,
+   "mean": 0.11,
+   "sum": 6.1
+  },
+  "links_await": {
+   "p50": 4.49,
+   "p95": 5.56,
+   "mean": 4.19,
+   "sum": 226.3
+  },
+  "links_sql": {
+   "p50": 4.16,
+   "p95": 5.31,
+   "mean": 3.97,
+   "sum": 214.2
+  },
+  "links_convert": {
+   "p50": 0.08,
+   "p95": 0.21,
+   "mean": 0.09,
+   "sum": 4.9
+  },
+  "adjacency": {
+   "p50": 0.23,
+   "p95": 0.47,
+   "mean": 0.24,
+   "sum": 13.1
+  },
+  "walk": {
+   "p50": 0.22,
+   "p95": 0.43,
+   "mean": 0.24,
+   "sum": 12.9
+  },
+  "result": {
+   "p50": 0.1,
+   "p95": 0.14,
+   "mean": 0.1,
+   "sum": 5.5
+  },
+  "seeds_range": [
+   2,
+   4.0,
+   21
+  ],
+  "known_range": [
+   662,
+   896.0,
+   997
+  ],
+  "owners_range": [
+   1,
+   1.0,
+   1
+  ],
+  "expandable_range": [
+   20,
+   586.5,
+   911
+  ],
+  "links_range": [
+   401,
+   1200.5,
+   1523
+  ],
+  "adjacency_nodes_range": [
+   390,
+   789.0,
+   997
+  ],
+  "edge_visits_range": [
+   424,
+   2531.0,
+   6134
+  ],
+  "reached_range": [
+   387,
+   788.0,
+   996
+  ],
+  "verified_calls": 20,
+  "read_ms": {
+   "p50": 149.8,
+   "p95": 190.9
+  },
+  "graph_stage_ms": {
+   "p50": 26.6,
+   "p95": 35.4
+  }
+ },
+ "limit_count_all_questions": {
+  "questions": 152,
+  "limit": 0,
+  "walked": 130,
+  "fewer_than_two_seeds": 22,
+  "no_seed_reach_call": 0,
+  "limit_expandable": [],
+  "metadata_neighborhood_limit": 0
+ },
+ "per_question": [
+  {
+   "repeat": 0,
+   "question": "What career path has Caroline decided to persue?",
+   "read_ms": 135.84458400146104,
+   "graph_stage_ms": 30.76787499594502,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.1417500025127083,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.509416001383215,
+     "links_convert": 0.08179197902791202,
+     "links_await": 4.700665973359719,
+     "links": 1416,
+     "adjacency": 0.23537498782388866,
+     "walk": 0.368500011973083,
+     "result": 0.10449998080730438,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 6.112917006248608,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did Melanie do after the road trip to relax?",
+   "read_ms": 201.04854099918157,
+   "graph_stage_ms": 32.21924998797476,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 862,
+     "setup": 0.12629100820049644,
+     "known": 863,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.3686250098980963,
+     "links_convert": 0.058542005717754364,
+     "links_await": 3.5527919826563448,
+     "links": 979,
+     "adjacency": 0.18195901066064835,
+     "walk": 0.23762500495649874,
+     "result": 0.0837499974295497,
+     "adjacency_nodes": 647,
+     "edge_visits": 2904,
+     "reached": 646,
+     "total": 4.56566599314101,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Melanie run a charity race?",
+   "read_ms": 132.22600001608953,
+   "graph_stage_ms": 32.16308300034143,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 859,
+     "setup": 0.12524999328888953,
+     "known": 860,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.339415998198092,
+     "links_convert": 0.016874982975423336,
+     "links_await": 3.4812919911928475,
+     "links": 976,
+     "adjacency": 0.13004199718125165,
+     "walk": 0.21700002253055573,
+     "result": 0.07224999717436731,
+     "adjacency_nodes": 644,
+     "edge_visits": 1937,
+     "reached": 643,
+     "total": 4.415125004015863,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Did Melanie make the black and white bowl in the photo?",
+   "read_ms": 161.2089590053074,
+   "graph_stage_ms": 29.86137502011843,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 859,
+     "setup": 0.12650000280700624,
+     "known": 859,
+     "owners": 1,
+     "expandable": 466,
+     "links_sql": 3.2802920031826943,
+     "links_convert": 0.02174999099224806,
+     "links_await": 3.4355419920757413,
+     "links": 978,
+     "adjacency": 0.13637501979246736,
+     "walk": 0.26354199508205056,
+     "result": 0.08408300345763564,
+     "adjacency_nodes": 643,
+     "edge_visits": 2556,
+     "reached": 643,
+     "total": 4.496459005167708,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Melanie sign up for a pottery class?",
+   "read_ms": 134.01479099411517,
+   "graph_stage_ms": 30.47291698749177,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 855,
+     "setup": 0.10341699817217886,
+     "known": 855,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.292874986073002,
+     "links_convert": 0.12870901264250278,
+     "links_await": 3.5470410075504333,
+     "links": 931,
+     "adjacency": 0.1717910054139793,
+     "walk": 0.2624169865157455,
+     "result": 0.08754199370741844,
+     "adjacency_nodes": 606,
+     "edge_visits": 3285,
+     "reached": 606,
+     "total": 4.565041977912188,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What are Caroline's plans for the summer?",
+   "read_ms": 179.98912499751896,
+   "graph_stage_ms": 50.685124995652586,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.12549999519251287,
+     "known": 927,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.587375005939975,
+     "links_convert": 0.14670801465399563,
+     "links_await": 4.858416999923065,
+     "links": 1417,
+     "adjacency": 0.2262920024804771,
+     "walk": 0.260582979535684,
+     "result": 0.12412501382641494,
+     "adjacency_nodes": 927,
+     "edge_visits": 3158,
+     "reached": 926,
+     "total": 6.15304202074185,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "In what ways is Caroline participating in the LGBTQ community?",
+   "read_ms": 139.86770901829004,
+   "graph_stage_ms": 37.178375001531094,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 931,
+     "setup": 0.12991702533327043,
+     "known": 931,
+     "owners": 1,
+     "expandable": 699,
+     "links_sql": 5.021499993745238,
+     "links_convert": 0.04612500197254121,
+     "links_await": 5.186583002796397,
+     "links": 1420,
+     "adjacency": 0.24354099878109992,
+     "walk": 0.3942500043194741,
+     "result": 0.13520900392904878,
+     "adjacency_nodes": 931,
+     "edge_visits": 4934,
+     "reached": 931,
+     "total": 6.666542001767084,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of books does Caroline have in her library?",
+   "read_ms": 143.77616700949147,
+   "graph_stage_ms": 34.73179100546986,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 926,
+     "setup": 0.11570900096558034,
+     "known": 926,
+     "owners": 1,
+     "expandable": 681,
+     "links_sql": 4.591167002217844,
+     "links_convert": 0.1102499954868108,
+     "links_await": 4.829333018278703,
+     "links": 1415,
+     "adjacency": 0.2361670194659382,
+     "walk": 0.21854197257198393,
+     "result": 0.11937500676140189,
+     "adjacency_nodes": 926,
+     "edge_visits": 2885,
+     "reached": 926,
+     "total": 6.23170897597447,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What would Caroline's political leaning likely be?",
+   "read_ms": 148.52141600567847,
+   "graph_stage_ms": 21.804125019116327,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 925,
+     "total": 0.0007500057108700275,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of painting did Caroline share with Melanie on October 13, 2023?",
+   "read_ms": 159.68591600540094,
+   "graph_stage_ms": 52.219375007553026,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 996,
+     "setup": 0.13124998076818883,
+     "known": 997,
+     "owners": 1,
+     "expandable": 911,
+     "links_sql": 6.091124989325181,
+     "links_convert": 0.061583006754517555,
+     "links_await": 6.28966701333411,
+     "links": 1523,
+     "adjacency": 0.6351670017465949,
+     "walk": 0.44162498670630157,
+     "result": 0.17383298836648464,
+     "adjacency_nodes": 997,
+     "edge_visits": 6134,
+     "reached": 996,
+     "total": 8.446333988104016,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of place does Caroline want to create for people?",
+   "read_ms": 141.19054199545644,
+   "graph_stage_ms": 35.66591700655408,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.11312498827464879,
+     "known": 926,
+     "owners": 1,
+     "expandable": 680,
+     "links_sql": 4.666542023187503,
+     "links_convert": 0.25641598040238023,
+     "links_await": 5.048791004810482,
+     "links": 1415,
+     "adjacency": 0.2464159915689379,
+     "walk": 0.1891670108307153,
+     "result": 0.10845798533409834,
+     "adjacency_nodes": 926,
+     "edge_visits": 2506,
+     "reached": 926,
+     "total": 6.337999977404252,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How does Melanie prioritize self-care?",
+   "read_ms": 154.37470900360495,
+   "graph_stage_ms": 31.435917015187442,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 864,
+     "setup": 0.1051250146701932,
+     "known": 866,
+     "owners": 1,
+     "expandable": 472,
+     "links_sql": 3.5956659994553775,
+     "links_convert": 0.03612501313909888,
+     "links_await": 3.7614589964505285,
+     "links": 986,
+     "adjacency": 0.2442499971948564,
+     "walk": 0.1755419943947345,
+     "result": 0.08387499838136137,
+     "adjacency_nodes": 652,
+     "edge_visits": 1962,
+     "reached": 650,
+     "total": 4.7742500028107315,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How long has Melanie been creating art?",
+   "read_ms": 177.34600001131184,
+   "graph_stage_ms": 70.31479198485613,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 863,
+     "setup": 0.10429200483486056,
+     "known": 866,
+     "owners": 1,
+     "expandable": 493,
+     "links_sql": 3.5553330089896917,
+     "links_convert": 0.1195840013679117,
+     "links_await": 3.805707994615659,
+     "links": 966,
+     "adjacency": 0.17762501374818385,
+     "walk": 0.1714169920887798,
+     "result": 0.07570799789391458,
+     "adjacency_nodes": 628,
+     "edge_visits": 1955,
+     "reached": 625,
+     "total": 4.728625004645437,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did the posters at the poetry reading say?",
+   "read_ms": 151.8861249787733,
+   "graph_stage_ms": 22.284499980742112,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 659,
+     "setup": 0.061166996601969004,
+     "known": 662,
+     "owners": 1,
+     "expandable": 20,
+     "links_sql": 0.603374995989725,
+     "links_convert": 0.011083000572398305,
+     "links_await": 0.7266669999808073,
+     "links": 401,
+     "adjacency": 0.06554101128131151,
+     "walk": 0.10020899935625494,
+     "result": 0.04645800800062716,
+     "adjacency_nodes": 390,
+     "edge_visits": 424,
+     "reached": 387,
+     "total": 1.0438329773023725,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Would Melanie likely enjoy the song \"The Four Seasons\" by Vivaldi?",
+   "read_ms": 122.46437498833984,
+   "graph_stage_ms": 21.498709014849737,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 853,
+     "total": 0.0002910092007368803,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Why are flowers important to Melanie?",
+   "read_ms": 137.71404101862572,
+   "graph_stage_ms": 30.051915993681177,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 855,
+     "setup": 0.10483301593922079,
+     "known": 855,
+     "owners": 1,
+     "expandable": 463,
+     "links_sql": 3.263708989834413,
+     "links_convert": 0.017499987734481692,
+     "links_await": 3.3967920171562582,
+     "links": 927,
+     "adjacency": 0.2927499881479889,
+     "walk": 0.15904201427474618,
+     "result": 0.07337500574067235,
+     "adjacency_nodes": 606,
+     "edge_visits": 1892,
+     "reached": 606,
+     "total": 4.421000019647181,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What pets does Melanie have?",
+   "read_ms": 167.9649579746183,
+   "graph_stage_ms": 31.748833978781477,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 857,
+     "setup": 0.1057499903254211,
+     "known": 859,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.369957994436845,
+     "links_convert": 0.031458010198548436,
+     "links_await": 3.5375419829506427,
+     "links": 931,
+     "adjacency": 0.2343749802093953,
+     "walk": 0.14720801846124232,
+     "result": 0.0831669894978404,
+     "adjacency_nodes": 612,
+     "edge_visits": 1531,
+     "reached": 610,
+     "total": 4.496749985264614,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "How long has Caroline had her current group of friends for?",
+   "read_ms": 146.0577919788193,
+   "graph_stage_ms": 37.325499986764044,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 929,
+     "setup": 0.13087500701658428,
+     "known": 930,
+     "owners": 1,
+     "expandable": 687,
+     "links_sql": 4.8834579938557,
+     "links_convert": 0.18891700892709196,
+     "links_await": 5.227457993896678,
+     "links": 1418,
+     "adjacency": 0.27620900073088706,
+     "walk": 0.3407500043977052,
+     "result": 0.13249999028630555,
+     "adjacency_nodes": 930,
+     "edge_visits": 4069,
+     "reached": 929,
+     "total": 6.6944170102942735,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "When did Caroline join a new activist group?",
+   "read_ms": 137.38687502336688,
+   "graph_stage_ms": 36.115916998824105,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 932,
+     "setup": 0.12012498336844146,
+     "known": 934,
+     "owners": 1,
+     "expandable": 690,
+     "links_sql": 4.708791995653883,
+     "links_convert": 0.11395799810998142,
+     "links_await": 4.958542005624622,
+     "links": 1421,
+     "adjacency": 0.47400000039488077,
+     "walk": 0.23970799520611763,
+     "result": 0.12362501001916826,
+     "adjacency_nodes": 934,
+     "edge_visits": 2889,
+     "reached": 932,
+     "total": 6.497833004686981,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Would Caroline pursue writing as a career option?",
+   "read_ms": 165.7518340216484,
+   "graph_stage_ms": 34.72100000362843,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.11666599311865866,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.495166998822242,
+     "links_convert": 0.24491699878126383,
+     "links_await": 4.87820798298344,
+     "links": 1416,
+     "adjacency": 0.24358299560844898,
+     "walk": 0.18537501455284655,
+     "result": 0.10358297731727362,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 6.144374987343326,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What career path has Caroline decided to persue?",
+   "read_ms": 135.5049170088023,
+   "graph_stage_ms": 25.169749977067113,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.11433401959948242,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.881041997577995,
+     "links_convert": 0.12020798749290407,
+     "links_await": 5.129583005327731,
+     "links": 1416,
+     "adjacency": 0.2585420152172446,
+     "walk": 0.19949997658841312,
+     "result": 0.11162500595673919,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 6.370874994900078,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did Melanie do after the road trip to relax?",
+   "read_ms": 135.10716700693592,
+   "graph_stage_ms": 23.866500006988645,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 862,
+     "setup": 0.10733399540185928,
+     "known": 863,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.2200830173678696,
+     "links_convert": 0.025999994250014424,
+     "links_await": 3.3686250098980963,
+     "links": 979,
+     "adjacency": 0.22104199160821736,
+     "walk": 0.23162498837336898,
+     "result": 0.08504200377501547,
+     "adjacency_nodes": 647,
+     "edge_visits": 2904,
+     "reached": 646,
+     "total": 4.3974169821012765,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Melanie run a charity race?",
+   "read_ms": 150.58416698593646,
+   "graph_stage_ms": 49.05454197432846,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 859,
+     "setup": 0.10041598579846323,
+     "known": 860,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.671415994176641,
+     "links_convert": 0.03541700425557792,
+     "links_await": 3.8360829930752516,
+     "links": 976,
+     "adjacency": 0.17229100922122598,
+     "walk": 0.17204199684783816,
+     "result": 0.0881669984664768,
+     "adjacency_nodes": 644,
+     "edge_visits": 1937,
+     "reached": 643,
+     "total": 4.753417015308514,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Did Melanie make the black and white bowl in the photo?",
+   "read_ms": 128.3071670040954,
+   "graph_stage_ms": 23.530083999503404,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 859,
+     "setup": 0.10183302219957113,
+     "known": 859,
+     "owners": 1,
+     "expandable": 466,
+     "links_sql": 3.3009999897331,
+     "links_convert": 0.018708000425249338,
+     "links_await": 3.429165983106941,
+     "links": 978,
+     "adjacency": 0.22191600874066353,
+     "walk": 0.22487499518319964,
+     "result": 0.08520900155417621,
+     "adjacency_nodes": 643,
+     "edge_visits": 2556,
+     "reached": 643,
+     "total": 4.444916994543746,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Melanie sign up for a pottery class?",
+   "read_ms": 154.15124999708496,
+   "graph_stage_ms": 23.899166990304366,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 855,
+     "setup": 0.10274999658577144,
+     "known": 855,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.175375022692606,
+     "links_convert": 0.019332976080477238,
+     "links_await": 3.3121250162366778,
+     "links": 931,
+     "adjacency": 0.20708399824798107,
+     "walk": 0.26316600269638,
+     "result": 0.0882500025909394,
+     "adjacency_nodes": 606,
+     "edge_visits": 3285,
+     "reached": 606,
+     "total": 4.357249999884516,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What are Caroline's plans for the summer?",
+   "read_ms": 126.88020800123923,
+   "graph_stage_ms": 25.444625003729016,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.11325001833029091,
+     "known": 927,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.461917007574812,
+     "links_convert": 0.07262500002980232,
+     "links_await": 4.7184579889290035,
+     "links": 1417,
+     "adjacency": 0.2453339984640479,
+     "walk": 0.23233299725688994,
+     "result": 0.11004201951436698,
+     "adjacency_nodes": 927,
+     "edge_visits": 3158,
+     "reached": 926,
+     "total": 5.957540997769684,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "In what ways is Caroline participating in the LGBTQ community?",
+   "read_ms": 159.14274999522604,
+   "graph_stage_ms": 28.386666002916172,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 931,
+     "setup": 0.13295802637003362,
+     "known": 931,
+     "owners": 1,
+     "expandable": 699,
+     "links_sql": 4.915166005957872,
+     "links_convert": 0.1315839763265103,
+     "links_await": 5.176250007934868,
+     "links": 1420,
+     "adjacency": 0.22625000565312803,
+     "walk": 0.4177499795332551,
+     "result": 0.1424590009264648,
+     "adjacency_nodes": 931,
+     "edge_visits": 4934,
+     "reached": 931,
+     "total": 6.693875009659678,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of books does Caroline have in her library?",
+   "read_ms": 177.69262500223704,
+   "graph_stage_ms": 26.282417005859315,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 926,
+     "setup": 0.11904200073331594,
+     "known": 926,
+     "owners": 1,
+     "expandable": 681,
+     "links_sql": 4.604624991770834,
+     "links_convert": 0.1167499867733568,
+     "links_await": 4.850875004194677,
+     "links": 1415,
+     "adjacency": 0.23183299344964325,
+     "walk": 0.2476670197211206,
+     "result": 0.12195800081826746,
+     "adjacency_nodes": 926,
+     "edge_visits": 2885,
+     "reached": 926,
+     "total": 6.171124987304211,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What would Caroline's political leaning likely be?",
+   "read_ms": 118.90029200003482,
+   "graph_stage_ms": 18.856915994547307,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 925,
+     "total": 0.00012500095181167126,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of painting did Caroline share with Melanie on October 13, 2023?",
+   "read_ms": 160.92570801265538,
+   "graph_stage_ms": 29.603542003314942,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 996,
+     "setup": 0.12845799210481346,
+     "known": 997,
+     "owners": 1,
+     "expandable": 911,
+     "links_sql": 5.821041006129235,
+     "links_convert": 0.13124998076818883,
+     "links_await": 6.074000004446134,
+     "links": 1523,
+     "adjacency": 0.3928330261260271,
+     "walk": 0.4532499879132956,
+     "result": 0.1392920094076544,
+     "adjacency_nodes": 997,
+     "edge_visits": 6134,
+     "reached": 996,
+     "total": 7.906458980869502,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of place does Caroline want to create for people?",
+   "read_ms": 131.55712498701178,
+   "graph_stage_ms": 25.709166016895324,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.11470800382085145,
+     "known": 926,
+     "owners": 1,
+     "expandable": 680,
+     "links_sql": 4.374999989522621,
+     "links_convert": 0.24166700313799083,
+     "links_await": 4.7393330023624,
+     "links": 1415,
+     "adjacency": 0.2243329945486039,
+     "walk": 0.19545800751075149,
+     "result": 0.10525001562200487,
+     "adjacency_nodes": 926,
+     "edge_visits": 2506,
+     "reached": 926,
+     "total": 5.931791994953528,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How does Melanie prioritize self-care?",
+   "read_ms": 124.55712500377558,
+   "graph_stage_ms": 23.946750006871298,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 864,
+     "setup": 0.10408301022835076,
+     "known": 866,
+     "owners": 1,
+     "expandable": 472,
+     "links_sql": 3.259999997681007,
+     "links_convert": 0.01833401620388031,
+     "links_await": 3.3930000208783895,
+     "links": 986,
+     "adjacency": 0.22062502102926373,
+     "walk": 0.1804579806048423,
+     "result": 0.08216701098717749,
+     "adjacency_nodes": 652,
+     "edge_visits": 1962,
+     "reached": 650,
+     "total": 4.380375001346692,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How long has Melanie been creating art?",
+   "read_ms": 148.98308398551308,
+   "graph_stage_ms": 23.24429200962186,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 863,
+     "setup": 0.10754200047813356,
+     "known": 866,
+     "owners": 1,
+     "expandable": 493,
+     "links_sql": 3.289125015726313,
+     "links_convert": 0.020083010895177722,
+     "links_await": 3.4252920013386756,
+     "links": 966,
+     "adjacency": 0.20720798056572676,
+     "walk": 0.16558400238864124,
+     "result": 0.07325000478886068,
+     "adjacency_nodes": 628,
+     "edge_visits": 1955,
+     "reached": 625,
+     "total": 4.385208012536168,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did the posters at the poetry reading say?",
+   "read_ms": 118.35708300350234,
+   "graph_stage_ms": 19.416291994275525,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 659,
+     "setup": 0.05908298771828413,
+     "known": 662,
+     "owners": 1,
+     "expandable": 20,
+     "links_sql": 0.6035840197000653,
+     "links_convert": 0.01391599653288722,
+     "links_await": 0.7244999869726598,
+     "links": 401,
+     "adjacency": 0.06212500738911331,
+     "walk": 0.10187498992308974,
+     "result": 0.05004199920222163,
+     "adjacency_nodes": 390,
+     "edge_visits": 424,
+     "reached": 387,
+     "total": 1.0392910044174641,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Would Melanie likely enjoy the song \"The Four Seasons\" by Vivaldi?",
+   "read_ms": 125.73062497540377,
+   "graph_stage_ms": 20.159417006652802,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 853,
+     "total": 0.00016600824892520905,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Why are flowers important to Melanie?",
+   "read_ms": 163.45299998647533,
+   "graph_stage_ms": 24.38833299675025,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 855,
+     "setup": 0.09520800085738301,
+     "known": 855,
+     "owners": 1,
+     "expandable": 463,
+     "links_sql": 3.2446660043206066,
+     "links_convert": 0.020749983377754688,
+     "links_await": 3.382333990884945,
+     "links": 927,
+     "adjacency": 0.32854097662493587,
+     "walk": 0.15070900553837419,
+     "result": 0.07208299939520657,
+     "adjacency_nodes": 606,
+     "edge_visits": 1892,
+     "reached": 606,
+     "total": 4.406000021845102,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What pets does Melanie have?",
+   "read_ms": 136.88262502546422,
+   "graph_stage_ms": 28.298416000325233,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 857,
+     "setup": 0.1025829988066107,
+     "known": 859,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.2915000047069043,
+     "links_convert": 0.15279199578799307,
+     "links_await": 3.5892919986508787,
+     "links": 931,
+     "adjacency": 0.14925000141374767,
+     "walk": 0.18670898862183094,
+     "result": 0.07491599535569549,
+     "adjacency_nodes": 612,
+     "edge_visits": 1531,
+     "reached": 610,
+     "total": 4.490749997785315,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "How long has Caroline had her current group of friends for?",
+   "read_ms": 167.69900001236238,
+   "graph_stage_ms": 27.719915990019217,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 929,
+     "setup": 0.13000000035390258,
+     "known": 930,
+     "owners": 1,
+     "expandable": 687,
+     "links_sql": 4.581249988405034,
+     "links_convert": 0.12487501953728497,
+     "links_await": 4.841749992920086,
+     "links": 1418,
+     "adjacency": 0.22045799414627254,
+     "walk": 0.3310000174678862,
+     "result": 0.1263749727513641,
+     "adjacency_nodes": 930,
+     "edge_visits": 4069,
+     "reached": 929,
+     "total": 6.2274590018205345,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did Caroline join a new activist group?",
+   "read_ms": 129.749499988975,
+   "graph_stage_ms": 25.98479198059067,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 932,
+     "setup": 0.11054097558371723,
+     "known": 934,
+     "owners": 1,
+     "expandable": 690,
+     "links_sql": 4.5281250204425305,
+     "links_convert": 0.087958003859967,
+     "links_await": 4.73712501116097,
+     "links": 1421,
+     "adjacency": 0.2444170240778476,
+     "walk": 0.23116599186323583,
+     "result": 0.12099999003112316,
+     "adjacency_nodes": 934,
+     "edge_visits": 2889,
+     "reached": 932,
+     "total": 5.997875006869435,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Would Caroline pursue writing as a career option?",
+   "read_ms": 131.47675001528114,
+   "graph_stage_ms": 25.15366699662991,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.11020799865946174,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.625625006156042,
+     "links_convert": 0.0805000017862767,
+     "links_await": 4.879874992184341,
+     "links": 1416,
+     "adjacency": 0.23333297576755285,
+     "walk": 0.2062499988824129,
+     "result": 0.10529201244935393,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 6.07845900231041,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What career path has Caroline decided to persue?",
+   "read_ms": 190.7106250000652,
+   "graph_stage_ms": 27.307124983053654,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.11458300286903977,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.542416019830853,
+     "links_convert": 0.11208397336304188,
+     "links_await": 4.7716659901198,
+     "links": 1416,
+     "adjacency": 0.23870798759162426,
+     "walk": 0.19354201504029334,
+     "result": 0.1093749888241291,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 5.994415987515822,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did Melanie do after the road trip to relax?",
+   "read_ms": 158.87720801401883,
+   "graph_stage_ms": 33.15050000674091,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 862,
+     "setup": 0.10262499563395977,
+     "known": 863,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.2970409956760705,
+     "links_convert": 0.13562498497776687,
+     "links_await": 3.559792006853968,
+     "links": 979,
+     "adjacency": 0.33745900145731866,
+     "walk": 0.22987500415183604,
+     "result": 0.08691599941812456,
+     "adjacency_nodes": 647,
+     "edge_visits": 2904,
+     "reached": 646,
+     "total": 4.732542001875117,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Melanie run a charity race?",
+   "read_ms": 129.47066701599397,
+   "graph_stage_ms": 24.30270900367759,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 859,
+     "setup": 0.10466598905622959,
+     "known": 860,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.613083012169227,
+     "links_convert": 0.02329199924133718,
+     "links_await": 3.760541003430262,
+     "links": 976,
+     "adjacency": 0.22945800446905196,
+     "walk": 0.1844999787863344,
+     "result": 0.07791700772941113,
+     "adjacency_nodes": 644,
+     "edge_visits": 1937,
+     "reached": 643,
+     "total": 4.749417013954371,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Did Melanie make the black and white bowl in the photo?",
+   "read_ms": 165.20562500227243,
+   "graph_stage_ms": 23.742458026390523,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 859,
+     "setup": 0.10083400411531329,
+     "known": 859,
+     "owners": 1,
+     "expandable": 466,
+     "links_sql": 3.2882920058909804,
+     "links_convert": 0.026124995201826096,
+     "links_await": 3.4374579845461994,
+     "links": 978,
+     "adjacency": 0.22187500144355,
+     "walk": 0.21416699746623635,
+     "result": 0.08291698759421706,
+     "adjacency_nodes": 643,
+     "edge_visits": 2556,
+     "reached": 643,
+     "total": 4.444249992957339,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Melanie sign up for a pottery class?",
+   "read_ms": 140.64041699748486,
+   "graph_stage_ms": 29.042750014923513,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 855,
+     "setup": 0.10616699000820518,
+     "known": 855,
+     "owners": 1,
+     "expandable": 468,
+     "links_sql": 3.9541670121252537,
+     "links_convert": 0.1789579982869327,
+     "links_await": 4.271208017598838,
+     "links": 931,
+     "adjacency": 0.17987497267313302,
+     "walk": 0.2535410167183727,
+     "result": 0.09175000013783574,
+     "adjacency_nodes": 606,
+     "edge_visits": 3285,
+     "reached": 606,
+     "total": 5.30554199940525,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What are Caroline's plans for the summer?",
+   "read_ms": 173.40362499817275,
+   "graph_stage_ms": 27.85237500211224,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.12224999954923987,
+     "known": 927,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.725290986243635,
+     "links_convert": 0.18500001169741154,
+     "links_await": 5.0475000170990825,
+     "links": 1417,
+     "adjacency": 0.2346250112168491,
+     "walk": 0.2610829833429307,
+     "result": 0.1437090104445815,
+     "adjacency_nodes": 927,
+     "edge_visits": 3158,
+     "reached": 926,
+     "total": 6.404584011761472,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "In what ways is Caroline participating in the LGBTQ community?",
+   "read_ms": 144.21412500087172,
+   "graph_stage_ms": 31.871332990704104,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 21,
+     "reached_nodes": 931,
+     "setup": 0.14337501488626003,
+     "known": 931,
+     "owners": 1,
+     "expandable": 699,
+     "links_sql": 5.024375015636906,
+     "links_convert": 0.06433299859054387,
+     "links_await": 5.238417012151331,
+     "links": 1420,
+     "adjacency": 0.2440420212224126,
+     "walk": 0.42345799738541245,
+     "result": 0.1473749871365726,
+     "adjacency_nodes": 931,
+     "edge_visits": 4934,
+     "reached": 931,
+     "total": 6.817374989623204,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of books does Caroline have in her library?",
+   "read_ms": 151.64870899752714,
+   "graph_stage_ms": 29.153792012948543,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 926,
+     "setup": 0.12145898654125631,
+     "known": 926,
+     "owners": 1,
+     "expandable": 681,
+     "links_sql": 5.032708024373278,
+     "links_convert": 0.11766699026338756,
+     "links_await": 5.275916977552697,
+     "links": 1415,
+     "adjacency": 0.24375002249144018,
+     "walk": 0.2449589956086129,
+     "result": 0.11670798994600773,
+     "adjacency_nodes": 926,
+     "edge_visits": 2885,
+     "reached": 926,
+     "total": 6.573916994966567,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What would Caroline's political leaning likely be?",
+   "read_ms": 155.88325000135228,
+   "graph_stage_ms": 20.579750009346753,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 925,
+     "total": 0.00012500095181167126,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of painting did Caroline share with Melanie on October 13, 2023?",
+   "read_ms": 141.63770899176598,
+   "graph_stage_ms": 30.643375008367002,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 996,
+     "setup": 0.1336249988526106,
+     "known": 997,
+     "owners": 1,
+     "expandable": 911,
+     "links_sql": 5.834375013364479,
+     "links_convert": 0.15183398500084877,
+     "links_await": 6.130708003183827,
+     "links": 1523,
+     "adjacency": 0.2687090018298477,
+     "walk": 0.48295798478648067,
+     "result": 0.14612500672228634,
+     "adjacency_nodes": 997,
+     "edge_visits": 6134,
+     "reached": 996,
+     "total": 7.909999985713512,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of place does Caroline want to create for people?",
+   "read_ms": 153.39745799428783,
+   "graph_stage_ms": 34.70062499400228,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 926,
+     "setup": 0.11945798178203404,
+     "known": 926,
+     "owners": 1,
+     "expandable": 680,
+     "links_sql": 4.829791985685006,
+     "links_convert": 0.1347920042462647,
+     "links_await": 5.118791974382475,
+     "links": 1415,
+     "adjacency": 0.5375829932745546,
+     "walk": 0.20866701379418373,
+     "result": 0.11320799239911139,
+     "adjacency_nodes": 926,
+     "edge_visits": 2506,
+     "reached": 926,
+     "total": 6.682415987597778,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How does Melanie prioritize self-care?",
+   "read_ms": 167.58962499443442,
+   "graph_stage_ms": 26.38216599007137,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 864,
+     "setup": 0.1060419890563935,
+     "known": 866,
+     "owners": 1,
+     "expandable": 472,
+     "links_sql": 3.407792013604194,
+     "links_convert": 0.03320799442008138,
+     "links_await": 3.5668749769683927,
+     "links": 986,
+     "adjacency": 0.24316698545590043,
+     "walk": 0.1891670108307153,
+     "result": 0.08308299584314227,
+     "adjacency_nodes": 652,
+     "edge_visits": 1962,
+     "reached": 650,
+     "total": 4.590916010783985,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How long has Melanie been creating art?",
+   "read_ms": 132.68666600924917,
+   "graph_stage_ms": 26.827583002159372,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 863,
+     "setup": 0.10591701720841229,
+     "known": 866,
+     "owners": 1,
+     "expandable": 493,
+     "links_sql": 3.4943750069942325,
+     "links_convert": 0.03833399387076497,
+     "links_await": 3.7272920017130673,
+     "links": 966,
+     "adjacency": 0.18766598077490926,
+     "walk": 0.17583402222953737,
+     "result": 0.08558298577554524,
+     "adjacency_nodes": 628,
+     "edge_visits": 1955,
+     "reached": 625,
+     "total": 4.70383299398236,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did the posters at the poetry reading say?",
+   "read_ms": 168.99145900970325,
+   "graph_stage_ms": 57.64049998833798,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 659,
+     "setup": 0.06349998875521123,
+     "known": 662,
+     "owners": 1,
+     "expandable": 20,
+     "links_sql": 0.8020829991437495,
+     "links_convert": 0.02170898369513452,
+     "links_await": 0.9392080246470869,
+     "links": 401,
+     "adjacency": 0.0728330051060766,
+     "walk": 0.12383301509544253,
+     "result": 0.055791984777897596,
+     "adjacency_nodes": 390,
+     "edge_visits": 424,
+     "reached": 387,
+     "total": 1.3050840061623603,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Would Melanie likely enjoy the song \"The Four Seasons\" by Vivaldi?",
+   "read_ms": 220.8857910009101,
+   "graph_stage_ms": 24.894625006709248,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 853,
+     "total": 0.00012500095181167126,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Why are flowers important to Melanie?",
+   "read_ms": 171.5332499879878,
+   "graph_stage_ms": 31.07274998910725,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 855,
+     "setup": 0.10591701720841229,
+     "known": 855,
+     "owners": 1,
+     "expandable": 463,
+     "links_sql": 3.621665993705392,
+     "links_convert": 0.19324998720549047,
+     "links_await": 3.962791000958532,
+     "links": 927,
+     "adjacency": 0.1839580072555691,
+     "walk": 0.17124999430961907,
+     "result": 0.08179200813174248,
+     "adjacency_nodes": 606,
+     "edge_visits": 1892,
+     "reached": 606,
+     "total": 4.91375001729466,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What pets does Melanie have?",
+   "read_ms": 195.24045797879808,
+   "graph_stage_ms": 34.24083400750533,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 857,
+     "setup": 0.10966698755510151,
+     "known": 859,
+     "owners": 1,
+     "expandable": 465,
+     "links_sql": 3.6697500036098063,
+     "links_convert": 0.05112498183734715,
+     "links_await": 3.8729580119252205,
+     "links": 931,
+     "adjacency": 0.47483399976044893,
+     "walk": 0.16270802007056773,
+     "result": 0.08354199235327542,
+     "adjacency_nodes": 612,
+     "edge_visits": 1531,
+     "reached": 610,
+     "total": 5.985750001855195,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "How long has Caroline had her current group of friends for?",
+   "read_ms": 145.6874580180738,
+   "graph_stage_ms": 30.126208992442116,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 929,
+     "setup": 0.12174999574199319,
+     "known": 930,
+     "owners": 1,
+     "expandable": 687,
+     "links_sql": 4.763540986459702,
+     "links_convert": 0.10341699817217886,
+     "links_await": 5.000042001483962,
+     "links": 1418,
+     "adjacency": 0.25025001377798617,
+     "walk": 0.3252500027883798,
+     "result": 0.13508298434317112,
+     "adjacency_nodes": 930,
+     "edge_visits": 4069,
+     "reached": 929,
+     "total": 6.4106250065378845,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did Caroline join a new activist group?",
+   "read_ms": 137.9787499899976,
+   "graph_stage_ms": 29.72104199579917,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 932,
+     "setup": 0.11841702507808805,
+     "known": 934,
+     "owners": 1,
+     "expandable": 690,
+     "links_sql": 4.692292015533894,
+     "links_convert": 0.10487501276656985,
+     "links_await": 4.914791992632672,
+     "links": 1421,
+     "adjacency": 0.23287502699531615,
+     "walk": 0.245749979512766,
+     "result": 0.11900000390596688,
+     "adjacency_nodes": 934,
+     "edge_visits": 2889,
+     "reached": 932,
+     "total": 6.202834018040448,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Would Caroline pursue writing as a career option?",
+   "read_ms": 176.80908300098963,
+   "graph_stage_ms": 27.82154199667275,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 927,
+     "setup": 0.11479100794531405,
+     "known": 928,
+     "owners": 1,
+     "expandable": 683,
+     "links_sql": 4.575375001877546,
+     "links_convert": 0.09362501441501081,
+     "links_await": 4.856625018874183,
+     "links": 1416,
+     "adjacency": 0.23700000019744039,
+     "walk": 0.20924999262206256,
+     "result": 0.11662501492537558,
+     "adjacency_nodes": 928,
+     "edge_visits": 2495,
+     "reached": 927,
+     "total": 6.460167001932859,
+     "outcome": "walked"
+    }
+   ]
+  }
+ ]
+}

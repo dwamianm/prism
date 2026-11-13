@@ -1,0 +1,1735 @@
+{
+ "pack": "/tmp/task26/packs/conv-47",
+ "kind": "locomo",
+ "commit": "56b51d53aa48d0c79a7a6d8b3a94c063273d31d4",
+ "settings": {
+  "memory_mode": "address_first",
+  "fusion": "rrf",
+  "rrf_graph_seed_count": true,
+  "rrf_graph_weight": 0.5,
+  "graph_max_hops": 3,
+  "graph_max_candidates": 150,
+  "graph_seed_words": true
+ },
+ "timed_questions": 20,
+ "repeats": 3,
+ "load_before": [
+  6.84,
+  4.48,
+  4.49
+ ],
+ "load_after": [
+  8.31,
+  5.42,
+  4.84
+ ],
+ "summary": {
+  "reads": 60,
+  "seed_reach_calls": 60,
+  "outcomes": {
+   "walked": 48,
+   "limit": 0,
+   "fewer_than_two_seeds": 12
+  },
+  "total": {
+   "p50": 10.2,
+   "p95": 22.87,
+   "mean": 12.55,
+   "sum": 602.4
+  },
+  "setup": {
+   "p50": 0.21,
+   "p95": 0.35,
+   "mean": 0.23,
+   "sum": 10.9
+  },
+  "links_await": {
+   "p50": 7.98,
+   "p95": 13.48,
+   "mean": 9.1,
+   "sum": 437.0
+  },
+  "links_sql": {
+   "p50": 7.34,
+   "p95": 12.02,
+   "mean": 7.92,
+   "sum": 380.3
+  },
+  "links_convert": {
+   "p50": 0.24,
+   "p95": 0.61,
+   "mean": 0.29,
+   "sum": 13.7
+  },
+  "adjacency": {
+   "p50": 0.4,
+   "p95": 0.75,
+   "mean": 0.44,
+   "sum": 21.3
+  },
+  "walk": {
+   "p50": 0.54,
+   "p95": 1.4,
+   "mean": 1.49,
+   "sum": 71.7
+  },
+  "result": {
+   "p50": 0.24,
+   "p95": 0.38,
+   "mean": 0.28,
+   "sum": 13.4
+  },
+  "seeds_range": [
+   2,
+   5.5,
+   31
+  ],
+  "known_range": [
+   1303,
+   1347.0,
+   1525
+  ],
+  "owners_range": [
+   1,
+   1.0,
+   1
+  ],
+  "expandable_range": [
+   770,
+   842.0,
+   1406
+  ],
+  "links_range": [
+   1329,
+   1649.0,
+   2137
+  ],
+  "adjacency_nodes_range": [
+   986,
+   1200.0,
+   1525
+  ],
+  "edge_visits_range": [
+   2812,
+   3921.5,
+   16642
+  ],
+  "reached_range": [
+   986,
+   1196.0,
+   1523
+  ],
+  "verified_calls": 20,
+  "read_ms": {
+   "p50": 246.1,
+   "p95": 359.6
+  },
+  "graph_stage_ms": {
+   "p50": 45.2,
+   "p95": 65.4
+  }
+ },
+ "limit_count_all_questions": {
+  "questions": 150,
+  "limit": 0,
+  "walked": 137,
+  "fewer_than_two_seeds": 13,
+  "no_seed_reach_call": 0,
+  "limit_expandable": [],
+  "metadata_neighborhood_limit": 0
+ },
+ "per_question": [
+  {
+   "repeat": 0,
+   "question": "When did James volunteer at an organization?",
+   "read_ms": 222.1119999885559,
+   "graph_stage_ms": 54.2641670035664,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 1368,
+     "setup": 0.21795800421386957,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 861,
+     "links_sql": 6.839250010671094,
+     "links_convert": 0.07587499567307532,
+     "links_await": 7.203041022876278,
+     "links": 1898,
+     "adjacency": 0.4464999947231263,
+     "walk": 0.47737499698996544,
+     "result": 0.24858300457708538,
+     "adjacency_nodes": 1370,
+     "edge_visits": 3680,
+     "reached": 1368,
+     "total": 9.669291001046076,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What is the board game where you have to find the imposter that John mentions to James?",
+   "read_ms": 318.83958299295045,
+   "graph_stage_ms": 129.33645898010582,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 31,
+     "reached_nodes": 1523,
+     "setup": 0.40662498213350773,
+     "known": 1525,
+     "owners": 1,
+     "expandable": 1406,
+     "links_sql": 12.053541984641925,
+     "links_convert": 0.1833749993238598,
+     "links_await": 12.569333979627118,
+     "links": 2137,
+     "adjacency": 0.4149579908698797,
+     "walk": 39.19716700329445,
+     "result": 0.48954199883155525,
+     "adjacency_nodes": 1525,
+     "edge_visits": 16642,
+     "reached": 1523,
+     "total": 54.88479201449081,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of assignment was giving John a hard time at work?",
+   "read_ms": 289.80616698390804,
+   "graph_stage_ms": 61.856791988248006,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.24812499759718776,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 6.872458005091175,
+     "links_convert": 0.17379201017320156,
+     "links_await": 7.283540995558724,
+     "links": 1329,
+     "adjacency": 0.2851670142263174,
+     "walk": 0.32420799834653735,
+     "result": 0.14187500346451998,
+     "adjacency_nodes": 986,
+     "edge_visits": 3357,
+     "reached": 986,
+     "total": 9.283249994041398,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What has John mostly found with the metal detector so far?",
+   "read_ms": 250.2892499906011,
+   "graph_stage_ms": 58.61287500010803,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.2437919902149588,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 6.97716698050499,
+     "links_convert": 0.2706660015974194,
+     "links_await": 10.005999996792525,
+     "links": 1329,
+     "adjacency": 0.3716659848578274,
+     "walk": 0.9362919954583049,
+     "result": 0.2202920150011778,
+     "adjacency_nodes": 986,
+     "edge_visits": 2812,
+     "reached": 986,
+     "total": 12.589332996867597,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Which countries has James visited?",
+   "read_ms": 253.4498749882914,
+   "graph_stage_ms": 36.76599997561425,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.000500003807246685,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Did James have a girlfriend during April 2022?",
+   "read_ms": 275.33204198698513,
+   "graph_stage_ms": 37.74433399667032,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.0002499727997928858,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of games is James excited to play with his new video card?",
+   "read_ms": 281.966749986168,
+   "graph_stage_ms": 112.97083302633837,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 19,
+     "reached_nodes": 1375,
+     "setup": 0.22654200438410044,
+     "known": 1380,
+     "owners": 1,
+     "expandable": 879,
+     "links_sql": 8.708375011337921,
+     "links_convert": 0.24033398949541152,
+     "links_await": 10.526875004870817,
+     "links": 1915,
+     "adjacency": 0.4519580106716603,
+     "walk": 0.829625001642853,
+     "result": 0.3237919881939888,
+     "adjacency_nodes": 1380,
+     "edge_visits": 8289,
+     "reached": 1375,
+     "total": 13.375000009546056,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What breed is Daisy, one of James' dogs?",
+   "read_ms": 239.07604199484922,
+   "graph_stage_ms": 62.2216249757912,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 1368,
+     "setup": 0.2598330029286444,
+     "known": 1369,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 7.997874985449016,
+     "links_convert": 0.6505420024041086,
+     "links_await": 8.962457999587059,
+     "links": 1895,
+     "adjacency": 0.4981249803677201,
+     "walk": 0.5585420003626496,
+     "result": 0.2505409938748926,
+     "adjacency_nodes": 1369,
+     "edge_visits": 3914,
+     "reached": 1368,
+     "total": 11.439915979281068,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What does John do to stay informed and constantly learn about game design?",
+   "read_ms": 259.98799997614697,
+   "graph_stage_ms": 103.55754199554212,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 28,
+     "reached_nodes": 1318,
+     "setup": 0.2598330029286444,
+     "known": 1326,
+     "owners": 1,
+     "expandable": 824,
+     "links_sql": 6.578291999176145,
+     "links_convert": 0.20549999317154288,
+     "links_await": 7.159583998145536,
+     "links": 1403,
+     "adjacency": 0.39537501288577914,
+     "walk": 1.399333996232599,
+     "result": 0.2684159844648093,
+     "adjacency_nodes": 1032,
+     "edge_visits": 12971,
+     "reached": 1024,
+     "total": 10.355791979236528,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of classes has James joined?",
+   "read_ms": 228.63958397647366,
+   "graph_stage_ms": 38.737666996894404,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.0003329769242554903,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Which country did James book tickets for in July 2022?",
+   "read_ms": 303.53612499311566,
+   "graph_stage_ms": 57.22841701935977,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1368,
+     "setup": 0.19454199355095625,
+     "known": 1368,
+     "owners": 1,
+     "expandable": 860,
+     "links_sql": 7.348875020397827,
+     "links_convert": 0.24562497856095433,
+     "links_await": 7.860957994125783,
+     "links": 1895,
+     "adjacency": 0.4185830184724182,
+     "walk": 0.5368329875636846,
+     "result": 0.33508401247672737,
+     "adjacency_nodes": 1368,
+     "edge_visits": 3705,
+     "reached": 1368,
+     "total": 10.232832981273532,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Which countries did James visit in July 2022?",
+   "read_ms": 210.32750001177192,
+   "graph_stage_ms": 32.536584010813385,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.000166997779160738,
+     "outcome": "fewer_than_two_seeds",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "Are John and James fans of the same football team?",
+   "read_ms": 332.9597499978263,
+   "graph_stage_ms": 75.56012499844655,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1518,
+     "setup": 0.26516697835177183,
+     "known": 1518,
+     "owners": 1,
+     "expandable": 1391,
+     "links_sql": 11.947124992730096,
+     "links_convert": 0.23179198615252972,
+     "links_await": 12.515707989223301,
+     "links": 2132,
+     "adjacency": 0.6020830187480897,
+     "walk": 0.5412499886006117,
+     "result": 0.25708400062285364,
+     "adjacency_nodes": 1518,
+     "edge_visits": 5973,
+     "reached": 1518,
+     "total": 15.815499995369464,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did John use to play when he was younger to let off steam?",
+   "read_ms": 225.0606669986155,
+   "graph_stage_ms": 58.150208002189174,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.2319590130355209,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 7.183042005635798,
+     "links_convert": 0.2177499991375953,
+     "links_await": 7.644083991181105,
+     "links": 1329,
+     "adjacency": 0.3486250061541796,
+     "walk": 0.29704198823310435,
+     "result": 0.14908300363458693,
+     "adjacency_nodes": 986,
+     "edge_visits": 2817,
+     "reached": 986,
+     "total": 9.661374991992489,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of programs are John's siblings making?",
+   "read_ms": 268.84337500086986,
+   "graph_stage_ms": 47.00441600289196,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1305,
+     "setup": 0.19833300029858947,
+     "known": 1306,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 6.1804169963579625,
+     "links_convert": 0.1926660188473761,
+     "links_await": 6.618125014938414,
+     "links": 1334,
+     "adjacency": 0.26562498533166945,
+     "walk": 0.4269170167390257,
+     "result": 0.1790410024113953,
+     "adjacency_nodes": 990,
+     "edge_visits": 3929,
+     "reached": 989,
+     "total": 8.598625019658357,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What career milestone did John achieve recently in September 2022?",
+   "read_ms": 182.36066700774245,
+   "graph_stage_ms": 42.41508399718441,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.15958299627527595,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 772,
+     "links_sql": 6.092750001698732,
+     "links_convert": 0.2005829883273691,
+     "links_await": 6.45470799645409,
+     "links": 1330,
+     "adjacency": 0.2890000178012997,
+     "walk": 0.2919999824371189,
+     "result": 0.1416669983882457,
+     "adjacency_nodes": 986,
+     "edge_visits": 3358,
+     "reached": 986,
+     "total": 8.03345799795352,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What kind of games has James tried to develop?",
+   "read_ms": 250.7934169843793,
+   "graph_stage_ms": 55.09325000457466,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 1373,
+     "setup": 0.19054199219681323,
+     "known": 1376,
+     "owners": 1,
+     "expandable": 870,
+     "links_sql": 7.201207976322621,
+     "links_convert": 0.22729201009497046,
+     "links_await": 7.632042019395158,
+     "links": 1907,
+     "adjacency": 0.37274998612701893,
+     "walk": 0.55308299488388,
+     "result": 0.2232080150861293,
+     "adjacency_nodes": 1376,
+     "edge_visits": 5980,
+     "reached": 1373,
+     "total": 9.755292005138472,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What did James and Samantha discover they both enjoy at McGee's bar?",
+   "read_ms": 227.6702499948442,
+   "graph_stage_ms": 53.80012499517761,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1368,
+     "setup": 0.19245900330133736,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 7.157207990530878,
+     "links_convert": 0.08383399108424783,
+     "links_await": 7.435624982463196,
+     "links": 1895,
+     "adjacency": 0.6911249947734177,
+     "walk": 0.4661249986384064,
+     "result": 0.3048329963348806,
+     "adjacency_nodes": 1370,
+     "edge_visits": 4860,
+     "reached": 1368,
+     "total": 10.03650002530776,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What gaming equipments did John buy or refurbish?",
+   "read_ms": 381.1904579924885,
+   "graph_stage_ms": 88.35529201314785,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 17,
+     "reached_nodes": 1312,
+     "setup": 0.20962499547749758,
+     "known": 1316,
+     "owners": 1,
+     "expandable": 803,
+     "links_sql": 8.323249989189208,
+     "links_convert": 0.2506669843569398,
+     "links_await": 27.247708989307284,
+     "links": 1365,
+     "adjacency": 0.3379170084372163,
+     "walk": 0.7819579914212227,
+     "result": 0.2300830092281103,
+     "adjacency_nodes": 1005,
+     "edge_visits": 9056,
+     "reached": 1001,
+     "total": 29.580165981315076,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 0,
+   "question": "What happened to John's job situation in 2022?",
+   "read_ms": 421.9721249828581,
+   "graph_stage_ms": 78.52116599678993,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.2277919847983867,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 7.008667016634718,
+     "links_convert": 0.20962499547749758,
+     "links_await": 7.483584020519629,
+     "links": 1329,
+     "adjacency": 0.3423329908400774,
+     "walk": 0.3762920096050948,
+     "result": 0.21908298367634416,
+     "adjacency_nodes": 986,
+     "edge_visits": 3355,
+     "reached": 986,
+     "total": 9.607167012291029,
+     "outcome": "walked",
+     "verified": true
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "When did James volunteer at an organization?",
+   "read_ms": 466.4155830105301,
+   "graph_stage_ms": 73.57958299689926,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 1368,
+     "setup": 0.20295800641179085,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 861,
+     "links_sql": 7.660792005481198,
+     "links_convert": 0.48570800572633743,
+     "links_await": 8.978958008810878,
+     "links": 1898,
+     "adjacency": 0.6221660005394369,
+     "walk": 1.3607089931610972,
+     "result": 0.22470802650786936,
+     "adjacency_nodes": 1370,
+     "edge_visits": 3680,
+     "reached": 1368,
+     "total": 12.348249991191551,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What is the board game where you have to find the imposter that John mentions to James?",
+   "read_ms": 621.5625410259236,
+   "graph_stage_ms": 351.74949999782257,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 31,
+     "reached_nodes": 1523,
+     "setup": 0.38362498162314296,
+     "known": 1525,
+     "owners": 1,
+     "expandable": 1406,
+     "links_sql": 12.181875004898757,
+     "links_convert": 0.1194999786093831,
+     "links_await": 16.710500000044703,
+     "links": 2137,
+     "adjacency": 0.9086249920073897,
+     "walk": 3.7318750109989196,
+     "result": 1.924540993059054,
+     "adjacency_nodes": 1525,
+     "edge_visits": 16642,
+     "reached": 1523,
+     "total": 25.673291995190084,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of assignment was giving John a hard time at work?",
+   "read_ms": 353.9468749950174,
+   "graph_stage_ms": 56.18020799010992,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.24879199918359518,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 8.013291022507474,
+     "links_convert": 0.28229199233464897,
+     "links_await": 11.83558299089782,
+     "links": 1329,
+     "adjacency": 0.5404999828897417,
+     "walk": 0.49670800217427313,
+     "result": 0.29387499671429396,
+     "adjacency_nodes": 986,
+     "edge_visits": 3357,
+     "reached": 986,
+     "total": 14.404249988729134,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What has John mostly found with the metal detector so far?",
+   "read_ms": 245.82549999468029,
+   "graph_stage_ms": 48.6462079861667,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.21541700698435307,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 7.938041992019862,
+     "links_convert": 0.19024999346584082,
+     "links_await": 8.429042005445808,
+     "links": 1329,
+     "adjacency": 0.3168339899275452,
+     "walk": 0.8888750162441283,
+     "result": 0.23641600273549557,
+     "adjacency_nodes": 986,
+     "edge_visits": 2812,
+     "reached": 986,
+     "total": 11.059250013204291,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Which countries has James visited?",
+   "read_ms": 244.27729201852344,
+   "graph_stage_ms": 38.648499990813434,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.00020800507627427578,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Did James have a girlfriend during April 2022?",
+   "read_ms": 318.33979199291207,
+   "graph_stage_ms": 49.33116599568166,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.00029199873097240925,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of games is James excited to play with his new video card?",
+   "read_ms": 248.72441601473838,
+   "graph_stage_ms": 64.96045901440084,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 19,
+     "reached_nodes": 1375,
+     "setup": 0.23370797862298787,
+     "known": 1380,
+     "owners": 1,
+     "expandable": 879,
+     "links_sql": 10.178416996495798,
+     "links_convert": 0.38387501263059676,
+     "links_await": 10.876625019591302,
+     "links": 1915,
+     "adjacency": 0.43004201143048704,
+     "walk": 0.9480419976171106,
+     "result": 0.37791600334458053,
+     "adjacency_nodes": 1380,
+     "edge_visits": 8289,
+     "reached": 1375,
+     "total": 14.049791992874816,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What breed is Daisy, one of James' dogs?",
+   "read_ms": 306.4690830069594,
+   "graph_stage_ms": 49.19099999824539,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 1368,
+     "setup": 0.21374999778345227,
+     "known": 1369,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 8.776625007158145,
+     "links_convert": 0.6037919956725091,
+     "links_await": 9.693750005681068,
+     "links": 1895,
+     "adjacency": 0.538624997716397,
+     "walk": 0.545457995031029,
+     "result": 0.2558750275056809,
+     "adjacency_nodes": 1369,
+     "edge_visits": 3914,
+     "reached": 1368,
+     "total": 12.221416982356459,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What does John do to stay informed and constantly learn about game design?",
+   "read_ms": 233.5931249835994,
+   "graph_stage_ms": 50.83370901411399,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 28,
+     "reached_nodes": 1318,
+     "setup": 0.2536670072004199,
+     "known": 1326,
+     "owners": 1,
+     "expandable": 824,
+     "links_sql": 7.8063340042717755,
+     "links_convert": 0.2981249999720603,
+     "links_await": 8.304125018185005,
+     "links": 1403,
+     "adjacency": 0.7644169963896275,
+     "walk": 1.240832993062213,
+     "result": 0.3635000030044466,
+     "adjacency_nodes": 1032,
+     "edge_visits": 12971,
+     "reached": 1024,
+     "total": 11.949292005738243,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of classes has James joined?",
+   "read_ms": 297.16733397799544,
+   "graph_stage_ms": 36.34054199210368,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.000166997779160738,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Which country did James book tickets for in July 2022?",
+   "read_ms": 259.49566697818227,
+   "graph_stage_ms": 53.98550000973046,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1368,
+     "setup": 0.21179101895540953,
+     "known": 1368,
+     "owners": 1,
+     "expandable": 860,
+     "links_sql": 8.375625009648502,
+     "links_convert": 0.6058340077288449,
+     "links_await": 10.046292009064928,
+     "links": 1895,
+     "adjacency": 0.4409159882925451,
+     "walk": 0.4279169952496886,
+     "result": 0.23150001652538776,
+     "adjacency_nodes": 1368,
+     "edge_visits": 3705,
+     "reached": 1368,
+     "total": 12.2989579977002,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Which countries did James visit in July 2022?",
+   "read_ms": 264.10758300335146,
+   "graph_stage_ms": 45.255167002324015,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.0001659791450947523,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "Are John and James fans of the same football team?",
+   "read_ms": 246.31820901413448,
+   "graph_stage_ms": 54.79391699191183,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1518,
+     "setup": 0.3734579950105399,
+     "known": 1518,
+     "owners": 1,
+     "expandable": 1391,
+     "links_sql": 12.968916998943314,
+     "links_convert": 0.6108749948907644,
+     "links_await": 13.976667018141598,
+     "links": 2132,
+     "adjacency": 0.5022090044803917,
+     "walk": 0.6632499862462282,
+     "result": 0.29475000337697566,
+     "adjacency_nodes": 1518,
+     "edge_visits": 5973,
+     "reached": 1518,
+     "total": 17.65662501566112,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did John use to play when he was younger to let off steam?",
+   "read_ms": 237.14154100161977,
+   "graph_stage_ms": 46.111582982121035,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.18058400019071996,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 6.966665998334065,
+     "links_convert": 0.18500001169741154,
+     "links_await": 7.387332996586338,
+     "links": 1329,
+     "adjacency": 0.6427080079447478,
+     "walk": 0.3167919931001961,
+     "result": 0.1549159933347255,
+     "adjacency_nodes": 986,
+     "edge_visits": 2817,
+     "reached": 986,
+     "total": 9.478166000917554,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of programs are John's siblings making?",
+   "read_ms": 314.5403330272529,
+   "graph_stage_ms": 45.120750000933185,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1305,
+     "setup": 0.2537920081522316,
+     "known": 1306,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 6.677249999484047,
+     "links_convert": 0.27129100635647774,
+     "links_await": 7.276290998561308,
+     "links": 1334,
+     "adjacency": 0.3604580124374479,
+     "walk": 0.4149579908698797,
+     "result": 0.1685839961282909,
+     "adjacency_nodes": 990,
+     "edge_visits": 3929,
+     "reached": 989,
+     "total": 9.32504201773554,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What career milestone did John achieve recently in September 2022?",
+   "read_ms": 250.7335830014199,
+   "graph_stage_ms": 55.84179199649952,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.2477089874446392,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 772,
+     "links_sql": 7.58837498142384,
+     "links_convert": 0.3631250001490116,
+     "links_await": 8.251541992649436,
+     "links": 1330,
+     "adjacency": 0.37541601341217756,
+     "walk": 0.44283398892730474,
+     "result": 0.23933299235068262,
+     "adjacency_nodes": 986,
+     "edge_visits": 3358,
+     "reached": 986,
+     "total": 10.412292002001777,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What kind of games has James tried to develop?",
+   "read_ms": 257.6449579792097,
+   "graph_stage_ms": 47.984042001189664,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 1373,
+     "setup": 0.22158300271257758,
+     "known": 1376,
+     "owners": 1,
+     "expandable": 870,
+     "links_sql": 7.5935409986414015,
+     "links_convert": 0.2715839946176857,
+     "links_await": 8.163041988154873,
+     "links": 1907,
+     "adjacency": 0.7300830038730055,
+     "walk": 0.5780000064987689,
+     "result": 0.2440839889459312,
+     "adjacency_nodes": 1376,
+     "edge_visits": 5980,
+     "reached": 1373,
+     "total": 11.11945800948888,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What did James and Samantha discover they both enjoy at McGee's bar?",
+   "read_ms": 210.6507499993313,
+   "graph_stage_ms": 40.37162501481362,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1368,
+     "setup": 0.17675000708550215,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 7.088249985827133,
+     "links_convert": 0.5329590057954192,
+     "links_await": 7.8139579854905605,
+     "links": 1895,
+     "adjacency": 0.34179200883954763,
+     "walk": 0.44200001866556704,
+     "result": 0.21779097733087838,
+     "adjacency_nodes": 1370,
+     "edge_visits": 4860,
+     "reached": 1368,
+     "total": 10.07570800720714,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What gaming equipments did John buy or refurbish?",
+   "read_ms": 203.34620799985714,
+   "graph_stage_ms": 47.05491597997025,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 17,
+     "reached_nodes": 1312,
+     "setup": 0.20891701569780707,
+     "known": 1316,
+     "owners": 1,
+     "expandable": 803,
+     "links_sql": 8.151208981871605,
+     "links_convert": 0.19479100592434406,
+     "links_await": 8.635624981252477,
+     "links": 1365,
+     "adjacency": 0.8819159993436188,
+     "walk": 1.037084002746269,
+     "result": 0.30495799728669226,
+     "adjacency_nodes": 1005,
+     "edge_visits": 9056,
+     "reached": 1001,
+     "total": 11.97237498126924,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 1,
+   "question": "What happened to John's job situation in 2022?",
+   "read_ms": 235.37337500602007,
+   "graph_stage_ms": 35.23729200242087,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.16487500397488475,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 5.733084020903334,
+     "links_convert": 0.40266598807647824,
+     "links_await": 6.36891700560227,
+     "links": 1329,
+     "adjacency": 0.262040994130075,
+     "walk": 0.31362500158138573,
+     "result": 0.14287501107901335,
+     "adjacency_nodes": 986,
+     "edge_visits": 3355,
+     "reached": 986,
+     "total": 7.985458010807633,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "When did James volunteer at an organization?",
+   "read_ms": 183.53658300475217,
+   "graph_stage_ms": 38.536292006028816,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 4,
+     "reached_nodes": 1368,
+     "setup": 0.1842500059865415,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 861,
+     "links_sql": 6.875166989630088,
+     "links_convert": 0.30858299578540027,
+     "links_await": 7.4773750093299896,
+     "links": 1898,
+     "adjacency": 0.4327500064391643,
+     "walk": 0.3552919952198863,
+     "result": 0.2361249935347587,
+     "adjacency_nodes": 1370,
+     "edge_visits": 3680,
+     "reached": 1368,
+     "total": 9.552583011100069,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What is the board game where you have to find the imposter that John mentions to James?",
+   "read_ms": 256.09495799290016,
+   "graph_stage_ms": 45.26287500630133,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 31,
+     "reached_nodes": 1523,
+     "setup": 0.30262500513345003,
+     "known": 1525,
+     "owners": 1,
+     "expandable": 1406,
+     "links_sql": 10.901750007178634,
+     "links_convert": 0.1589579915162176,
+     "links_await": 11.262500018347055,
+     "links": 2137,
+     "adjacency": 0.42208400554955006,
+     "walk": 1.4031660102773458,
+     "result": 0.37724999128840864,
+     "adjacency_nodes": 1525,
+     "edge_visits": 16642,
+     "reached": 1523,
+     "total": 15.526417002547532,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of assignment was giving John a hard time at work?",
+   "read_ms": 212.15487498557195,
+   "graph_stage_ms": 38.78033300861716,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.20933299674652517,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 6.462666991865262,
+     "links_convert": 0.22033299319446087,
+     "links_await": 6.905332993483171,
+     "links": 1329,
+     "adjacency": 0.30645899823866785,
+     "walk": 0.30625000363215804,
+     "result": 0.16075000166893005,
+     "adjacency_nodes": 986,
+     "edge_visits": 3357,
+     "reached": 986,
+     "total": 8.651541982544586,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What has John mostly found with the metal detector so far?",
+   "read_ms": 256.35470799170434,
+   "graph_stage_ms": 42.769167019287124,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.18195799202658236,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 6.771499989554286,
+     "links_convert": 0.6622920045629144,
+     "links_await": 7.731791993137449,
+     "links": 1329,
+     "adjacency": 0.3559589968062937,
+     "walk": 0.49129099352285266,
+     "result": 0.16987501294352114,
+     "adjacency_nodes": 986,
+     "edge_visits": 2812,
+     "reached": 986,
+     "total": 9.712042025057599,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Which countries has James visited?",
+   "read_ms": 179.68708300031722,
+   "graph_stage_ms": 32.395082991570234,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 8.300412446260452e-05,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Did James have a girlfriend during April 2022?",
+   "read_ms": 184.07341701094992,
+   "graph_stage_ms": 27.986791013972834,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.000166997779160738,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of games is James excited to play with his new video card?",
+   "read_ms": 304.3577919888776,
+   "graph_stage_ms": 41.6034160007257,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 19,
+     "reached_nodes": 1375,
+     "setup": 0.19925000378862023,
+     "known": 1380,
+     "owners": 1,
+     "expandable": 879,
+     "links_sql": 7.327208993956447,
+     "links_convert": 0.24016600218601525,
+     "links_await": 7.765207992633805,
+     "links": 1915,
+     "adjacency": 0.37258301745168865,
+     "walk": 0.7211249903775752,
+     "result": 0.25541699142195284,
+     "adjacency_nodes": 1380,
+     "edge_visits": 8289,
+     "reached": 1375,
+     "total": 10.162374994251877,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What breed is Daisy, one of James' dogs?",
+   "read_ms": 229.78462500032037,
+   "graph_stage_ms": 43.029833992477506,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 9,
+     "reached_nodes": 1368,
+     "setup": 0.19666700973175466,
+     "known": 1369,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 7.728958007646725,
+     "links_convert": 0.0941669859457761,
+     "links_await": 8.096583012957126,
+     "links": 1895,
+     "adjacency": 0.37850000080652535,
+     "walk": 0.41354200220666826,
+     "result": 0.2278749889228493,
+     "adjacency_nodes": 1369,
+     "edge_visits": 3914,
+     "reached": 1368,
+     "total": 10.161832993617281,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What does John do to stay informed and constantly learn about game design?",
+   "read_ms": 230.37637502420694,
+   "graph_stage_ms": 38.475749985082075,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 28,
+     "reached_nodes": 1318,
+     "setup": 0.19274998339824378,
+     "known": 1326,
+     "owners": 1,
+     "expandable": 824,
+     "links_sql": 6.340458989143372,
+     "links_convert": 0.1618750102352351,
+     "links_await": 6.646333000389859,
+     "links": 1403,
+     "adjacency": 0.29266701312735677,
+     "walk": 0.9477499988861382,
+     "result": 0.3490000090096146,
+     "adjacency_nodes": 1032,
+     "edge_visits": 12971,
+     "reached": 1024,
+     "total": 9.365124977193773,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of classes has James joined?",
+   "read_ms": 191.09479198232293,
+   "graph_stage_ms": 29.563333024270833,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.00020800507627427578,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Which country did James book tickets for in July 2022?",
+   "read_ms": 252.8578329947777,
+   "graph_stage_ms": 43.75816599349491,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1368,
+     "setup": 0.23137498646974564,
+     "known": 1368,
+     "owners": 1,
+     "expandable": 860,
+     "links_sql": 7.6825409778393805,
+     "links_convert": 0.48433401389047503,
+     "links_await": 8.344708010554314,
+     "links": 1895,
+     "adjacency": 0.38150002365000546,
+     "walk": 0.38449998828582466,
+     "result": 0.21595900761894882,
+     "adjacency_nodes": 1368,
+     "edge_visits": 3705,
+     "reached": 1368,
+     "total": 10.59945800807327,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Which countries did James visit in July 2022?",
+   "read_ms": 180.60933402739465,
+   "graph_stage_ms": 30.77374998247251,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 1,
+     "reached_nodes": 1364,
+     "total": 0.00016600824892520905,
+     "outcome": "fewer_than_two_seeds"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "Are John and James fans of the same football team?",
+   "read_ms": 217.1031670004595,
+   "graph_stage_ms": 51.22416699305177,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1518,
+     "setup": 0.2519999979995191,
+     "known": 1518,
+     "owners": 1,
+     "expandable": 1391,
+     "links_sql": 11.327249987516552,
+     "links_convert": 0.21179101895540953,
+     "links_await": 11.717916000634432,
+     "links": 2132,
+     "adjacency": 0.42179200681857765,
+     "walk": 0.5524580192286521,
+     "result": 0.2611669769976288,
+     "adjacency_nodes": 1518,
+     "edge_visits": 5973,
+     "reached": 1518,
+     "total": 14.558833005139604,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did John use to play when he was younger to let off steam?",
+   "read_ms": 232.8530830272939,
+   "graph_stage_ms": 39.193709002574906,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 2,
+     "reached_nodes": 1303,
+     "setup": 0.17012498574331403,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 771,
+     "links_sql": 6.231292005395517,
+     "links_convert": 0.16270799096673727,
+     "links_await": 6.557582993991673,
+     "links": 1329,
+     "adjacency": 0.2550839853938669,
+     "walk": 0.6474580150097609,
+     "result": 0.14541699783876538,
+     "adjacency_nodes": 986,
+     "edge_visits": 2817,
+     "reached": 986,
+     "total": 8.510957995895296,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of programs are John's siblings making?",
+   "read_ms": 216.67645798879676,
+   "graph_stage_ms": 42.51516697695479,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 5,
+     "reached_nodes": 1305,
+     "setup": 0.16862497432157397,
+     "known": 1306,
+     "owners": 1,
+     "expandable": 781,
+     "links_sql": 8.073292003246024,
+     "links_convert": 0.20366700482554734,
+     "links_await": 8.43062499188818,
+     "links": 1334,
+     "adjacency": 0.3066249773837626,
+     "walk": 0.3567080129869282,
+     "result": 0.15174999134615064,
+     "adjacency_nodes": 990,
+     "edge_visits": 3929,
+     "reached": 989,
+     "total": 10.127999994438142,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What career milestone did John achieve recently in September 2022?",
+   "read_ms": 241.4480420120526,
+   "graph_stage_ms": 44.23299999325536,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.26037500356324017,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 772,
+     "links_sql": 6.815375003498048,
+     "links_convert": 0.23233299725688994,
+     "links_await": 7.277374999830499,
+     "links": 1330,
+     "adjacency": 0.6133750139269978,
+     "walk": 0.5053339991718531,
+     "result": 0.1928329875227064,
+     "adjacency_nodes": 986,
+     "edge_visits": 3358,
+     "reached": 986,
+     "total": 9.658916009357199,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What kind of games has James tried to develop?",
+   "read_ms": 212.5402919773478,
+   "graph_stage_ms": 47.48933302471414,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 12,
+     "reached_nodes": 1373,
+     "setup": 0.2042909909505397,
+     "known": 1376,
+     "owners": 1,
+     "expandable": 870,
+     "links_sql": 7.158166001318023,
+     "links_convert": 0.3615840105339885,
+     "links_await": 7.702291011810303,
+     "links": 1907,
+     "adjacency": 0.3535830182954669,
+     "walk": 0.5936670058872551,
+     "result": 0.3780829720199108,
+     "adjacency_nodes": 1376,
+     "edge_visits": 5980,
+     "reached": 1373,
+     "total": 10.077874991111457,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What did James and Samantha discover they both enjoy at McGee's bar?",
+   "read_ms": 252.61875000433065,
+   "graph_stage_ms": 51.217875006841496,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 6,
+     "reached_nodes": 1368,
+     "setup": 0.20150002092123032,
+     "known": 1370,
+     "owners": 1,
+     "expandable": 866,
+     "links_sql": 8.944750006776303,
+     "links_convert": 0.25866698706522584,
+     "links_await": 9.425541997188702,
+     "links": 1895,
+     "adjacency": 0.40862499736249447,
+     "walk": 1.1159160058014095,
+     "result": 0.2367089909967035,
+     "adjacency_nodes": 1370,
+     "edge_visits": 4860,
+     "reached": 1368,
+     "total": 12.342208006884903,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What gaming equipments did John buy or refurbish?",
+   "read_ms": 353.9602500095498,
+   "graph_stage_ms": 46.0682499979157,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 17,
+     "reached_nodes": 1312,
+     "setup": 0.20029200823046267,
+     "known": 1316,
+     "owners": 1,
+     "expandable": 803,
+     "links_sql": 6.734416994731873,
+     "links_convert": 0.27158300508745015,
+     "links_await": 7.225416979053989,
+     "links": 1365,
+     "adjacency": 0.5828340072184801,
+     "walk": 0.734750006813556,
+     "result": 0.21329100127331913,
+     "adjacency_nodes": 1005,
+     "edge_visits": 9056,
+     "reached": 1001,
+     "total": 9.7332920122426,
+     "outcome": "walked"
+    }
+   ]
+  },
+  {
+   "repeat": 2,
+   "question": "What happened to John's job situation in 2022?",
+   "read_ms": 270.73462499538437,
+   "graph_stage_ms": 42.86291598691605,
+   "graph_seed_reach_metadata": null,
+   "calls": [
+    {
+     "seeds": 3,
+     "reached_nodes": 1303,
+     "setup": 0.18266699044033885,
+     "known": 1303,
+     "owners": 1,
+     "expandable": 770,
+     "links_sql": 6.7378749954514205,
+     "links_convert": 0.18954198458231986,
+     "links_await": 7.106582983396947,
+     "links": 1329,
+     "adjacency": 0.26912501198239625,
+     "walk": 0.3262920072302222,
+     "result": 0.15887498739175498,
+     "adjacency_nodes": 986,
+     "edge_visits": 3355,
+     "reached": 986,
+     "total": 8.75904198619537,
+     "outcome": "walked"
+    }
+   ]
+  }
+ ]
+}
