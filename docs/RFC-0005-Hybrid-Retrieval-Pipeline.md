@@ -637,8 +637,12 @@ score(obj) =
   score. The walk reads the links of the nodes it can continue from, never
   those of an owner entity the question does not name, and is skipped when more
   than 5,000 nodes would be read; the response metadata's `graph_seed_reach`
-  then says `neighborhood_limit`, or `backend_error` when the read failed, and
-  every graph candidate is kept. Only the graph search's kept candidates
+  then says `neighborhood_limit` and a warning is logged (`backend_error` when
+  the read failed), and every graph candidate is kept. The count is measured
+  for the kept candidates only, from both ends of each path: a seed and a
+  candidate are one hop apart when linked, two when a node that is not an
+  owner entity links to both, and three when such nodes next to each are
+  linked. Only the graph search's kept candidates
   (`graph_max_candidates`) can join the list, and a first-person question has at
   most one seed. The hop count list stays opt-in. With `enable_relation_routing`
   (off by default, dwamianm/prism#399, `docs/RELATIONS.md`) a question that asks

@@ -9,6 +9,8 @@ graph term; evidence projection, which replaces a claim with its source, keeps i
 """
 
 import json
+import logging
+import random
 import warnings
 from types import SimpleNamespace
 from uuid import UUID, uuid4
@@ -203,13 +205,37 @@ class TestSeedReach:
         # The owner is still reached through the records linked to it, and the owner's own claim is not.
         assert (reach["alex"], reach["learning"], reach["cities"]) == ((2, 4, 2), None, (2, 4, 1))
 
-    async def test_a_walk_past_the_node_limit_reads_nothing(self, monkeypatch):
+    async def test_a_walk_past_the_node_limit_reads_nothing(self, monkeypatch, caplog):
         nodes, store = trip_graph(OWNER_MARKS["named owner"])
         asked = record_reads(store)
         monkeypatch.setattr(candidates_module, "SEED_REACH_MAX_NODES", 3)
         known = {str(node.id): node for node in nodes.values()}
-        assert await _seed_reach(store, [nodes["japan"], nodes["jordan"]], known, 3) is None
+        with caplog.at_level(logging.WARNING, logger=candidates_module.__name__):
+            assert await _seed_reach(store, [nodes["japan"], nodes["jordan"]], known, 3) is None
         assert asked == []
+        # One warning says the count was turned off, and why.
+        assert [record.getMessage() for record in caplog.records if record.name == candidates_module.__name__] == [
+            "Graph seed reach skipped: 7 nodes would be read, more than the limit of 3; "
+            "no graph candidate gets a seed count rank"]
+
+    @pytest.mark.parametrize("shape", ["walk_links", "get_edges"])
+    @pytest.mark.parametrize("max_hops", [1, 2, 3])
+    async def test_the_count_of_each_target_is_a_plain_walks_on_random_graphs(self, shape, max_hops):
+        # Small random graphs with cycles, links from a node to itself, repeated links, owner entities (some of them
+        # seeds), a fact that carries an owner mark, links to nodes the search did not return, seeds among the
+        # targets and targets with no link at all.
+        for number in range(150):
+            rng = random.Random(f"{shape}:{max_hops}:{number}")
+            nodes, links, seeds, targets = random_graph(rng)
+            store = (LinkStore if shape == "walk_links" else EdgeStore)(links)
+            known = {str(node.id): node for node in nodes}
+            expected = bfs_reach(seeds, known, links, max_hops)
+            depths = search_depths(seeds, known, links, max_hops)
+            for given in (None, depths):
+                assert await _seed_reach(store, seeds, known, max_hops, given) == expected
+                found = await _seed_reach(store, seeds, known, max_hops, given, targets=targets)
+                assert found == {node_id: expected[node_id] for node_id in targets if node_id in expected}
+
 
     async def test_an_alias_no_one_accepted_is_not_a_path(self):
         nodes, store = trip_graph(OWNER_MARKS["named owner"])
@@ -220,6 +246,91 @@ class TestSeedReach:
         assert reach["learning"] == (1, 1, 1)
         store.edges[-1] = store.edges[-1].model_copy(update={"metadata": {"relation": "alias", "identity_verified": True}})
         assert (await reach_of(nodes, store, ("japan", "rust")))["learning"] == (2, 3, 1)
+
+
+
+class LinkStore(EdgeStore):
+    """A store that walks from all seeds at once, so the count reads two ids per link (``walk_links``).
+
+    It also returns the links from a node to itself, which the stores leave out, so the count is shown to skip them.
+    """
+
+    async def walk_from_seeds(self, *_args, **_kwargs):
+        raise AssertionError("the seed reach count does not walk")
+
+    async def walk_links(self, node_ids):
+        return [(str(edge.source_id), str(edge.target_id)) for edge in await self.get_edges(node_ids=node_ids)]
+
+
+def random_graph(rng):
+    """Nodes the search returned, links among them and a few outside nodes, two to four seeds, and targets."""
+    marks = list(OWNER_MARKS.values())
+    nodes = []
+    for index in range(rng.randint(3, 12)):
+        kind = rng.random()
+        if kind < .2:
+            nodes.append(entity(f"owner {index}", **rng.choice(marks)))
+        elif kind < .25:
+            nodes.append(fact(f"fact {index}").model_copy(update={"metadata": dict(rng.choice(marks))}))
+        elif kind < .6:
+            nodes.append(entity(f"entity {index}"))
+        else:
+            nodes.append(fact(f"fact {index}"))
+    outside = [fact(f"outside {index}") for index in range(2)]
+    every = nodes + outside
+    links = [(rng.choice(every), rng.choice(every), EdgeType.RELATES_TO, None)
+             for _ in range(rng.randint(0, 3 * len(nodes)))]
+    seeds = rng.sample(nodes, min(len(nodes), rng.randint(2, 4)))
+    isolated = fact("isolated")
+    nodes.append(isolated)
+    targets = [str(node.id) for node in rng.sample(every, rng.randint(1, len(every)))]
+    targets += [str(isolated.id), str(seeds[0].id), str(uuid4())]
+    return nodes, links, seeds, targets
+
+
+def neighbors(known, links):
+    linked = {node_id: set() for node_id in known}
+    for source, target, _kind, _metadata in links:
+        source, target = str(source.id), str(target.id)
+        if source != target and source in known and target in known:
+            linked[source].add(target)
+            linked[target].add(source)
+    return linked
+
+
+def bfs_reach(seeds, known, links, max_hops):
+    """The oracle: a walk from each seed, breadth first, that never continues through an owner other than itself."""
+    from prme.ingestion.owner_name import OWNER_NAME_KEY
+
+    linked = neighbors(known, links)
+    owners = {node_id for node_id, node in known.items() if candidates_module._is_owner_entity(node, OWNER_NAME_KEY)}
+    hops = {}
+    for seed in seeds:
+        seed_id = str(seed.id)
+        seen, frontier = {seed_id}, [seed_id]
+        for depth in range(1, max_hops + 1):
+            reached = []
+            for node_id in frontier:
+                if node_id in owners and node_id != seed_id:
+                    continue
+                for other in sorted(linked[node_id] - seen):
+                    seen.add(other)
+                    reached.append(other)
+                    hops.setdefault(other, {})[seed_id] = depth
+            frontier = reached
+    return {node_id: (len(by_seed), sum(by_seed.values()), min(by_seed.values())) for node_id, by_seed in hops.items()}
+
+
+def search_depths(seeds, known, links, max_hops):
+    """Each node's fewest hops from any seed within ``max_hops``, owners or not, as the graph search gives them."""
+    linked = neighbors(known, links)
+    depths = {str(seed.id): 0 for seed in seeds}
+    frontier = list(depths)
+    for depth in range(1, max_hops + 1):
+        frontier = [other for node_id in frontier for other in sorted(linked[node_id]) if other not in depths
+                    and depths.setdefault(other, depth) == depth]
+    return depths
+
 
 
 # --- Session context ---------------------------------------------------------------------------------------------

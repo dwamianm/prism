@@ -201,6 +201,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   candidate module; receipts made before the change still replay. A store without the method, such as the privacy
   read view, and a time bound without a time zone take the earlier path. No setting changes, and stored memories are
   not rewritten (`benchmarks/results/research/2026-11-12/GRAPH-CANDIDATE-CUT.md`).
+- The seed reach count of the graph candidate stage (`scoring.rrf_graph_seed_count`) is measured for the stage's kept
+  candidates only (at most `packing.graph_max_candidates`), instead of for every node a walk from each seed reached.
+  It reads the same links after the same 5,000 node limit check, and finds the fewest hops from each seed to each kept
+  candidate from both ends: one hop when they are linked, two when a node that is not an owner entity links to both,
+  and three when such nodes next to each are linked. On the m3 pack (20,500 stated facts) a question that runs the
+  count reads 100 ms faster at the median, and the counts, the ranked results, the packed contexts and the retrieval
+  receipts are the same as before. When the limit turns the count off, a warning is now logged; the response metadata
+  still says `graph_seed_reach: neighborhood_limit`. The receipt's `source_files_sha256` changes, because the hash
+  covers the candidate module; receipts made before the change still replay. No setting changes, the limit is
+  unchanged, and stored memories are not rewritten (`benchmarks/results/research/2026-11-12/SEED-REACH-COST.md`).
 
 ## [0.17.0a7] - 2026-11-10
 
