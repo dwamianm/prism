@@ -23,7 +23,15 @@ import duckdb
 from prme.privacy.journals import protected_mutation, journal_deadline
 from prme.models.edges import MemoryEdge
 from prme.storage._threading import run_to_completion
-from prme.storage.seed_walk import WalkedNode, seed_walk_sql, walk_links_sql, walked_nodes
+from prme.storage.seed_walk import (
+    WalkCandidates,
+    WalkedNode,
+    seed_candidates_sql,
+    seed_walk_sql,
+    walk_candidates_result,
+    walk_links_sql,
+    walked_nodes,
+)
 from prme.models.nodes import MemoryNode
 from prme.storage.organizer_merge import MergeResult
 from prme.storage.owner_reads import (
@@ -1161,6 +1169,43 @@ class DuckPGQGraphStore:
 
         def read() -> list[tuple[WalkedNode, int]]:
             return walked_nodes(self._conn.execute(query, params).fetchall(), epoch=True)
+
+        async with self._conn_lock:
+            return await run_to_completion(read)
+
+    async def walk_candidates(
+        self,
+        seed_ids: list[str],
+        *,
+        max_hops: int,
+        valid_at: datetime | None = None,
+        user_id: str,
+        limit: int,
+        scopes: list[Scope] | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
+    ) -> WalkCandidates:
+        """The graph candidates of one walk from all seeds, filtered, ordered and cut in one query.
+
+        ``walk_from_seeds`` with the graph candidate stage's filters, its sort
+        key and its cut to ``limit`` done in the SQL
+        (``prme.storage.seed_walk.seed_candidates_sql``). Returns the kept ids
+        in candidate order and every node that passed the filters with its
+        fewest hops; read full records for the kept ids with ``get_nodes``.
+        """
+        if not seed_ids:
+            return WalkCandidates([], {}, {})
+        query, extra = seed_candidates_sql(
+            "duckdb", with_valid_at=valid_at is not None, limit=limit, scopes=scopes,
+            time_from=time_from, time_to=time_to,
+        )
+        params: list = [user_id, max_hops, list(seed_ids)]
+        if valid_at is not None:
+            params.append(valid_at)
+        params.extend(extra)
+
+        def read() -> WalkCandidates:
+            return walk_candidates_result(self._conn.execute(query, params).fetchall())
 
         async with self._conn_lock:
             return await run_to_completion(read)

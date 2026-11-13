@@ -55,6 +55,11 @@ class CandidateDiagnostics:
 # list is short-listed to the semantic top 10 anyway.
 SEED_REACH_MAX_NODES = 5000
 
+# graph_proximity by fewest hops from a seed.
+_HOP_PROXIMITY = {1: 1.0, 2: 0.7, 3: 0.4}
+# Node types exempt from temporal filtering (persistent knowledge).
+_TEMPORAL_EXEMPT_TYPES = frozenset({NodeType.ENTITY, NodeType.PREFERENCE})
+
 
 def normalize_bm25_scores(results: list[dict]) -> list[dict]:
     """Normalize BM25 scores to [0, 1] via min-max within the result set.
@@ -271,6 +276,69 @@ def _walks_once(graph_store: GraphStore) -> bool:
     return getattr(type(graph_store), "walk_from_seeds", None) is not None
 
 
+class _ReachedNode:
+    """A reached node as ``_seed_reach`` reads it: its type and, for an entity, its metadata."""
+
+    __slots__ = ("node_type", "metadata")
+
+    def __init__(self, node_type: NodeType | None, metadata: dict | None) -> None:
+        self.node_type = node_type
+        self.metadata = metadata
+
+
+# ``_seed_reach`` reads only whether a node is an entity that names the owner,
+# so every reached node that is not an entity shares this one stand-in.
+_NOT_ENTITY = _ReachedNode(None, None)
+
+
+async def _walk_candidates(
+    graph_store: GraphStore,
+    seed_ids: list[str],
+    config: PackingConfig,
+    *,
+    max_hops: int,
+    valid_at: datetime | None,
+    user_id: str,
+    scope: list[Scope] | None,
+    time_from: datetime | None,
+    time_to: datetime | None,
+) -> tuple[list[dict], dict, dict[str, int]] | None:
+    """The graph candidates from the store's one query (``walk_candidates``), or None without it.
+
+    DuckDB and PostgreSQL walk from all seeds and filter, order and cut the
+    reached nodes in the same SQL (``prme.storage.seed_walk``), so the stage
+    reads five narrow columns per reached node and full records only for the
+    kept ones. The candidates, the reached nodes for ``_seed_reach`` and their
+    fewest hops are the ones ``_walked_candidates`` gives. Any other store,
+    such as the privacy read view, returns None and keeps that path. So does
+    a time bound with no time zone, which that path compares with the stored
+    times as before.
+    """
+    if getattr(type(graph_store), "walk_candidates", None) is None:
+        return None
+    if any(bound is not None and bound.utcoffset() is None for bound in (time_from, time_to)):
+        return None
+    found = await graph_store.walk_candidates(
+        seed_ids, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
+        limit=config.graph_max_candidates, scopes=scope or None, time_from=time_from, time_to=time_to,
+    )
+    records = {}
+    if found.kept:
+        records = {
+            str(node.id): node
+            for node in await graph_store.get_nodes([node_id for node_id, _depth in found.kept], user_id=user_id)
+        }
+    candidates = [
+        {"node": records[node_id], "graph_proximity": _HOP_PROXIMITY.get(depth, 0.4)}
+        for node_id, depth in found.kept
+        if node_id in records
+    ]
+    reached: dict = dict.fromkeys(found.depths, _NOT_ENTITY)
+    for node_id, metadata in found.entities.items():
+        reached[node_id] = _ReachedNode(NodeType.ENTITY, metadata)
+    return candidates, reached, found.depths
+
+
 async def _graph_walks(
     graph_store: GraphStore,
     seed_ids: list[str],
@@ -301,59 +369,29 @@ async def _graph_walks(
         )
 
 
-async def _generate_graph_candidates(
-    analysis: QueryAnalysis,
+async def _walked_candidates(
     graph_store: GraphStore,
-    user_id: str,
+    seed_ids: list[str],
     config: PackingConfig,
     *,
-    scope: list[Scope] | None = None,
-    time_from: datetime | None = None,
-    time_to: datetime | None = None,
-    seed_reach: bool = False,
-    diagnostics: CandidateDiagnostics | None = None,
-) -> list[dict]:
-    """Generate candidates from graph neighborhood traversal.
+    max_hops: int,
+    valid_at: datetime | None,
+    user_id: str,
+    scope: list[Scope] | None,
+    time_from: datetime | None,
+    time_to: datetime | None,
+) -> tuple[list[dict], dict, dict[str, int]]:
+    """The graph candidates from ``_graph_walks``, filtered, ordered and cut in Python.
 
-    Seeds are the entity nodes the question names (see
-    ``_find_seed_entities``; matched in SQL via content LIKE filters, so only
-    matching entity nodes are hydrated). ``_graph_walks`` gives each reached
-    node's fewest hops from a seed, for graph_proximity scoring, and only
-    the kept candidates become full records.
-
-    Scope and temporal filters are forwarded to query_nodes() for seed
-    discovery and used for post-filter on neighborhood results, and the
-    walk never steps onto a node another user owns.
-
-    Returns list of dicts: {node: MemoryNode, graph_proximity: float}. With
-    ``seed_reach`` (``ScoringWeights.rrf_graph_seed_count``) each dict also
-    holds ``graph_seed_reach``, from ``_seed_reach``, or None for a node no
-    seed reaches without passing through the owner's entity. When the walk is
-    skipped or its read fails, every dict holds None and ``diagnostics``
-    records why.
+    The path of a store without ``walk_candidates``, such as the privacy read
+    view. Returns the candidates, the reached nodes that passed the filters
+    for ``_seed_reach`` and their fewest hops.
     """
-    seed_nodes = await _find_seed_entities(
-        analysis, graph_store, user_id, scope, config.graph_seed_words,
-    )
-    seed_ids = [str(node.id) for node in seed_nodes]
-
-    if not seed_ids:
-        return []
-
-    # Determine valid_at for neighborhood queries if temporal filter is set.
-    valid_at = time_from if time_from is not None else time_to
-
     # For each seed, determine hop distances via a single depth-aware
     # neighborhood query (one traversal instead of one per hop level).
     node_proximity: dict[str, float] = {}  # node_id -> best proximity
     node_depth: dict[str, int] = {}  # node_id -> fewest hops from a seed
     node_map: dict[str, MemoryNode] = {}  # node_id -> MemoryNode
-
-    # Node types exempt from temporal filtering (persistent knowledge).
-    _TEMPORAL_EXEMPT_TYPES = {NodeType.ENTITY, NodeType.PREFERENCE}
-
-    max_hops = min(config.graph_max_hops, 3)
-    _HOP_PROXIMITY = {1: 1.0, 2: 0.7, 3: 0.4}
 
     async for seed_id, neighbors in _graph_walks(
         graph_store, seed_ids, max_hops=max_hops, valid_at=valid_at, user_id=user_id,
@@ -416,6 +454,61 @@ async def _generate_graph_candidates(
             for c in candidates
             if not isinstance(c["node"], WalkedNode) or str(c["node"].id) in records
         ]
+    return candidates, node_map, node_depth
+
+
+async def _generate_graph_candidates(
+    analysis: QueryAnalysis,
+    graph_store: GraphStore,
+    user_id: str,
+    config: PackingConfig,
+    *,
+    scope: list[Scope] | None = None,
+    time_from: datetime | None = None,
+    time_to: datetime | None = None,
+    seed_reach: bool = False,
+    diagnostics: CandidateDiagnostics | None = None,
+) -> list[dict]:
+    """Generate candidates from graph neighborhood traversal.
+
+    Seeds are the entity nodes the question names (see
+    ``_find_seed_entities``; matched in SQL via content LIKE filters, so only
+    matching entity nodes are hydrated). On DuckDB and PostgreSQL one store
+    query walks from every seed and filters, orders and cuts the reached
+    nodes (``_walk_candidates``); any other store walks with ``_graph_walks``
+    and does that work in Python (``_walked_candidates``). Both give each
+    kept node's fewest hops from a seed, for graph_proximity scoring, and
+    only the kept candidates become full records.
+
+    Scope and temporal filters are forwarded to query_nodes() for seed
+    discovery and used for post-filter on neighborhood results, and the
+    walk never steps onto a node another user owns.
+
+    Returns list of dicts: {node: MemoryNode, graph_proximity: float}. With
+    ``seed_reach`` (``ScoringWeights.rrf_graph_seed_count``) each dict also
+    holds ``graph_seed_reach``, from ``_seed_reach``, or None for a node no
+    seed reaches without passing through the owner's entity. When the walk is
+    skipped or its read fails, every dict holds None and ``diagnostics``
+    records why.
+    """
+    seed_nodes = await _find_seed_entities(
+        analysis, graph_store, user_id, scope, config.graph_seed_words,
+    )
+    seed_ids = [str(node.id) for node in seed_nodes]
+
+    if not seed_ids:
+        return []
+
+    # Determine valid_at for neighborhood queries if temporal filter is set.
+    valid_at = time_from if time_from is not None else time_to
+
+    max_hops = min(config.graph_max_hops, 3)
+    walk = dict(max_hops=max_hops, valid_at=valid_at, user_id=user_id, scope=scope,
+                time_from=time_from, time_to=time_to)
+    found = await _walk_candidates(graph_store, seed_ids, config, **walk)
+    if found is None:
+        found = await _walked_candidates(graph_store, seed_ids, config, **walk)
+    candidates, node_map, node_depth = found
     if seed_reach:
         try:
             reach = await _seed_reach(graph_store, seed_nodes, node_map, max_hops, node_depth)

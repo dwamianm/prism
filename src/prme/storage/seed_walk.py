@@ -32,6 +32,16 @@ JSON and times.
 (``_seed_reach``) as two ids each, with the same edge rule, instead of full
 edge records: at 20,500 stated facts that read made about 45,000 edges into
 records.
+
+``walk_candidates`` runs the same walk and also does, in the same query, the
+work the graph candidate stage did in Python on every reached node: it leaves
+out an unindexed hierarchical summary, a node outside the requested scopes
+and a node outside the time window (an entity or a preference is never out
+of the window), orders the rest by the stage's sort key (confidence, then
+creation time, newest first, then id) and marks the first ``limit``. It
+returns five narrow columns per node instead of a ``WalkedNode``: on the m3
+pack (20,500 stated facts) a question with 25 seeds reaches about 38,000
+nodes, and the stage keeps 150 (research/graph-read-cost-2026-11, P8).
 """
 
 from __future__ import annotations
@@ -41,6 +51,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
+from prme.index_policy import HIERARCHICAL_SUMMARY_KIND, unindexed_summary_sql
 from prme.types import NodeType, Scope
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -173,6 +184,115 @@ def seed_walk_sql(dialect: Literal["duckdb", "postgres"], *, with_valid_at: bool
           AND n.lifecycle_state IN ('tentative', 'stable', 'contested')
           {valid_at}
     """
+
+
+# The walk's columns, named so ``seed_candidates_sql`` can filter and order them.
+_WALK_COLUMNS = "node_id, depth, node_type, user_id, scope, confidence, created_at, valid_from, valid_to, metadata"
+
+
+@dataclass(frozen=True, slots=True)
+class WalkCandidates:
+    """What the graph candidate stage reads from one walk (``walk_candidates``).
+
+    ``kept`` holds the ids of the first ``limit`` nodes in candidate order,
+    each with its fewest hops. ``depths`` holds every reached node that passed
+    the filters, with its fewest hops, for the seed reach count. ``entities``
+    holds the metadata of the entities among them, which names the memory's
+    owner (``_seed_reach``).
+    """
+
+    kept: list[tuple[str, int]]
+    depths: dict[str, int]
+    entities: dict[str, dict | None]
+
+
+def _instant(dialect: Literal["duckdb", "postgres"], value: datetime) -> Any:
+    """A time bound as the walk's time columns hold it: microseconds since 1970 on DuckDB."""
+    if dialect == "postgres":
+        return value
+    return (value - _EPOCH) // timedelta(microseconds=1)
+
+
+def seed_candidates_sql(
+    dialect: Literal["duckdb", "postgres"],
+    *,
+    with_valid_at: bool,
+    limit: int,
+    scopes: list[Scope] | None,
+    time_from: datetime | None,
+    time_to: datetime | None,
+) -> tuple[str, list[Any]]:
+    """The walk with the graph candidate stage's filters, order and cut (``walk_candidates``).
+
+    Takes the walk's parameters ($1 user, $2 max hops, $3 seed ids, $4
+    valid-at time) and returns the SQL with the parameters it adds after them:
+    the time bounds, which must have a time zone. A row is a reached node that
+    passed the filters: its id, its fewest hops, its place in the candidate
+    order when it is among the first ``limit`` (else NULL), whether it is an
+    entity and, for an entity, its metadata.
+
+    The filters are the stage's: no unindexed hierarchical summary
+    (``is_unindexed_summary``, dwamianm/prism#534), only the requested scopes,
+    and, except for an entity or a preference, a validity window that does not
+    end at or before ``time_from`` and does not start after ``time_to``. The
+    order is the stage's sort key; ids sort as bytes, as Python compares
+    strings, so PostgreSQL sorts them with the "C" collation. The scopes and
+    the limit are written into the SQL; each scope is a ``Scope`` value.
+    """
+    # ``unindexed_summary_sql`` also leaves out a summary whose publication
+    # kind is another kind when its other fields have the old hierarchical
+    # shape; ``is_unindexed_summary`` reads the kind alone when it is set, so
+    # the stage kept that summary, and so does this query.
+    if dialect == "postgres":
+        kind = "(b.metadata->>'summary_publication_kind')"
+    else:
+        kind = "json_extract_string(b.metadata, '$.summary_publication_kind')"
+    conditions = [
+        f"NOT ({unindexed_summary_sql('b', dialect=dialect)} "
+        f"AND COALESCE({kind} = '{HIERARCHICAL_SUMMARY_KIND}', TRUE))"
+    ]
+    if scopes:
+        values = ", ".join(f"'{Scope(value).value}'" for value in scopes)
+        conditions.append(f"b.scope IN ({values})")
+    params: list[Any] = []
+    first = 5 if with_valid_at else 4
+    bounds = []
+    for value, test in ((time_from, "b.valid_to IS NULL OR b.valid_to > ${}"),
+                        (time_to, "b.valid_from IS NULL OR b.valid_from <= ${}")):
+        if value is not None:
+            params.append(_instant(dialect, value))
+            bounds.append("(" + test.format(first + len(params) - 1) + ")")
+    if bounds:
+        conditions.append(f"(b.node_type IN ('entity', 'preference') OR ({' AND '.join(bounds)}))")
+    node_order = 'b.node_id COLLATE "C"' if dialect == "postgres" else "b.node_id"
+    sql = f"""
+        WITH b({_WALK_COLUMNS}) AS ({seed_walk_sql(dialect, with_valid_at=with_valid_at)}),
+        ranked AS (
+            SELECT b.node_id, b.depth, b.node_type, b.metadata,
+                   ROW_NUMBER() OVER (ORDER BY b.confidence DESC, b.created_at DESC, {node_order}) AS rn
+            FROM b
+            WHERE {' AND '.join(conditions)}
+        )
+        SELECT node_id, depth, CASE WHEN rn <= {int(limit)} THEN rn END, node_type = 'entity',
+               CASE WHEN node_type = 'entity' THEN metadata END
+        FROM ranked
+    """
+    return sql, params
+
+
+def walk_candidates_result(rows: list[Any]) -> WalkCandidates:
+    """Decode the rows of ``seed_candidates_sql``."""
+    depths: dict[str, int] = {}
+    entities: dict[str, dict | None] = {}
+    ranked = []
+    for node_id, depth, rank, is_entity, metadata in rows:
+        depths[node_id] = depth
+        if rank is not None:
+            ranked.append((rank, node_id, depth))
+        if is_entity:
+            entities[node_id] = json.loads(metadata) if isinstance(metadata, str) else metadata
+    ranked.sort()
+    return WalkCandidates([(node_id, depth) for _rank, node_id, depth in ranked], depths, entities)
 
 
 def walked_nodes(rows: list[Any], *, epoch: bool) -> list[tuple[WalkedNode, int]]:

@@ -23,7 +23,15 @@ from prme.models.nodes import MemoryNode
 from prme.storage.graph_rows import EDGE_COLUMNS as _EDGE_COLUMNS
 from prme.storage.graph_rows import NODE_COLUMNS as _NODE_COLUMNS
 from prme.storage.graph_rows import record_to_edge, record_to_node
-from prme.storage.seed_walk import WalkedNode, seed_walk_sql, walk_links_sql, walked_nodes
+from prme.storage.seed_walk import (
+    WalkCandidates,
+    WalkedNode,
+    seed_candidates_sql,
+    seed_walk_sql,
+    walk_candidates_result,
+    walk_links_sql,
+    walked_nodes,
+)
 from prme.storage.organizer_merge import MergeResult
 from prme.storage.owner_reads import (
     CROSS_USER_EDGE_WHERE,
@@ -1563,6 +1571,40 @@ class PgGraphStore:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
         return walked_nodes([tuple(row) for row in rows], epoch=False)
+
+    async def walk_candidates(
+        self,
+        seed_ids: list[str],
+        *,
+        max_hops: int,
+        valid_at: datetime | None = None,
+        user_id: str,
+        limit: int,
+        scopes: list[Scope] | None = None,
+        time_from: datetime | None = None,
+        time_to: datetime | None = None,
+    ) -> WalkCandidates:
+        """The graph candidates of one walk from all seeds, filtered, ordered and cut in one query.
+
+        ``walk_from_seeds`` with the graph candidate stage's filters, its sort
+        key and its cut to ``limit`` done in the SQL
+        (``prme.storage.seed_walk.seed_candidates_sql``). Returns the kept ids
+        in candidate order and every node that passed the filters with its
+        fewest hops; read full records for the kept ids with ``get_nodes``.
+        """
+        if not seed_ids:
+            return WalkCandidates([], {}, {})
+        query, extra = seed_candidates_sql(
+            "postgres", with_valid_at=valid_at is not None, limit=limit, scopes=scopes,
+            time_from=time_from, time_to=time_to,
+        )
+        params: list = [user_id, max_hops, [UUID(str(seed)) for seed in seed_ids]]
+        if valid_at is not None:
+            params.append(valid_at)
+        params.extend(extra)
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+        return walk_candidates_result([tuple(row) for row in rows])
 
     async def walk_links(self, node_ids: list[str]) -> list[tuple[str, str]]:
         """The links a graph walk can step along that touch ``node_ids``, as two ids each.
