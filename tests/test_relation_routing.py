@@ -153,9 +153,34 @@ def test_a_word_that_asks_for_a_name_says_nothing_about_the_relation(question):
     assert route_question(question) == ((RelationStep("owns"),),)
 
 
-def test_on_call_still_asks_for_involvement():
-    assert route_question("Who is on call?") == ((RelationStep("involved_in"),),)
-    assert route_question("What is it called?") is None
+@pytest.mark.parametrize("question", [
+    # dwamianm/prism#428: each of these routed under ROUTING_VERSION 3 on one everyday word alone.
+    "What medication do I take?", "What is the weather like in Lisbon?", "What do I keep in the garage?",
+    "Where did I run into Sam?", "Who is on call?", "What is it called?", "Which race did Alex sign up for?",
+    "Is Alex leading the rewrite?", "What part did Sam play?", "What did Sam present?", "Does Alex like pairing?",
+])
+def test_an_everyday_word_routes_no_question(question):
+    assert route_question(question) is None
+
+
+@pytest.mark.parametrize("question, step", [
+    # The stopped words leave the other words of a question to route it.
+    ("What medication does my sister take?", RelationStep("kin_of", ("sister",))),
+    ("Who is Dana's running partner?", RelationStep("partner_of")),
+    ("Which dog does Alex like most?", RelationStep("owns")),
+    # "want" and "use" still route ("use" is the uses relation's own word).
+    ("Which country does Sam want to visit?", RelationStep("visits")),
+    ("Which editor does Alex use?", RelationStep("uses")),
+])
+def test_the_other_words_still_route_a_question_with_an_everyday_word(question, step):
+    route = route_question(question)
+    assert route is not None and step in {found for steps in route for found in steps}
+
+
+def test_an_everyday_word_still_maps_a_stored_predicate():
+    # The stop list acts on questions only: the normalizer still maps claims stored with these words.
+    assert normalize_predicate("likes").relation == "prefers"
+    assert normalize_predicate("leads").relation == "involved_in"
 
 
 @pytest.mark.parametrize("question, word, step", [

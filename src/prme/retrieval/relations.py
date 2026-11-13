@@ -31,7 +31,7 @@ import re
 # The version of the routing rule recorded in receipts. Change it with any
 # change to the vocabulary, the cues, the normalizer, the concepts, the router
 # or the walk that can change a route or its candidates.
-ROUTING_VERSION = 3
+ROUTING_VERSION = 4
 
 # The closed vocabulary (benchmarks/graph_oracle/DESIGN.md, "The relation
 # vocabulary"), with each relation's subject and object kinds and definition.
@@ -398,8 +398,15 @@ def normalize_concepts(concepts: Mapping[str, Sequence[str]] | None) -> dict[str
 _NEGATIVE_WORDS = frozenset("dislike dislikes disliked avoid avoids avoided hate hates hated".split())
 _POSSESSIVE_WORDS = frozenset({"my", "our", "your", "his", "her", "their"})
 # Words that ask for a name ("what is it called?", "who is the dog named after?") say nothing about the relation;
-# the router skips them. "call" stays a cue ("Who is on call?"): only these forms ask for a name.
+# the router skips them.
 _NAME_WORDS = frozenset("name names named called".split())
+# Everyday words a definition happens to use (dwamianm/prism#428): "take", "call", "part", "present", "sign" and
+# "lead" from involved_in, "like" from prefers, "keep" from owns, "run" from friend_of and uses. Ordinary questions
+# carry them ("What medication do I take?", "What is the weather like in Lisbon?", "Where did I run into Sam?"),
+# so they route no question, as a derived cue or as a predicate word; the normalizer still maps them on stored
+# claims. Stems, matched with stem(). "want" stays a cue: on the 2026-11-12 mid tier it routes a question routing
+# wins, and "use" is the uses relation's own word ("Which editor does Alex use?").
+_EVERYDAY_STEMS = frozenset("take tak call part present sign lead like lik keep run runn".split())
 # A question about when asks for a time, which the text ranking answers better
 # than a relation (the graph oracle's blind sets lost temporal questions to the
 # walk), so it is never routed.
@@ -417,7 +424,9 @@ def route_question(question: str, concepts: Mapping[str, Sequence[str]] | None =
     normalizer maps to a relation (``_PREDICATE_WORDS``: "dog", "hates",
     "manages") also routes to that relation, with the word's polarity and
     role, so a word that stores a relation also asks for it. A word that asks
-    for a name ("called", "named") is skipped. When a people or concept word
+    for a name ("called", "named") is skipped, and so is an everyday word a
+    definition happens to use ("take", "like", "keep", "run":
+    ``_EVERYDAY_STEMS``). When a people or concept word
     belongs to someone ("Dana's sister", "my sister") and the question asks for
     more ("Where does Dana's sister live?", "Who is my sister's husband?"), the
     route is two steps: the possessed words first, then the rest. Otherwise it is one step that accepts
@@ -445,7 +454,7 @@ def route_question(question: str, concepts: Mapping[str, Sequence[str]] | None =
             found.add(_step(*people))
         elif singular(word) in known:
             found.update(known[singular(word)])
-        elif word not in _STOPWORDS and word not in _NAME_WORDS:
+        elif word not in _STOPWORDS and word not in _NAME_WORDS and stem(word) not in _EVERYDAY_STEMS:
             for name, cues in DERIVED_CUES.items():
                 if name not in UNROUTED_RELATIONS and stem(word) in cues:
                     found.add(_step(name, polarity="negative" if name == "prefers" and negative else "positive"))

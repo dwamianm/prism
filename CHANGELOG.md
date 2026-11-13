@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Relation routing no longer routes a question on an everyday word that a relation's definition happens to use
+  (`ROUTING_VERSION` 4, dwamianm/prism#428): "take", "call", "part", "present", "sign" and "lead" (`involved_in`),
+  "like" (`prefers`), "keep" (`owns`) and "run" (`friend_of`, `uses`). Questions such as "What medication do I
+  take?" or "What is the weather like in Lisbon?" now read as with routing off; the normalizer still maps these words
+  on stored claims, and the other words of a question still route it ("Who is Dana's running partner?" routes
+  `partner_of`). "want" stays a cue and "use" stays the `uses` relation's word. On the mid tier (retrieval half over
+  the saved address-first packs, against version 3), LoCoMo evidence in the top 25 rose 0.5 points (95% interval
+  +0.2 to +0.8 over questions, +0.1 to +0.9 over conversations; 8 gained, 0 lost) with every other measure
+  unchanged. With routing alone on the 0.17.0a6 packs, 2 of the 6 questions routing lost in the top 25 came back
+  (conv-44-q0068 and conv-49-q0006); the other 4 route on "adoption", "using", "pets" and "adopt" and are follow-up
+  work. `memory_mode=classic` and `enable_relation_routing=false` read exactly as before. It is a read-time change: no
+  stored memory is rewritten and `DERIVATION_VERSION` does not move. A receipt or configuration hash that records the
+  route weight now names `route_rule=4`.
+
 ## [0.17.0a8] - 2026-11-12
 
 This is an alpha. It passed CI on `main`, and each change in it carries its evidence in its pull
