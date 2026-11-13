@@ -1,0 +1,2631 @@
+{
+ "routing_version": 4,
+ "summary": {
+  "locomo": {
+   "questions": 1540,
+   "routed_v3": 525,
+   "unrouted_by_v4": 65,
+   "another_route": 24
+  },
+  "longmemeval-12": {
+   "questions": 12,
+   "routed_v3": 6,
+   "unrouted_by_v4": 2,
+   "another_route": 1
+  },
+  "chat-v1": {
+   "questions": 18,
+   "routed_v3": 10,
+   "unrouted_by_v4": 0,
+   "another_route": 1
+  },
+  "defects-v1": {
+   "questions": 7,
+   "routed_v3": 6,
+   "unrouted_by_v4": 0,
+   "another_route": 0
+  },
+  "member-v1": {
+   "questions": 12,
+   "routed_v3": 5,
+   "unrouted_by_v4": 0,
+   "another_route": 0
+  },
+  "fast-cycle:store-v1": {
+   "questions": 17,
+   "routed_v3": 13,
+   "unrouted_by_v4": 4,
+   "another_route": 0
+  },
+  "fast-cycle:corrections-v1": {
+   "questions": 4,
+   "routed_v3": 2,
+   "unrouted_by_v4": 1,
+   "another_route": 0
+  },
+  "blind-v1 (spent)": {
+   "questions": 86,
+   "routed_v3": 59,
+   "unrouted_by_v4": 9,
+   "another_route": 3
+  },
+  "blind-v2 (spent)": {
+   "questions": 65,
+   "routed_v3": 34,
+   "unrouted_by_v4": 4,
+   "another_route": 4
+  },
+  "blind-paraphrases-v1 (spent)": {
+   "questions": 258,
+   "routed_v3": 168,
+   "unrouted_by_v4": 28,
+   "another_route": 7
+  }
+ },
+ "changes": [
+  {
+   "set": "locomo",
+   "id": "conv-26-q0019",
+   "question": "What do Melanie's kids like?",
+   "v3": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "kid"
+      ]
+     }
+    ],
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "kid"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-26-q0105",
+   "question": "What did Caroline take away from the book \"Becoming Nicole\"?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-26-q0107",
+   "question": "What is Melanie's reason for getting into running?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-26-q0108",
+   "question": "What does Melanie say running has been great for?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-26-q0133",
+   "question": "What precautionary sign did Melanie see at the caf\u00e9?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-26-q0136",
+   "question": "What does Melanie do to keep herself busy during her pottery break?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-30-q0002",
+   "question": "How do Jon and Gina both like to destress?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-30-q0005",
+   "question": "What Jon thinks the ideal dance studio should look like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-30-q0045",
+   "question": "What is Jon's attitude towards being part of the dance festival?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-30-q0057",
+   "question": "What advice does Gina give to Jon about running a successful business?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-30-q0069",
+   "question": "What did Jon take a trip to Rome for?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "visits"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "visits"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0072",
+   "question": "What kind of activities did John and his mates from the online group do as part of their service efforts?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "member_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0076",
+   "question": "Why did John decide to run for office again?",
+   "v3": [
+    [
+     {
+      "relation": "decided"
+     },
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "decided"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0079",
+   "question": "How often does John take his kids to the park?",
+   "v3": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "kid"
+      ]
+     }
+    ],
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "kid"
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0098",
+   "question": "What did John host for the veterans in May 2023 as part of the project?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "part_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0108",
+   "question": "What did Maria say it was like being at the waterfall in Oregon?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0119",
+   "question": "How often does John get to see sunsets like the one he shared with Maria?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0126",
+   "question": "What did John take away from visiting the veteran's hospital?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "visits"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "visits"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0138",
+   "question": "What activity did Maria take up with her friends from church in August 2023?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ],
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-41-q0140",
+   "question": "What cause did the 5K charity run organized by John support?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0056",
+   "question": "What animal do both Nate and Joanna like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0107",
+   "question": "Why does Nate like turtles as pets?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0108",
+   "question": "How does Nate describe the process of taking care of turtles?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0119",
+   "question": "What does Nate feel he could do when out in cool places like Whispering Falls?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0146",
+   "question": "What motivates Joanna to keep writing even on tough days?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0158",
+   "question": "What kind of cake did Joanna share a photo of that she likes making for birthdays and special days?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0159",
+   "question": "What two main ingredients are part of the dessert Joanna shared a photo of with blueberries, coconut milk, and a gluten-free crust?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0167",
+   "question": "What does Joanna recommend to make a living room comfy like hers?",
+   "v3": [
+    [
+     {
+      "relation": "lives_in"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "lives_in"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0192",
+   "question": "What did Joanna take a picture of near Fort Wayne last summer?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0193",
+   "question": "What inspired Joanna to take a picture of the sunset in the field near Fort Wayne?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0196",
+   "question": "What did Nate take to the beach in Tampa?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-42-q0198",
+   "question": "What did Nate share a photo of as a part of his experimentation in November 2022?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0008",
+   "question": "Which outdoor gear company likely signed up John for an endorsement deal?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "part_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0011",
+   "question": "What sports does John like besides basketball?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0043",
+   "question": "What does John like about Lebron James?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0065",
+   "question": "What fantasy movies does Tim like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0071",
+   "question": "Which team did John sign with on 21 May, 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0072",
+   "question": "What is John's position on the team he signed with?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0076",
+   "question": "What kind of picture did Tim share as part of their Harry Potter book collection?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0079",
+   "question": "What kind of deals did John sign with Nike and Gatorade?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0093",
+   "question": "Why did John's teammates sign the basketball they gave him?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0139",
+   "question": "What motivated Tim to keep pushing himself to get better in writing and reading?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0146",
+   "question": "What did Tim recently start learning in addition to being part of a travel club and working on studies?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "uses"
+     },
+     {
+      "relation": "visits"
+     },
+     {
+      "relation": "works_at"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "uses"
+     },
+     {
+      "relation": "visits"
+     },
+     {
+      "relation": "works_at"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-43-q0168",
+   "question": "Why does John like Aragorn from Lord of the Rings?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0009",
+   "question": "What kind of classes or groups has Audrey joined to take better care of her dogs?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "member_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "member_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0036",
+   "question": "What are some foods that Audrey likes eating?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0040",
+   "question": "What is a good place for dogs to run around freely and meet new friends?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0050",
+   "question": "What is a skill that Audrey learned to take care of her dogs?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "uses"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0054",
+   "question": "What activity do Audrey's dogs like to do in the dog park?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0067",
+   "question": "Where does Andrew want to live to give their dog a large, open space to run around?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "lives_in"
+     },
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "prefers"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "lives_in"
+     },
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0068",
+   "question": "Why did Audrey sign up for a workshop about bonding with pets?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0070",
+   "question": "What type of training was the workshop Audrey signed up for in May 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0086",
+   "question": "How often does Audrey take her pups to the park for practice?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0089",
+   "question": "What is essential to keep the dogs looking good according to Audrey?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0094",
+   "question": "How often does Audrey take her dogs for walks?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0095",
+   "question": "What kind of flowers does Audrey take care of?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0105",
+   "question": "What type of games do Audrey's dogs like to play at the park?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0111",
+   "question": "What do Andrew and Buddy like doing on walks?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0117",
+   "question": "What did Audrey do in November 2023 to better take care of her dogs?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-44-q0119",
+   "question": "What did Audrey share to show ways to keep dogs active in the city?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-47-q0116",
+   "question": "What type of beer does John not like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-47-q0124",
+   "question": "Why did James sign up for a cooking class?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-47-q0129",
+   "question": "What kind of music does John like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0064",
+   "question": "Does Deborah like cats?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0138",
+   "question": "What made being part of the running group easy for Deborah to stay motivated?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "member_of"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "member_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0143",
+   "question": "Why does Deborah take her cats out for a run in the park every day?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0160",
+   "question": "What kind of event did Jolene present at recently?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0161",
+   "question": "What did Jolene's mom stress the value of, which she wants to keep in mind for her engineering projects?",
+   "v3": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "mom"
+      ]
+     }
+    ],
+    [
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "kin_of",
+      "roles": [
+       "mom"
+      ]
+     }
+    ],
+    [
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-48-q0173",
+   "question": "What course did Jolene sign up for on 6 September 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0004",
+   "question": "Which hobby did Sam take up in May 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0006",
+   "question": "How many roadtrips did Evan take in May 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0025",
+   "question": "Which year did Evan start taking care of his health seriously?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0026",
+   "question": "What motivates Evan to take care of his health?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0027",
+   "question": "What electronic device could Evan gift Sam to help him keep up with his fitness goals?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0033",
+   "question": "What is the recurring dream that Sam keeps having?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0060",
+   "question": "Which new activity does Sam take up in October 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0087",
+   "question": "Where did Evan take his family for a road trip on 24 May, 2023?",
+   "v3": [
+    [
+     {
+      "relation": "kin_of"
+     },
+     {
+      "relation": "partner_of"
+     }
+    ],
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "visits"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "kin_of"
+     },
+     {
+      "relation": "partner_of"
+     }
+    ],
+    [
+     {
+      "relation": "visits"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0101",
+   "question": "What class is Sam taking to learn how to make healthier meals?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "uses"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0105",
+   "question": "What type of painting classes did Evan start taking in 2023?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0115",
+   "question": "What activity does Evan do to keep himself busy while healing his knee?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-49-q0151",
+   "question": "What movie did Sam watch that motivated him to keep up with his routine?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0006",
+   "question": "Which types of cars does Dave like the most?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0011",
+   "question": "What mishaps has Calvin run into?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0058",
+   "question": "Which events in Dave's life inspired him to take up auto engineering?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0126",
+   "question": "Which part of Tokyo is described as Tokyo's Times Square by Calvin?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0134",
+   "question": "What is the toughest part of car restoration according to Dave?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0151",
+   "question": "What hobby did Calvin take up recently?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0153",
+   "question": "What type of photos does Dave like to capture with his new camera?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "locomo",
+   "id": "conv-50-q0156",
+   "question": "Where did Dave take a stunning photo of a waterfall?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "longmemeval-12",
+   "id": "488d3006",
+   "question": "I'm planning to go back to the Natural Park of Moncayo mountain in Arag\u00f3n and I was wondering, what was the name of that hiking trail you recommended that takes you through the park's most stunning landscapes and offers panoramic views of the surrounding mountainside?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "longmemeval-12",
+   "id": "6a1eabeb",
+   "question": "What was my personal best time in the charity 5K run?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "longmemeval-12",
+   "id": "2bf43736",
+   "question": "I was going through our previous chat and I wanted to clarify something about the prayer of beginners in Tanqueray's Spiritual Life treatise. Can you remind me which chapter of the second part discusses vocal prayer and meditation?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "chat-v1",
+   "id": "running-partner",
+   "question": "Who is Dana's running partner?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "partner_of"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "partner_of"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "fast-cycle:store-v1",
+   "id": "pair-programming",
+   "question": "Does Alex like pair programming?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "fast-cycle:store-v1",
+   "id": "observability",
+   "question": "Is Alex leading the observability rewrite?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "fast-cycle:store-v1",
+   "id": "on-call",
+   "question": "Who is on call the week of 2026-10-26?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "fast-cycle:store-v1",
+   "id": "gravel-race",
+   "question": "Which gravel race did Alex sign up for?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "fast-cycle:corrections-v1",
+   "id": "coffee",
+   "question": "How does Riley take coffee?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:list:2",
+   "question": "What tools and services does Northwind's stack run on AWS?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:multi-hop:2",
+   "question": "Who is covering Alex's on-call week of 2026-10-26, and what is that person's role at Northwind?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:negation:5",
+   "question": "Does Alex want to be on call during the production cutover week?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:multi-hop:1",
+   "question": "What is the name of the person who convinced Dana to sign up for the Cherry Creek Half Marathon?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:multi-hop:5",
+   "question": "What is the name of Dana's golden retriever who ate one of Sam's running shoes?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:correction:4",
+   "question": "What's the longest run I've done?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:negation:5",
+   "question": "Does Dana want to keep using Tableau for her dashboards?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "prefers"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "prefers"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:aggregation:1",
+   "question": "How many half marathons has Melanie run, and what was her finishing time at the Cherry Creek Half?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:lookup:r2.9",
+   "question": "What race did Alex sign up for in Fruita?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.2",
+   "question": "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.6",
+   "question": "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+   "v3": [
+    [
+     {
+      "relation": "decided"
+     },
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "decided"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v1 (spent)",
+   "id": "chat-v1:correction:r2.5",
+   "question": "Did I actually run the Cherry Creek Half, and what was my time?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:list:1",
+   "question": "What tools does Noor like for work?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     },
+     {
+      "relation": "works_at"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "works_at"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:correction:2",
+   "question": "How does Noor feel about leading the weekly stand-up?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:correction:4",
+   "question": "Did Noor end up leading the accessibility audit?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:negation:5",
+   "question": "What presentation format does Noor dislike?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:negation:7",
+   "question": "What meeting format does Noor no longer want to lead?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:negation:8",
+   "question": "What did Noor initially decline to lead?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:aggregation:6",
+   "question": "What are the key dates for the Patient Portal launch and Noor's Atlas roadmap presentation?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-v2 (spent)",
+   "id": "draw2-v1:aggregation:r2.4",
+   "question": "Which tools does Noor like for work, and which one does she dislike?",
+   "v3": [
+    [
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     },
+     {
+      "relation": "prefers"
+     },
+     {
+      "relation": "works_at"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     },
+     {
+      "relation": "works_at"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:4#p1",
+   "question": "What does the monthly Datadog bill amount to at present?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:4#p2",
+   "question": "What is the present monthly expenditure on Datadog?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:list:2#p2",
+   "question": "Northwind's stack runs on AWS\u2014what tools and services does it include?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:2#p0",
+   "question": "Who is covering Alex's on-call week of 2026-10-26, and what role does that person have at Northwind?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:2#p1",
+   "question": "Which person is covering Alex's on-call week of 2026-10-26, and what is that person's position at Northwind?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:2#p2",
+   "question": "For Alex's on-call week of 2026-10-26, who is the cover, and what is that person's role at Northwind?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:temporal:4#p2",
+   "question": "At what point did Alex take on leading the observability rewrite?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:temporal:5#p2",
+   "question": "Following the change, when does the Japan trip take place?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "visits"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "visits"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:negation:3#p1",
+   "question": "What city did Alex take out of the Japan itinerary?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:negation:5#p0",
+   "question": "Does Alex want to be on call during the week of the production cutover?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:negation:5#p1",
+   "question": "Is Alex willing to be on call during the production cutover week?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:negation:5#p2",
+   "question": "During the production cutover week, does Alex want to be on call?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:aggregation:5#p1",
+   "question": "What programming languages does Alex favor for services and internal tooling, and what languages does Alex not like?",
+   "v3": [
+    [
+     {
+      "relation": "prefers"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:r2.5#p1",
+   "question": "What was the duration of the migration's staging dry run?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:r2.9#p0",
+   "question": "Which race in Fruita did Alex sign up for?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:r2.9#p2",
+   "question": "Alex signed up for which race in Fruita?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:lookup:r2.10#p2",
+   "question": "At present, what book is Alex reading?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.2#p0",
+   "question": "Which engineer took over Alex's on-call week of 2026-10-26 so the cutover wouldn't fall during Alex's shift?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.2#p1",
+   "question": "Who took over Alex's on-call week of 2026-10-26 to keep the cutover from falling during Alex's shift?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "owns"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.2#p2",
+   "question": "To avoid the cutover falling during Alex's shift, which engineer took over Alex's on-call week of 2026-10-26?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "prefers",
+      "polarity": "negative"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.6#p0",
+   "question": "Which observability backend did Alex choose for the rewrite that Alex agreed to lead on 2026-10-14?",
+   "v3": [
+    [
+     {
+      "relation": "decided"
+     },
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "decided"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.6#p1",
+   "question": "What observability backend was selected by Alex for the rewrite Alex agreed to lead on 2026-10-14?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:multi-hop:r2.6#p2",
+   "question": "For the rewrite that Alex agreed to lead on 2026-10-14, which observability backend did Alex pick?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "store-v1:aggregation:r2.3#p1",
+   "question": "What editors is Alex using at present, and for what purposes?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "uses"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:multi-hop:1#p0",
+   "question": "Who persuaded Dana to sign up for the Cherry Creek Half Marathon?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:multi-hop:5#p0",
+   "question": "What is the name of Dana's golden retriever that ate one of Sam's running shoes?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:multi-hop:5#p1",
+   "question": "Which of Dana's golden retrievers ate one of Sam's running shoes?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:multi-hop:5#p2",
+   "question": "Dana's golden retriever that ate one of Sam's running shoes is called what?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:correction:4#p0",
+   "question": "What is the longest run I have completed?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:correction:4#p1",
+   "question": "Which run is the longest one I've done?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:correction:4#p2",
+   "question": "What is my longest run so far?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:negation:2#p1",
+   "question": "Is meat part of Dana's diet?",
+   "v3": [
+    [
+     {
+      "relation": "involved_in"
+     },
+     {
+      "relation": "part_of"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:negation:5#p2",
+   "question": "Does Dana wish to keep using Tableau for her dashboards?",
+   "v3": [
+    [
+     {
+      "relation": "owns"
+     },
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": [
+    [
+     {
+      "relation": "part_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ]
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:aggregation:1#p2",
+   "question": "Melanie has run how many half marathons, and what was her Cherry Creek Half finishing time?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  },
+  {
+   "set": "blind-paraphrases-v1 (spent)",
+   "id": "chat-v1:correction:r2.5#p0",
+   "question": "Did I actually run the Cherry Creek Half, and what was my time?",
+   "v3": [
+    [
+     {
+      "relation": "friend_of"
+     },
+     {
+      "relation": "uses"
+     }
+    ]
+   ],
+   "v4": null
+  }
+ ]
+}

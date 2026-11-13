@@ -94,9 +94,9 @@ its relations, and any other word whose stem is a derived cue to the cued relati
 `prefers` with negative polarity when the question says dislike, avoid or hate. A word the predicate normalizer
 maps to a relation (its word table: dog, pet, trip, hates, manages and the others) routes to that relation as
 well, with the word's polarity and role, so the words that store a relation also ask for it. A word that asks for a
-name ("called", "named", "name", "names") says nothing about the relation and is skipped: "called" stems to "call",
-which `involved_in`'s definition holds ("on call"), so "What is the dog called?" would otherwise ask for
-`involved_in`. "Who is on call?" still routes there. When a people or concept word
+name ("called", "named", "name", "names") says nothing about the relation and is skipped, and so is an everyday
+word a definition happens to use ("take", "call", "part", "present", "sign", "lead", "like", "keep" and "run";
+`_EVERYDAY_STEMS`): "What medication do I take?" and "Who is on call?" route nothing. When a people or concept word
 belongs to someone ("Dana's sister", "my sister") and the question asks for more ("Where does Dana's sister
 live?", "Who is my sister's husband?"), the route is two steps: the possessed words, then the rest. Otherwise it is
 one step. A question about
@@ -144,9 +144,14 @@ off, receipts included, and a configured `rrf_route_weight` is recorded only on 
 fails is logged and leaves the ranking as with the option off; the response metadata and the receipt's parameters
 record it as `backend_failures.ROUTE`.
 
-The routing version recorded in receipts (`ROUTING_VERSION`) is 3: version 2 added the pet concept and the rule for
-the role's end of a typed claim, either of which can change a route or its candidates, and version 3 skips the
-words that ask for a name and routes the normalizer's own words.
+The routing version recorded in receipts (`ROUTING_VERSION`) is 4: version 2 added the pet concept and the rule for
+the role's end of a typed claim, either of which can change a route or its candidates, version 3 skips the
+words that ask for a name and routes the normalizer's own words, and version 4 (dwamianm/prism#428) skips the
+everyday words a definition happens to use: "take", "call", "part", "present", "sign" and "lead" (`involved_in`),
+"like" (`prefers`), "keep" (`owns`) and "run" (`friend_of`, `uses`). Ordinary questions carry them ("What medication
+do I take?", "What is the weather like in Lisbon?"), so they route no question, as a derived cue or as a predicate
+word; the normalizer still maps them on stored claims. "want" stays a cue, because it routes a question that routing
+wins on the mid tier, and "use" stays as the `uses` relation's own word.
 
 ## The belief ledger
 
@@ -299,9 +304,12 @@ embeddings), not the assertions. It is not yet fit for a sensor stream.
 
 ## Limits
 
-- The derived cues include ordinary words ("call", "like", "take", "part"), so a question can be routed by a word
-  that does not ask for a relation; the walk then adds only claims of that relation on the question's seeds. The
-  graph oracle's blind set found derived cues weaker than hand-written ones.
+- The derived cues include ordinary words. The router skips the nine that most often routed a question that asks
+  for no relation (version 4), but others remain ("pets", "adopt", "using", "want"), so a question can still be
+  routed by a word that does not ask for a relation; the walk then adds only claims of that relation on the
+  question's seeds. On the 2026-11-12 mid tier, routing alone still lost evidence in the top 25 on 4 LoCoMo
+  questions this way (`benchmarks/results/research/2026-11-12/ROUTING-CUE-WORDS.md`). The graph oracle's blind set
+  found derived cues weaker than hand-written ones.
 - The normalizer maps what its tables and the derived cues name; a predicate the extractor words otherwise stays
   unmapped and the walk does not see it. Typed extraction (OM-09) is the lasting fix.
 - Rank fusion keeps the text lists in charge: a claim that names both dependents but shares no word with the
