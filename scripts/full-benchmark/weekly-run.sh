@@ -241,7 +241,7 @@ compare_gates() {  # name before-report after-report benchmark
 }
 
 # LoCoMo's conversation-level intervals for the same pair: the stable gate counts them with the question-level
-# ones (CLAUDE.md), and gate-compare resamples questions only.
+# ones (AGENTS.md), and gate-compare resamples questions only.
 compare_conversations() {  # name before-report after-report
   local name=$1 before=$2 after=$3 base="$RUN_DIR/compare-$1-locomo-conversations" status
   if valid_json "$base.json"; then log "conversations $name: already written"; return 0; fi

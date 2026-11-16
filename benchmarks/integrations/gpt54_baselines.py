@@ -284,7 +284,7 @@ BOOTSTRAP_SAMPLES = 2000
 # LoCoMo's questions come from 10 conversations, so its intervals resample conversations. Each LongMemEval-S
 # question has its own history, so its intervals resample questions.
 CONVERSATION_INTERVALS = frozenset({"locomo"})
-# The 4K budget the default-change rule in CLAUDE.md reads, as the registered run packed it: 4,096 tokens less the
+# The 4K budget the default-change rule in AGENTS.md reads, as the registered run packed it: 4,096 tokens less the
 # 100 reserved, counted by its tokenizer. compare and run-pair refuse PRME's arms prepared any other way (#125).
 RULE_BUDGET = 3996
 RULE_TOKENIZER = "cl100k_base"
@@ -2322,7 +2322,7 @@ def _arms_of(pairs: list[dict], preparations: dict[str, list[dict]], wanted) -> 
 def _variant_record(data: Path, benchmark: str, mark: dict) -> dict:
     """Where a variant's pair stands among every pair with its settings or its context text under ``data``.
 
-    The default-change rule in CLAUDE.md reads a variant's first pair and its
+    The default-change rule in AGENTS.md reads a variant's first pair and its
     confirmation (``_counted``). Pairs that count together can sit under
     another arm name, so this reads every variant preparation and pair on
     record for the benchmark (#130), and lists each that records the
@@ -2752,7 +2752,7 @@ def _aa_listed(entry: dict) -> dict:
 def _aa_coverage(data: Path, results: Path, model: str | ollama_answers.AnswerModel, conditions: dict) -> dict:
     """The A/A check that covers ``conditions`` on each benchmark, or a refusal when one does not (#137).
 
-    The default-change rule in CLAUDE.md relies on a variant's pair only under
+    The default-change rule in AGENTS.md relies on a variant's pair only under
     the conditions of a recorded A/A check (``AA_CONDITIONS``) on both
     benchmarks, so after an Ollama update a new A/A pair is needed on both
     before any further variant pair counts. On each benchmark the check is the
@@ -2817,7 +2817,7 @@ def _aa_warnings(coverage: dict) -> list[str]:
         if excluding:
             warnings.append(f"On {benchmark}, {', '.join(excluding)} under the conditions of this pair "
                             f"{'excludes' if len(excluding) == 1 else 'exclude'} zero, so under the default-change "
-                            "rule in CLAUDE.md a variant's gain there must also be larger than the largest absolute "
+                            "rule in AGENTS.md a variant's gain there must also be larger than the largest absolute "
                             "A/A difference measured so far on that benchmark, the #118 repeat included (#137)")
     return warnings
 
@@ -3236,7 +3236,7 @@ def _verdict_lines(benchmark: str, arm: str, lines: list[dict], data: Path) -> d
 def _same_answers(found: dict[str, dict], sides: dict[str, dict[str, dict]]) -> None:
     """A variant's first pair and its confirmation on one benchmark must share the model identity and answer settings.
 
-    The default-change rule in CLAUDE.md reads the two as one test repeated
+    The default-change rule in AGENTS.md reads the two as one test repeated
     (#144); ``sides`` are both pairs' published results.
     """
     if len(sides) < 2:
@@ -3277,7 +3277,7 @@ def _role_verdict(role: str, found: dict[str, dict | None]) -> dict:
 
 def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: Path | None = None,
             results: Path | None = None) -> dict:
-    """Whether a variant passed the default-change rule in CLAUDE.md, from the track's verdict record (#144).
+    """Whether a variant passed the default-change rule in AGENTS.md, from the track's verdict record (#144).
 
     ``arm`` is a named variant. On each benchmark, its pairs count together
     alongside the current baseline on its context text (#143), and the
@@ -3380,7 +3380,7 @@ def verdict(arm: str, *, model: ollama_answers.AnswerModel | None = None, data: 
         "record": {"path": path.name, "sha256": digest(path) if path.exists() else None},
         "aa_record": {"path": aa_path.name, "sha256": digest(aa_path) if aa_path.exists() else None},
         "warnings": warnings,
-        "note": "The default-change rule in CLAUDE.md, applied to the pairs compare recorded in the track's verdict "
+        "note": "The default-change rule in AGENTS.md, applied to the pairs compare recorded in the track's verdict "
                 "record: the variant passes only when its first pair and its confirmation each show a gain on at least "
                 "one benchmark whose 95% interval excludes zero and no loss on either whose interval excludes zero. "
                 "Where an accepted A/A pair under a pair's conditions excluded zero, that pair's gain must also be "
@@ -3412,7 +3412,7 @@ def _server_version(result: dict) -> str | None:
 def _check_rule_budget(label: str, arm: str, budget: int | None, tokenizer: str | None) -> None:
     """Refuse an arm prepared outside the default-change rule's 4K budget, unless it is a reference arm (#125).
 
-    The rule in CLAUDE.md reads paired runs only at the 4K budget:
+    The rule in AGENTS.md reads paired runs only at the 4K budget:
     ``RULE_BUDGET`` tokens counted by ``RULE_TOKENIZER``, as the registered run
     packed them. Only the plain and full-context reference arms, which are not
     PRME settings, are paired with the defaults at any budget; PRME's defaults
@@ -3428,7 +3428,7 @@ def _check_rule_budget(label: str, arm: str, budget: int | None, tokenizer: str 
         packed = f"its budget counted by the {tokenizer!r} tokenizer"
     else:
         return
-    raise ValueError(f"{label}, {arm}, was prepared with {packed}. The default-change rule in CLAUDE.md reads PRME's "
+    raise ValueError(f"{label}, {arm}, was prepared with {packed}. The default-change rule in AGENTS.md reads PRME's "
                      f"arms only at the 4K budget ({RULE_BUDGET:,} {RULE_TOKENIZER} tokens), so compare refuses any "
                      "other: prepare the variant without changing packing.token_budget, packing.overhead_tokens or "
                      "packing.tokenizer (#125).")
@@ -3837,7 +3837,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
                     "again, and other context text, such as after a code change, makes a new variant with its own "
                     "first pair and confirmation. The first pair is the first of them to complete, and the "
                     "confirmation the next to complete that started after it and repeats the first pair's settings; "
-                    "the default-change rule in CLAUDE.md reads only those two, compare refuses any other pair, and a "
+                    "the default-change rule in AGENTS.md reads only those two, compare refuses any other pair, and a "
                     "failed first pair or confirmation fails the variant. A complete pair that is invalid under the 1% "
                     "limit, and a pair given up, not published or unfinished, count as neither. Settings recorded "
                     "only as this checkout reads an arm's overrides, for pairs started before #130, are not compared. "
@@ -3857,7 +3857,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
             "note": "The A/A check this pair relies on, on each benchmark: the first A/A pair in the track's A/A "
                     "record that was answered under the same model identity, answer settings, failure policy, Ollama "
                     "server version and context budget as this pair and that compare accepted. The default-change "
-                    "rule in CLAUDE.md reads a variant's pair only under the conditions of an A/A check on both "
+                    "rule in AGENTS.md reads a variant's pair only under the conditions of an A/A check on both "
                     "benchmarks, so compare refuses any other, and a later A/A pair never replaces the check. "
                     "other_pairs lists every other A/A pair recorded under these conditions, accepted or refused, in "
                     "the order they finished. If any A/A pair under them excludes zero, a variant's gain on that "
@@ -3892,7 +3892,7 @@ def compare(before: dict, after: dict, *, samples: int = BOOTSTRAP_SAMPLES, data
             "note": (f"Two answer runs of the defaults with the same inputs and the same model identity and settings, "
                      f"{how}, so the difference is run-to-run variation alone. If an interleaved A/A interval "
                      "excludes zero, a variant's gain must also be larger than the largest A/A difference measured "
-                     "so far (the default-change rule in CLAUDE.md)."),
+                     "so far (the default-change rule in AGENTS.md)."),
         },
     }
 

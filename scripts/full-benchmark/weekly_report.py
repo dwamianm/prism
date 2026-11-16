@@ -11,7 +11,7 @@ request text that publish-results.sh uses.
     weekly_report.py verdict RUN_DIR
     weekly_report.py pr-body RUN_DIR [--files-verified N]
 
-The verdict follows the stable gate in CLAUDE.md: a measure lost when its paired
+The verdict follows the stable gate in AGENTS.md: a measure lost when its paired
 95% interval lies wholly below zero, at either level. LoCoMo's two levels are the
 question-level interval (gate-compare) and the conversation-level interval
 (``product_packing gate-conversations``); both count, so a loss at one level is a

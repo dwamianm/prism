@@ -454,7 +454,7 @@ are not lost. Calls on one engine run one at a time.
    2026-11-02 (dwamianm/prism#390, "Live sessions" above); the capture
    process, the filters and the HTTP route are still open. If it is used
    on coding sessions, it touches the shelved coding-memory decision in
-   `CLAUDE.md`; that decision stands until a new study says otherwise.
+   `AGENTS.md`; that decision stands until a new study says otherwise.
 3. **Camera and wearables.** A phone or glasses client streams keyframes to
    the HTTP API. The camera demo can send its frames to `observe_frame()`
    today; a `camera_frame` modality with its own prompt hint is still open. This is the Memories.ai comparison and needs the
