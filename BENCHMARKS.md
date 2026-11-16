@@ -170,7 +170,7 @@ uv run python -m benchmarks.integrations.lenient_judge run \
 ## Release channels and the benchmark tiers
 
 Since 2026-10-19 a release is gated by one of two sets of checks, by the owner's
-directive. `CLAUDE.md` ("Release channels and default changes") has the rule and
+directive. `AGENTS.md` ("Release channels and default changes") has the rule and
 the commands. This page keeps each check's method and measurements.
 
 | Check | Gates | Measured time | Section |
@@ -1266,7 +1266,7 @@ benchmark count: all evidence packed, all evidence packed with memory text,
 evidence recall, all evidence among the candidates and projected accuracy.
 Per-category rows and retrieval time are listed and not judged.
 
-**Release rule** (`CLAUDE.md`, "Stable gate"). An alpha or beta needs the fast
+**Release rule** (`AGENTS.md`, "Stable gate"). An alpha or beta needs the fast
 tiers (the fast gate, the fast cycle and, where it applies, the mid tier). A
 stable release needs the latest scheduled run to show no loss against the last
 stable release, and the run must be of the release commit or of a `main` commit
@@ -1773,7 +1773,7 @@ DeepSeek answer track, as batched extraction did (v0.15.0, flipped on the
 offline evidence gate alone). The same day the owner made
 this the rule for the alpha and beta channel: any default may flip on the fast
 tiers (this gate, the fast cycle and the offline evidence gate), and the
-DeepSeek default-change rule in `CLAUDE.md` is the stable-channel rule. The full
+DeepSeek default-change rule in `AGENTS.md` is the stable-channel rule. The full
 answer track is the audit at the stable release: record a new defaults baseline
 on it and pair the previous behavior, and later variants, with that baseline.
 
@@ -1841,7 +1841,7 @@ unchanged replays the shared extraction cache in seconds.
    other half: a change to retrieval must not lose evidence, and a change that
    leaves retrieval alone must leave the gate unchanged.
 
-The change passes when all of these hold. `CLAUDE.md` ("Release channels and
+The change passes when all of these hold. `AGENTS.md` ("Release channels and
 default changes") adds the fast cycle and says what to do when the rule fails.
 
 - Defect probes: with the option on, the answer ranks in the top 3 for all 7
@@ -1950,7 +1950,7 @@ and 6. So judge the member probe's off and on sides on the same extraction
 where the change leaves the extraction request unchanged (the on build then
 replays the off build's cache), and otherwise rebuild a side that is one or two
 answers or a few owner claims worse once before judging, as the rule in
-`CLAUDE.md` says for any live build.
+`AGENTS.md` says for any live build.
 
 ### Why the claim fixes lost rank
 
@@ -5335,7 +5335,7 @@ with another DeepSeek score from the same model identity and settings:
    context text it stays the same variant; if the newer code changed its
    text, it is a new variant with its own first pair and confirmation (#143).
 3. A default changes in a stable release only when the default-change rule in
-   the epic #77 work rules in `CLAUDE.md` is met. The alpha and beta channel
+   the epic #77 work rules in `AGENTS.md` is met. The alpha and beta channel
    flips defaults on the fast tiers instead, and the stable release audits those
    flips with this track. The default-change rule includes a confirmation run: run
    `run-pair` again for the same variant, which starts a new pair with a fresh
@@ -5954,7 +5954,7 @@ over the kept records reproduces both results exactly.
 | LoCoMo | 1,014/1,540 (65.8%) | 1,007/1,540 (65.4%) | -0.45 points, -1.43 to +0.52 (spanning -1.36 to +0.39 resampling conversations and -1.43 to +0.52 resampling questions) | 61 of 1,540 (27 gained, 34 lost) |
 
 **The floor does not hold.** The LongMemEval-S interval excludes zero, so under
-the default-change rule in `CLAUDE.md` the paired test was not trustworthy as it
+the default-change rule in `AGENTS.md` the paired test was not trustworthy as it
 stood. #129 revised it: each variant is now answered alongside its own fresh
 run of the defaults, LoCoMo intervals resample conversations, and server
 versions are recorded and checked. Under the old test, a variant paired
@@ -6013,7 +6013,7 @@ pair 5 took 14 minutes and LoCoMo pair 3 took 31.
 | LongMemEval-S, pair 5 ([before](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-before-result.json), [after](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-longmemeval-pair-5-after-result.json)) | 432/500 (86.4%) | 431/500 (86.2%) | -0.2 points, -1.4 to +1.0 | 9 of 500 (4 gained, 5 lost) |
 | LoCoMo, pair 3 ([before](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-before-result.json), [after](benchmarks/results/research/2026-09-24/ollama-deepseek-v4.1-flash-cloud-prme@46647825-vs-prme@46647825-locomo-pair-3-after-result.json)) | 1,018/1,540 (66.1%) | 1,012/1,540 (65.7%) | -0.39 points, -1.30 to +0.52 (spanning -0.93 to +0.19 resampling conversations and -1.30 to +0.52 resampling questions) | 50 of 1,540 (22 gained, 28 lost) |
 
-Both intervals include zero, so the default-change rule in `CLAUDE.md` allows
+Both intervals include zero, so the default-change rule in `AGENTS.md` allows
 the revised test without the extra margin, for model identity `e04da138`,
 Ollama server version 0.34.3, the current answer settings and the amended
 failure policy. It does not carry over to anything else: when any of these

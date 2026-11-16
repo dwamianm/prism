@@ -27,7 +27,7 @@ ranking.
 
 Epic #77 checks every retrieval, packing and representation change on the
 offline evidence gate first. A production default changes only when the change
-passes the default-change rule in `CLAUDE.md` on the DeepSeek answer track: a
+passes the default-change rule in `AGENTS.md` on the DeepSeek answer track: a
 paired answer run on both benchmarks, then a confirmation pair. DeepSeek scores
 are a separate track and are never compared directly with the GPT-5.4 numbers.
 Do not infer a deployable gain from annotation coverage alone or revive failed

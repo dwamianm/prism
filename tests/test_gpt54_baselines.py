@@ -942,7 +942,7 @@ async def test_prme_arms_prepare_the_defaults_or_a_named_variant_through_the_gat
     requests.clear()
     # compare would refuse a variant that changes the budget, so it is never answered, and no pair is opened.
     with pytest.raises(ValueError, match=r"The after arm, prme-small, was prepared with a context budget of 1948 "
-                                         r"tokens\. The default-change rule in CLAUDE\.md reads PRME's arms only at "
+                                         r"tokens\. The default-change rule in AGENTS\.md reads PRME's arms only at "
                                          r"the 4K budget \(3,996 cl100k_base tokens\)"):
         await run_pair(harness, "prme", "prme-small")
     assert requests == [] and not (harness["data"] / "pairs" / "prme" / "prme-small").exists()
@@ -1724,7 +1724,7 @@ def test_compare_reads_the_defaults_and_their_variants_only_at_the_rules_4k_budg
             (answer_result("prme", [True, False]), answer_result("prme-none", [True, True], budget=None),
              "after", "prme-none", "no context budget")):
         with pytest.raises(ValueError, match=rf"The {side} result, {arm}, was prepared with {packed}\. The "
-                                             r"default-change rule in CLAUDE\.md reads PRME's arms only at the 4K "
+                                             r"default-change rule in AGENTS\.md reads PRME's arms only at the 4K "
                                              r"budget \(3,996 cl100k_base tokens\)"):
             baselines.compare(*one_pair(before, after))
     with pytest.raises(ValueError, match="prme@0123abcd, was prepared with a context budget of 2048 tokens"):
@@ -1970,7 +1970,7 @@ def test_the_published_repeat_of_the_defaults_is_the_run_to_run_floor_in_benchma
         assert comparison["interval_unit"] == "questions" and accuracy["interval_95"] == pytest.approx([0.004, 0.042])
     assert (len(comparison["gained"]), len(comparison["lost"])) == (gained, lost)
     assert comparison["repeat"]["changed_verdicts"] == gained + lost
-    # BENCHMARKS.md reports the floor, and the default-change rule in CLAUDE.md depends on this flag.
+    # BENCHMARKS.md reports the floor, and the default-change rule in AGENTS.md depends on this flag.
     assert comparison["repeat"]["interval_excludes_zero"] is excludes_zero
     # The verdict's A/A margin counts this repeat's difference, read from these results (#144).
     assert baselines.SEQUENTIAL_REPEAT == ("2026-09-24", "prme", REPEAT)
@@ -2003,7 +2003,7 @@ def test_the_published_aa_pair_is_complete_and_matches_the_current_answer_settin
         # Both sides read the repeat's own prepared contexts, which reproduce every saved context.
         assert result["prepared_sha256"] == published_deepseek(REPEAT, benchmark)["prepared_sha256"]
         assert result["prepared"]["contexts_matching_saved_run"] == result["total"]
-        # The model identity and server version the check was measured with, as BENCHMARKS.md and CLAUDE.md record
+        # The model identity and server version the check was measured with, as BENCHMARKS.md and AGENTS.md record
         # them, and the current answer settings under the amendment.
         assert result["answer_model"]["identity"]["manifest_digest_sha256"].startswith("e04da138")
         assert result["server_versions"] == ["0.34.3"]
@@ -2032,7 +2032,7 @@ def test_the_published_interleaved_aa_pairs_hold_the_check_in_benchmarks_md(
     assert (comparison["contexts"]["differing"], comparison["contexts"]["shown_by"]) == (0, "one preparation")
     # compare() counts each side's retries and unscored questions again from its rows.
     assert comparison["failure_policy"]["before"] == comparison["failure_policy"]["after"] == NOTHING_UNSCORED
-    # BENCHMARKS.md and CLAUDE.md quote these intervals: LoCoMo's 10 conversations, and LongMemEval-S's questions.
+    # BENCHMARKS.md and AGENTS.md quote these intervals: LoCoMo's 10 conversations, and LongMemEval-S's questions.
     accuracy = comparison["accuracy"]
     if benchmark == "locomo":
         assert comparison["interval_unit"] == "conversations and questions" and accuracy["groups"] == 10
@@ -2045,7 +2045,7 @@ def test_the_published_interleaved_aa_pairs_hold_the_check_in_benchmarks_md(
     assert comparison["repeat"]["changed_verdicts"] == gained + lost
     # No category's interval excludes zero either, as BENCHMARKS.md says.
     assert all(value["interval_95"][0] <= 0 <= value["interval_95"][1] for value in comparison["categories"].values())
-    # Both intervals include zero, so under the default-change rule in CLAUDE.md the revised test applies without
+    # Both intervals include zero, so under the default-change rule in AGENTS.md the revised test applies without
     # the extra margin taken from the largest A/A difference.
     assert comparison["repeat"]["interval_excludes_zero"] is False
 
@@ -3476,7 +3476,7 @@ def test_a_refused_aa_pair_never_counts_and_one_that_excludes_zero_brings_the_ru
     assert (locomo["check"]["number"], locomo["check"]["interval_excludes_zero"]) == (2, True)
     assert [(pair["number"], pair["accepted"]) for pair in locomo["other_pairs"]] == [(1, False)]
     margin = ("A/A pair 2 of prme@00aa00aa under the conditions of this pair excludes zero, so under the "
-              "default-change rule in CLAUDE.md a variant's gain there must also be larger than the largest absolute "
+              "default-change rule in AGENTS.md a variant's gain there must also be larger than the largest absolute "
               "A/A difference measured so far on that benchmark, the #118 repeat included (#137)")
     assert comparison["warnings"] == [
         "Other A/A pairs on locomo were answered under the conditions of this pair: A/A pair 1 of prme@00aa00aa "
@@ -3578,7 +3578,7 @@ def test_cli_record_aa_check_adds_a_published_aa_pair(monkeypatch, tmp_path, cap
 
 def test_every_line_of_the_tracked_aa_record_matches_its_published_aa_pair():
     entries = aa_record(PUBLISHED)
-    # The A/A checks of 2026-09-24 that CLAUDE.md and BENCHMARKS.md cite come first, under the conditions they
+    # The A/A checks of 2026-09-24 that AGENTS.md and BENCHMARKS.md cite come first, under the conditions they
     # name: model identity e04da138, Ollama 0.34.3, the amended failure policy, the answer settings and the 4K budget.
     assert [(entry["benchmark"], entry["baseline"], entry["pair"]["number"], entry["accepted"], entry["first"])
             for entry in entries[:2]] == [("longmemeval", REPEAT, AA_PAIRS["longmemeval"], True, True),

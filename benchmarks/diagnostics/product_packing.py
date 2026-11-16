@@ -1824,7 +1824,7 @@ def conversation_intervals(before: dict, after: dict, *, samples: int = 2000) ->
     """LoCoMo's conversation-level 95% intervals for compare_gates' five headline measures (issue #272).
 
     ``gate-compare`` resamples questions. LoCoMo's 1,540 questions come from 10 conversations, and the stable gate
-    in CLAUDE.md counts the conversation-level interval too. This pairs the same two reports over the same questions
+    in AGENTS.md counts the conversation-level interval too. This pairs the same two reports over the same questions
     as ``compare_gates`` and resamples whole conversations with ``cluster_statistics``, the bootstrap the answer
     track and the mid tier use (2,000 samples, seed 42). A question's conversation is its id before ``-q``.
     The research script of the #254 comparisons (``conversation_intervals.py``) gives the same numbers.

@@ -114,7 +114,7 @@ There are two release channels. They differ in the evidence a release needs, not
 in how it is published. An alpha or beta (`0.16.0a3`, `0.16.0b1`) is a GitHub
 prerelease that is gated by the fast tiers. A stable release (`0.16.0`) also
 needs the latest scheduled full benchmark run to show no loss against the
-previous stable. `CLAUDE.md` ("Release channels and default changes") is the
+previous stable. `AGENTS.md` ("Release channels and default changes") is the
 rule: the gates, the commands and their times, and who may turn a default on
 with which evidence. This section is the mechanics.
 
@@ -146,7 +146,7 @@ takes default flips and `bN` once it is a candidate for the stable release.
 
 1. **Merge what ships first.** Everything in the prerelease is already on `main`
    with green CI. A default turned on since the last prerelease went through its
-   own pull request with the gate numbers (`CLAUDE.md`), not through the version
+   own pull request with the gate numbers (`AGENTS.md`), not through the version
    bump.
 2. **Open the version bump pull request** from `main` (for example branch
    `release-0-16-0a4`). Change the version in `pyproject.toml`,
@@ -161,7 +161,7 @@ takes default flips and `bN` once it is a candidate for the stable release.
    > Install the alpha with `pip install --pre prme` or
    > `pip install prme==0.16.0a4`.
 
-   Change no code, and leave `README.md`, `AGENTS.md` and `CLAUDE.md` alone: they
+   Change no code, and leave `README.md` and `AGENTS.md` alone: they
    name a release only when it is stable. The pull request body says what is new
    since the last prerelease and which checks the tree passed. Wait for the
    required CI checks (10 for 0.16.0a3: DuckDB and PostgreSQL on Python 3.11 to
@@ -233,12 +233,12 @@ takes default flips and `bN` once it is a candidate for the stable release.
 ### Cutting a stable release
 
 A stable release is cut the same way, with these differences. The gates in
-`CLAUDE.md` have passed (the latest scheduled full benchmark run shows no loss,
+`AGENTS.md` have passed (the latest scheduled full benchmark run shows no loss,
 and the answer track audit is done for each `ingest()` default that is on), and
 the notes link their evidence. Whether to cut one is the owner's decision. The
 version has no suffix (`0.16.0`), and the `CHANGELOG.md` section covers
 everything since the previous stable release and drops the alpha note.
-`README.md`, `CLAUDE.md`, `AGENTS.md` and `memory_bank/GOALS.md` name the new
+`README.md`, `AGENTS.md` and `memory_bank/GOALS.md` name the new
 release, as they did for v0.15.0 (pull request #272), and the defaults that the audit passed
 move from the alpha-channel list into the plain list of notable defaults. The
 release is created without `--prerelease`, so GitHub shows it as the latest

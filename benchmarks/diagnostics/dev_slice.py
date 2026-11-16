@@ -43,7 +43,7 @@ KIND = "prme-dev-slice"
 SCHEMA_VERSION = 1
 BENCHMARKS = ("locomo", "longmemeval")
 TRACK = "ollama-deepseek-v4.1-flash-cloud"
-# The defaults baseline after #177 and #187 (CLAUDE.md, epic #77 rules).
+# The defaults baseline after #177 and #187 (AGENTS.md, epic #77 rules).
 BASELINE = {name: f"2026-09-25/{TRACK}-prme@d811e3ed-{name}-result.json" for name in BENCHMARKS}
 ANSWER_KINDS = ("ollama-answer-result", "ollama-answer-result-sample")  # not the lenient-judge rescoring
 LOCOMO_CONVERSATIONS = 3
