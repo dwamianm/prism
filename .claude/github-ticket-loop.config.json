@@ -10,7 +10,8 @@
     "wontfix",
     "duplicate",
     "needs-human",
-    "blocked"
+    "blocked",
+    "fleet-manual"
   ],
   "assignedOnly": false,
   "testCommand": "uv run pytest -q",
