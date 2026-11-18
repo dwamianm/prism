@@ -123,6 +123,12 @@ class TestRewrite:
         ("Last Monday I went home.", "Last Monday Maya went home."),
         ("Yesterday at Northwind I met Sam.", "Yesterday at Northwind Maya met Sam."),
         ("I told Mom I was tired.", "Maya told Mom Maya was tired."),
+        ("I told Henry I was tired.", "Maya told Henry Maya was tired."),
+        ("In Denver I was tired.", "In Denver Maya was tired."),
+        ("The book is certainly all mine.", "The book is certainly all Maya's."),
+        ("The book was hers; mine was blue.", "The book was hers; Maya's was blue."),
+        ("The book was hers, not mine.", "The book was hers, not Maya's."),
+        ("I breastfed my newborn.", "Maya breastfed Maya's newborn."),
         # A lowercase common noun before I is a relative clause, not a title.
         ("The class I took was hard.", "The class Maya took was hard."),
         ("The book I bought was cheap.", "The book Maya bought was cheap."),
@@ -169,6 +175,17 @@ class TestRewrite:
     def test_a_sentence_it_cannot_rewrite_safely_is_refused(self, text):
         assert name_first_person(text, "Maya") is None
 
+    @pytest.mark.parametrize("text", [
+        "I breastfeed my newborn.", "I overfeed my cat.", "I underfeed my cat.",
+        "I crossbreed roses.", "I interbreed plants.", "I reseed my lawn.",
+        "My uncle owns an old gold mine.", "My uncle owns a very old abandoned gold mine.",
+        "Henry I was king.", "Elizabeth I was queen.",
+        "world war I was a global conflict.", "part I is long.", "chapter I was short.",
+    ])
+    def test_bounded_word_guards_keep_the_source_under_a_label(self, text):
+        assert name_first_person(text, "Maya") is None
+        assert named_claim_text(text, "Maya") == f"Maya: {text}"
+
     def test_a_long_text_is_rewritten_in_one_pass(self):
         """Caller-controlled text must stay linear: 20,000 first-person words do not multiply the work (#409 review)."""
         text = "my " * 20000 + "wallet."
@@ -212,6 +229,32 @@ class TestRewrite:
 
 class TestSpeaker:
     """The caller names the member as the speaker of her turns, as a hosted application should."""
+
+    @pytest.mark.parametrize("enabled", [False, True])
+    @pytest.mark.parametrize(("text", "subject", "predicate", "obj"), [
+        ("I breastfeed my newborn.", "I", "breastfeeds", "newborn"),
+        ("My uncle owns an old gold mine.", "uncle", "owns", "old gold mine"),
+        ("Henry I was king.", "Henry I", "was", "king"),
+        ("world war I was a global conflict.", "world war I", "was", "global conflict"),
+    ])
+    async def test_word_guards_store_source_faithful_claims(self, config, user, enabled, text,
+                                                         subject, predicate, obj):
+        async with MemoryEngine.open(named(config, enable_named_claim_text=enabled)) as engine:
+            async def extract(*_, **__):
+                return result([person(subject), {"name": obj, "entity_type": "concept"}],
+                              subject, predicate, obj, text, "concept")
+
+            engine._pipeline._extraction_provider.extract = extract
+            event_id = await engine.ingest(text, user_id=user, speaker="Maya", wait_for_extraction=True)
+            [(node, _)] = await claims(engine, user, event_id)
+            events = await engine.get_events(user_id=user)
+        assert node.content == (f"Maya: {text}" if enabled else text)
+        assert node.metadata["evidence_quote"] == text
+        assert [event.content for event in events] == [text]
+        if enabled:
+            assert node.metadata[NAMED_TEXT_KEY] == {"name": "Maya", "original": text}
+        else:
+            assert NAMED_TEXT_KEY not in node.metadata
 
     async def test_the_claims_name_the_speaker_and_keep_the_evidence_verbatim(self, config, user):
         async with MemoryEngine.open(named(config)) as engine:

@@ -29,8 +29,9 @@ is unchanged), and a lowercase i is not read as I, so a turn that writes only
 i is left unnamed. A first person inside double quotes, or anywhere in a text
 that carries single-quoted speech, is someone else's speech, a set phrase is
 not a possessive ("Oh my god", "Oh my,"), "mine" after a determiner or noun is
-the noun ("a coal mine"), and a capitalized title or numbered part before the
-I makes it a numeral ("World War I"); each of those keeps the sentence whole
+the noun ("an old gold mine"), and a title or numbered part before the
+I can make it a numeral ("World War I", lowercase heads before a copula,
+or a clause-initial conventional regnal name); each keeps the sentence whole
 under the label too.
 
 A first version gave such a claim its statement instead ("Maya lives in
@@ -70,8 +71,10 @@ shook shone shot showed shrank slept slid sold sought spent spoke sprang stole s
 taught threw told took tore understood undertook went woke won wore wound wrote withdrew
 """.split())
 # Words ending in "ed" that are a base form, not a past tense.
-_BASE_ED = frozenset("bed bleed breed deed embed exceed feed heed need proceed seed shed shred sled speed succeed weed wed"
-                     .split())
+_BASE_ED = frozenset("""
+bed bleed breastfeed breed crossbreed deed embed exceed feed heed inbreed interbreed need overfeed proceed
+reseed seed shed shred sled speed succeed underfeed weed wed
+""".split())
 # Adverbs that may sit between I and its verb.
 _ADVERBS = frozenset("""
 actually already also always basically currently definitely finally generally honestly just mainly mostly never
@@ -87,6 +90,9 @@ _TITLE_HEADS = frozenset("""
 act amendment annex appendix article book chapter class clause episode exhibit figure grade group level paragraph part
 phase rank rule scene schedule section stage subsection table title type volume war world
 """.split())
+# Clause-initial regnal names, not arbitrary capitalized words ("In Denver I was", "I told Mom I was").
+_REGNAL_NAMES = frozenset("charles edward elizabeth ferdinand francis frederick george henry james john louis mary"
+                          " nicholas otto peter philip richard victoria william".split())
 # "mine" is the possessive pronoun after a copula, "of" or a coordinator ("the report is mine", "a friend of
 # mine"); after a determiner or a noun used attributively it is the noun ("a coal mine").
 _MINE_POSSESSIVE_BEFORE = frozenset({"am", "are", "be", "been", "being", "is", "of", "was", "were"})
@@ -173,9 +179,18 @@ def _possessive_mine(text: str, start: int) -> bool:
         return True
     if previous in _DETERMINERS:
         return False
-    # "a coal mine", "the gold mine": a determiner two words back heads the noun phrase.
+    # Walk modifiers in "an old gold mine" without crossing a clause or a preceding possessive phrase.
     span = _previous_word_span(text, start)
-    return _previous_word(text, span[1]) not in _DETERMINERS
+    while span is not None:
+        word = span[0].casefold().replace("’", "'")
+        if (word == "," or word in _MINE_POSSESSIVE_BEFORE or word in _COORDINATORS
+                or word in {"mine", "not", "never", "to", "from", "with", "for"}
+                or word.endswith(("n't", "'s"))):
+            return True
+        if word in _DETERMINERS:
+            return False
+        span = _previous_word_span(text, span[1])
+    return True
 
 
 def _keep_apostrophe(replacement: str, source: str) -> str:
@@ -243,9 +258,14 @@ def name_first_person(text: str, name: str) -> str | None:
         if lowered == "myself":
             return None
         # I: decide what follows.
-        if span is not None and span[0][:1].isupper() and previous in _TITLE_HEADS:
-            # "World War I": a title or numbered part before the I makes it a numeral, not a subject.
-            return None
+        if span is not None:
+            if previous in _TITLE_HEADS and (
+                    span[0][:1].isupper() or _next_word(text, position) in {"is", "was", "were"}):
+                # Lowercase "world war I was" is a numeral too, but "the book I bought" is not.
+                return None
+            if (previous in _REGNAL_NAMES and span[0][:1].isupper()
+                    and _previous_word(text, span[1]) is None):
+                return None
         contraction = _CONTRACTION_RE.match(text, position)
         if contraction is not None:
             key = f"'{contraction.group(1).casefold()}"
