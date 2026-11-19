@@ -49,6 +49,9 @@ def claim_key(node: MemoryNode, object_entity_id: str | None) -> tuple | None:
     predicate, obj = metadata.get("predicate"), metadata.get("object")
     if not isinstance(predicate, str) or not isinstance(obj, str):
         return None
+    status = metadata.get("status")
+    if status is not None and not isinstance(status, str):
+        return None
     if node.epistemic_type not in MERGEABLE_EPISTEMIC_TYPES or node.pinned or node.ttl_days is not None:
         return None
     if metadata.get("quantity") is not None or metadata.get("condition") is not None:
@@ -58,7 +61,7 @@ def claim_key(node: MemoryNode, object_entity_id: str | None) -> tuple | None:
     return (
         node.node_type.value, node.epistemic_type.value, node.source_type.value,
         _normalize(predicate), _normalize(obj), object_entity_id,
-        metadata.get("polarity", "unknown"), metadata.get("resolved_date"),
+        metadata.get("polarity", "unknown"), metadata.get("resolved_date"), status,
     )
 
 

@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Repeated claims keep distinct typed statuses (#473): a planned claim and a done claim with the same
+  predicate and object remain separate; repeats of the same status still merge. Missing and null status
+  retain legacy matching, without treating either as a stated status. Saved plans and records are not
+  rewritten. `DERIVATION_VERSION` is now 4, so an explicit reingestion scan sees all existing sources as
+  stale once; reingestion remains opt-in and may make model requests for unstructured sources.
+
 - The seed reach count of the graph candidate stage (`scoring.rrf_graph_seed_count`) is measured for the stage's kept
   candidates only (at most `packing.graph_max_candidates`), instead of for every node a walk from each seed reached.
   It reads the same links after the same 5,000 node limit check, and finds the fewest hops from each seed to each kept
