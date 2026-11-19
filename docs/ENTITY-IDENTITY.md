@@ -99,8 +99,13 @@ writes only i is left unnamed. A first person inside double quotes, or
 anywhere in a text that carries single-quoted speech, is someone else's
 ("My husband said \"I was fired.\"", "He said 'call me later.'"), a set phrase
 is not a possessive ("Oh my god", "Oh my,"), "mine" after a determiner or noun
-is the noun ("a coal mine"), and a capitalized title or numbered part before
-the I makes it a numeral ("World War I", "Part I"); each of those keeps the
+is the noun ("a coal mine", "an old gold mine"), and a capitalized title or numbered part before
+the I makes it a numeral ("World War I", "Part I"). Lowercase title heads before
+`is`, `was` or `were` also retain the numeral ("world war I was a global conflict"),
+as do clause-initial conventional regnal names ("Henry I was king"). Relative
+clauses such as "the book I bought" still rewrite. Base forms such as
+`breastfeed`, `overfeed` and `crossbreed` are not treated as past-tense verbs;
+each of those keeps the
 sentence whole under the name too. A second
 verb whose subject the sentence leaves out is not
 conjugated ("Maya left Northwind and now work at Brightpath"). The literal
@@ -116,11 +121,14 @@ the option is part of the re-derivation settings only while it is on, so in
 steady state memories derived without it stay current while it is off,
 turning it on reads them as stale for `reingest()`, and memories derived while
 it was on read as stale once it is turned off. The rewrite's rule change in
-dwamianm/prism#409 bumped `DERIVATION_VERSION` to 2, and the version is in
+dwamianm/prism#409 bumped `DERIVATION_VERSION` to 2, and #474 bumps it to 3.
+The version is in
 every fingerprint, so every memory stored before the bump reads as stale once,
 including the memories of a store that leaves the option off; `reingest()`
 then re-derives each source with a model request, and with the option off the
-derived records are unchanged.
+derived records are unchanged. Existing rows are not rewritten on upgrade; only
+reingestion changes them. These bounded guards are not general part-of-speech
+or proper-name recognition.
 
 The option is off by default because the text is also what retrieval ranks.
 On the fast gate (2026-11-04, `BENCHMARKS.md`, "Named claim text") the named
