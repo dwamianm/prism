@@ -255,7 +255,9 @@ supersedence, edge, and receipt atomically.
 Repeated claims (#209). With `enable_claim_merge` (default on), a new
 `speech_act_v12` plan merges a claim that exactly repeats an active claim on the
 same resolved subject entity: the same memory, epistemic and source type,
-normalized predicate and object, object entity link, polarity and resolved date.
+normalized predicate and object, object entity link, polarity, resolved date and
+exact typed status (#473). Missing and null status match each other, but never a
+stated status; non-string status makes a legacy node ineligible for merging.
 Normalization is NFKC, case folding, and one space for underscores and
 whitespace runs; similarity never counts. The plan still creates the new node,
 gives it the copies' evidence references in source order, their highest scores

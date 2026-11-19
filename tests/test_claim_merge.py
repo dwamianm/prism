@@ -3,8 +3,12 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
+import pytest
+
 from prme import MemoryEngine
+from prme.ingestion.claim_merge import claim_key
 from prme.ingestion.schema import ExtractionResult
+from prme.models.nodes import MemoryNode
 from prme.types import EdgeType, LifecycleState, NodeType
 from tests import test_durable_ingestion
 
@@ -23,7 +27,7 @@ def extractor(*facts_for):
     """Return one fixed extraction per call, keyed by call order."""
     calls = iter(facts_for)
 
-    async def extract(content, *, role=None):
+    async def extract(content, *, role=None, typed=False):
         entities = [{"name": "Alex", "entity_type": "person"}]
         return ExtractionResult.model_validate({"entities": entities, "facts": next(calls)})
     return AsyncMock(side_effect=extract)
@@ -94,6 +98,43 @@ async def test_same_message_stating_a_claim_twice_makes_one_record(config, user)
         event_id = await say(engine, user, text, session="s0")
         [current] = await facts(engine, user)
         assert [str(ref) for ref in current.evidence_refs] == [event_id]
+
+
+@pytest.mark.parametrize("same_source", [False, True])
+@pytest.mark.parametrize("statuses", [("planned", "done"), ("done", "done"), (None, "done"), (None, None)])
+async def test_typed_status_is_part_of_claim_identity(config, user, same_source, statuses):
+    config = config.model_copy(update={"enable_typed_extraction": True})
+    texts = ["Alex calls Sam.", "Alex calls Sam again."]
+    extracted = [claim(text, predicate="calls", obj="Sam", relation="involved_in", status=status)
+                 for text, status in zip(texts, statuses)]
+    async with MemoryEngine.open(config) as engine:
+        engine._pipeline._extraction_provider.extract = extractor(
+            *([extracted] if same_source else [[fact] for fact in extracted]))
+        if same_source:
+            events = [await say(engine, user, " ".join(texts), session="s0")]
+        else:
+            events = [await say(engine, user, text, session=f"s{i}", hours=i)
+                      for i, text in enumerate(texts)]
+        stored = await facts(engine, user)
+        assert sorted(node.metadata.get("status") or "" for node in stored) == sorted(
+            status or "" for status in set(statuses))
+        if statuses[0] != statuses[1]:
+            assert all("merged_claim_ids" not in node.metadata for node in stored)
+            assert all(node.lifecycle_state == LifecycleState.TENTATIVE for node in stored)
+        else:
+            assert [str(ref) for ref in stored[0].evidence_refs] == events
+            assert bool(stored[0].metadata.get("merged_claim_ids")) == (not same_source)
+
+
+def test_legacy_status_identity_is_exact_and_missing_equals_null():
+    node = MemoryNode(user_id="owner", node_type=NodeType.FACT, content="Alex calls Sam.",
+                      metadata={"predicate": "calls", "object": "Sam"})
+    def key(status):
+        return claim_key(node.model_copy(update={"metadata": {**node.metadata, "status": status}}), None)
+    assert claim_key(node, None) == key(None)
+    assert len({key(None), key("current"), key("done"), key("DONE"), key("")}) == 5
+    for invalid in ([], {}, True, 1):
+        assert key(invalid) is None
 
 
 async def test_late_arriving_older_statement_does_not_retire_a_later_one(config, user):

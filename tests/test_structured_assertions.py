@@ -172,6 +172,19 @@ def test_the_result_holds_the_entities_and_one_typed_fact_per_assertion():
 # --- the records -----------------------------------------------------------------------------------------------------
 
 
+async def test_stated_statuses_stay_separate_without_typed_extraction(config, user, provider):
+    config = config.model_copy(update={"enable_typed_extraction": False})
+    async with MemoryEngine.open(config) as engine:
+        for i, status in enumerate(("planned", "done", "done")):
+            await engine.ingest(None, assertions=[assertion(status=status)], user_id=user,
+                                session_id=f"status-{i}", event_time=T0 + timedelta(hours=i),
+                                wait_for_extraction=True)
+        stored = await engine.query_nodes(user_id=user, node_type=NodeType.FACT)
+        assert sorted(node.metadata["status"] for node in stored) == ["done", "planned"]
+        assert {node.metadata["status"]: len(node.evidence_refs) for node in stored} == {"planned": 1, "done": 2}
+        assert provider.batches == []
+
+
 async def test_a_stated_fact_derives_the_records_typed_extraction_derives(tmp_path, config, user, provider):
     """The same claim twice: from a typed extraction (the option on) and stated (the option off)."""
     content, prepared = prepare_assertions(SENTENCE, [MUG])

@@ -442,6 +442,17 @@ def _link(claim, owner, event_id, **extra):
 
 
 class TestMergeLookup:
+    @pytest.mark.parametrize("status", ["planned", "done"])
+    async def test_group_copies_require_the_same_status(self, status):
+        owner, prior, new = _claim(subject="Owner"), _claim(), _claim()
+        prior.metadata["status"] = "planned"
+        new.metadata["status"] = status
+        graph = _Graph([_link(prior, owner, prior.id)], [prior])
+        found = await find_repeated_group_claims(
+            graph, str(owner.id), new, claim_key(new, None), None,
+            session_events={str(prior.id)}, exclude=set())
+        assert [node.id for node in found] == ([prior.id] if status == "planned" else [])
+
     async def test_a_claim_not_about_we_reads_nothing(self):
         graph, new = _Graph([], []), _claim(subject="Alex")
         found = await find_repeated_group_claims(graph, "owner-id", new, claim_key(new, None), None,
