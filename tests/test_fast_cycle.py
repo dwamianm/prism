@@ -1,7 +1,9 @@
 """The fast cycle's fixtures, measures, rules and comparator, with no model and no network."""
 import copy
 import dataclasses
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from functools import partial
+from itertools import count
 import json
 import re
 from types import SimpleNamespace
@@ -236,6 +238,17 @@ def _scripted_stage(tmp_path, monkeypatch, scripted):
     def prepare(engine):
         scripted.append(ScriptedBatches(engine))
         engine._pipeline._extraction_provider.extract_batch = scripted[-1].extract_batch
+        # Recency uses the span between sources. Give each fresh pack the same
+        # timeline so the cache comparison cannot measure elapsed write time.
+        start = datetime(2026, 10, 19, tzinfo=timezone.utc)
+        minutes = count()
+        store_with_receipt = engine.store_with_receipt
+
+        async def store_at_fixture_time(*args, **kwargs):
+            return await store_with_receipt(*args, **kwargs, event_time=start + timedelta(minutes=next(minutes)))
+
+        engine.store_with_receipt = store_at_fixture_time
+        engine.retrieve = partial(engine.retrieve, reference_time=start + timedelta(days=1))
 
     return {"model": "local-model", "prepare": prepare, "cache_dir": tmp_path / "committed-cache"}
 
@@ -263,7 +276,7 @@ async def test_the_store_extract_stage_extracts_each_memory_alone_and_a_rerun_re
 
     second = await store_extract.run(tmp_path / "second", **options)
     assert len(scripted[1].calls) == 0 and second["mode"] == "replay" and second["cache_hits"] == 75
-    # The stored memories carry another wall-clock time, and the replay does not mind.
+    # Rebuilding the same timeline from the cache must reproduce every measure.
     assert second["measures"] == measures
     assert ingest.update_cache(tmp_path / "second" / "extraction-cache", committed) == 0
 

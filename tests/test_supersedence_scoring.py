@@ -118,6 +118,9 @@ class TestUpdateLanguageDetection:
             "The old framework was replaced by a new one",
             "The config was updated to version 3.0",
             "The system now uses Redis for caching",
+            "The reference voltage is now 12 volts.",
+            "The replacement keys are now in the office.",
+            "I am now on the evening shift.",
             "We no longer use Jenkins for CI",
             "The codebase was rewritten in Rust",
             "The database was upgraded to version 15",
@@ -143,6 +146,9 @@ class TestUpdateLanguageDetection:
             "The service runs on Kubernetes",
             "Our CI pipeline uses GitHub Actions",
             "The project started in January",
+            "Is now a good time to call?",
+            "The station is nowhere near here.",
+            "The reference voltage was 12 volts then.",
             "",  # empty string
         ],
     )

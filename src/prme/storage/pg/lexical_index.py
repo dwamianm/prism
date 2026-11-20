@@ -15,6 +15,7 @@ from collections.abc import Callable
 import asyncpg
 
 from prme.index_policy import unindexed_summary_sql
+from prme.types import ACTIVE_LIFECYCLE_STATES
 
 logger = logging.getLogger(__name__)
 
@@ -160,12 +161,23 @@ class PgLexicalIndex:
             params.extend(scope)
         # A hierarchical summary keeps its node row but default retrieval does
         # not match it in the lexical search (dwamianm/prism#534).
+        active_states = ", ".join(f"'{state.value}'" for state in ACTIVE_LIFECYCLE_STATES)
         nodes_where = " AND ".join([
             "n.user_id = $1",
+            f"n.lifecycle_state IN ({active_states})",
             *(f"n.{f}" for f in filters),
             f"NOT {unindexed_summary_sql('n', dialect='postgres')}",
         ])
-        docs_where = " AND ".join(["d.user_id = $1", *(f"d.{f}" for f in filters)])
+        # Probe the UUID primary key for this document. Only the canonical
+        # spelling can equal n.id::text; other document IDs are standalone.
+        docs_where = " AND ".join([
+            "d.user_id = $1",
+            *(f"d.{f}" for f in filters),
+            f"COALESCE((SELECT n.lifecycle_state IN ({active_states}) FROM nodes n "
+            "WHERE n.user_id = d.user_id AND n.id = CASE "
+            "WHEN d.node_id COLLATE \"C\" ~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' "
+            "THEN d.node_id::uuid END), TRUE)",
+        ])
         params.append(limit)
         limit_idx = len(params)
 

@@ -1454,10 +1454,8 @@ async def _job_index_compaction(
     documents in ``lexical_documents``. Its branch clears the stored vector and
     any ``lexical_documents`` row for a node the graph has already retired. A
     document row with no node is left alone: the lexical index also writes
-    there before the graph row exists. A retired node's generated
-    ``nodes.content_tsv`` is not this job's anchor and keeps matching the
-    lexical search until that search filters lifecycle state
-    (dwamianm/prism#521).
+    there before the graph row exists. Lexical search filters retired nodes
+    while their generated ``nodes.content_tsv`` remains in the graph.
 
     Current prepared plans remain retryable. Replaced revisions with uniquely
     reserved identities and no graph nodes can be collected in batches of 500.
@@ -1542,9 +1540,8 @@ async def _compact_postgres_indexes(
     ``lexical_documents``. This pass selects non-active nodes that still hold
     either and clears both. A ``lexical_documents`` row with no node is left
     alone: the index also writes there before the graph row exists, so it is
-    not evidence of a retired node. A retired node's generated
-    ``nodes.content_tsv`` is not cleared here; the lexical search filter is
-    dwamianm/prism#521.
+    not evidence of a retired node. Lexical search filters retired nodes
+    before applying its candidate limit.
     """
     pool = getattr(engine, "_pool", None) or getattr(engine._graph_store, "_pool", None)
     if pool is None:

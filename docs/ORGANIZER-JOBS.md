@@ -31,7 +31,7 @@ one pass.
 | `tombstone_sweep` | Yes | Archives nodes past their TTL and records the policy transition | Safe |
 | `snapshot_generation` | Yes | Reads an entity and its owned neighborhood and builds an ephemeral snapshot | Safe; no graph write |
 | `consolidate` | Yes | Publishes an extractive summary and retires only fully represented, unchanged, old, low-confidence sources | Safe |
-| `index_compaction` | Yes | Evicts the stored vector and any `lexical_documents` row for non-active nodes; a node's generated `content_tsv` is not cleared | Safe on both backends; the generated lexical column is dwamianm/prism#521 |
+| `index_compaction` | Yes | Evicts the stored vector and any `lexical_documents` row for non-active nodes | Safe on both backends. PostgreSQL lexical search filters retired nodes before ranking. |
 
 The tests for these statements are `tests/test_organizer_job_safety.py` and
 `tests/test_organizer_privacy_scoping.py`. Both run on DuckDB and, when
@@ -207,10 +207,10 @@ evidence of a retired node. A test archives a node with an injected eviction
 failure and checks that the next `index_compaction` pass removes the stale
 vector and lexical row, with a scoped and an unscoped case.
 
-A retired node's text is also in `nodes.content_tsv`, which this pass does not
-clear. The lexical search does not filter lifecycle state yet, so a retired node
-can still consume a lexical candidate slot even though hydration drops it. That
-is dwamianm/prism#521. A store with `enable_multi_model_embeddings` keeps
+A retired node keeps its generated `nodes.content_tsv`. PostgreSQL lexical
+search excludes retired graph nodes and their index copies before counting
+terms or applying the candidate limit. Event documents with no graph node
+remain searchable. A store with `enable_multi_model_embeddings` keeps
 further vectors in `node_embeddings`; that per-model index is not reconciled by
 this pass and is dwamianm/prism#520.
 
@@ -231,7 +231,3 @@ this pass and is dwamianm/prism#520.
   index deletes `node_embeddings` rows only, so a stale node can be selected on
   every pass. That is dwamianm/prism#520; the measured table is the default
   single-model path.
-- A retired PostgreSQL node's `nodes.content_tsv` is not cleared and the lexical
-  search does not filter lifecycle state, so the retired text can still consume
-  a lexical candidate slot. Hydration drops it, so it does not surface.
-  dwamianm/prism#521 tracks adding the active-state predicate to that search.

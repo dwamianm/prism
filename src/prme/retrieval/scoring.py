@@ -163,6 +163,8 @@ _UPDATE_LANGUAGE_RE = re.compile(
     r"|replaced"
     r"|updated\s+to"
     r"|now\s+uses"
+    # A stated new value ("the limit is now ten"), with a subject and complement.
+    r"|\b(?:\w+\s+(?:is|are)|I\s+am)\s+now\s+\w"
     r"|no\s+longer"
     r"|rewritten"
     r"|upgraded\s+to"

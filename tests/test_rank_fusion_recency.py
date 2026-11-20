@@ -51,11 +51,11 @@ def _copies(items):
     return [item.model_copy(deep=True) for item in items]
 
 
-def _conflict():
+def _conflict(update=UPDATE):
     # The older memory ranks first on both channels. The newest memory is not
     # the update, so the current-update multiplier does not apply.
     return [candidate(1, semantic=.9, lexical=1.0, days=30, content="Our database is MySQL."),
-            candidate(2, semantic=.8, lexical=.6, days=5, content=UPDATE),
+            candidate(2, semantic=.8, lexical=.6, days=5, content=update),
             candidate(3, semantic=.7, lexical=.2, days=1, content="The database has nightly backups.")]
 
 
@@ -121,8 +121,9 @@ def test_without_the_boost_the_older_conflicting_memory_ranks_first():
     assert all(c.score_provenance.rank_fusion.recency_boost_factor is None for c in ranked)
 
 
-def test_the_boost_ranks_the_newer_conflicting_memory_first_and_replays():
-    ranked, _ = score_and_rank(_conflict(), BOOST, now=NOW, query_analysis=CURRENT)
+@pytest.mark.parametrize("update", [UPDATE, "The production database is now PostgreSQL."])
+def test_the_boost_ranks_the_newer_conflicting_memory_first_and_replays(update):
+    ranked, _ = score_and_rank(_conflict(update), BOOST, now=NOW, query_analysis=CURRENT)
     assert [c.node.id.int for c in ranked] == [2, 3, 1]
     assert all(item.score_provenance.adjustments == () for item in ranked)
     fusion = {c.node.id.int: c.score_provenance.rank_fusion for c in ranked}
@@ -163,11 +164,13 @@ def test_a_promoted_older_memory_does_not_look_newest():
     assert (fusion[2].tie_break, fusion[3].tie_break, fusion[1].tie_break) == (0.0, 1 / 3, 2 / 3)
 
 
-def test_the_boost_applies_only_to_current_state_questions():
+@pytest.mark.parametrize("update", [UPDATE, "The production database is now PostgreSQL."])
+def test_the_boost_applies_only_to_current_state_questions(update):
     historical = QueryAnalysis(query="Which database did we use before?", intent=QueryIntent.FACTUAL)
     for query in (None, historical):
-        plain, _ = score_and_rank(_conflict(), RRF, now=NOW, query_analysis=query)
-        boosted, _ = score_and_rank(_conflict(), BOOST, now=NOW, query_analysis=query)
+        plain, _ = score_and_rank(_conflict(update), RRF, now=NOW, query_analysis=query)
+        boosted, _ = score_and_rank(_conflict(update), BOOST, now=NOW, query_analysis=query)
+        assert boosted[0].node.id.int == 1  # The original value remains the strongest match.
         assert [(c.node.id, c.composite_score) for c in boosted] == [
             (c.node.id, c.composite_score) for c in plain
         ]
