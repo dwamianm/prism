@@ -15,6 +15,7 @@ from collections.abc import Callable
 import asyncpg
 
 from prme.index_policy import unindexed_summary_sql
+from prme.types import ACTIVE_LIFECYCLE_STATES
 
 logger = logging.getLogger(__name__)
 
@@ -160,12 +161,21 @@ class PgLexicalIndex:
             params.extend(scope)
         # A hierarchical summary keeps its node row but default retrieval does
         # not match it in the lexical search (dwamianm/prism#534).
+        active_states = ", ".join(f"'{state.value}'" for state in ACTIVE_LIFECYCLE_STATES)
         nodes_where = " AND ".join([
             "n.user_id = $1",
+            f"n.lifecycle_state IN ({active_states})",
             *(f"n.{f}" for f in filters),
             f"NOT {unindexed_summary_sql('n', dialect='postgres')}",
         ])
-        docs_where = " AND ".join(["d.user_id = $1", *(f"d.{f}" for f in filters)])
+        # An event may have no node. Exclude only copies of a retired node,
+        # even when compaction has not yet removed its lexical document.
+        docs_where = " AND ".join([
+            "d.user_id = $1",
+            *(f"d.{f}" for f in filters),
+            "NOT EXISTS (SELECT 1 FROM nodes n WHERE n.user_id = d.user_id "
+            f"AND n.id::text = d.node_id AND n.lifecycle_state NOT IN ({active_states}))",
+        ])
         params.append(limit)
         limit_idx = len(params)
 

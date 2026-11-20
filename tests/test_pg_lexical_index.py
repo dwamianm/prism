@@ -11,7 +11,7 @@ import uuid
 import pytest
 
 from prme.models.nodes import MemoryNode
-from prme.types import NodeType, Scope
+from prme.types import LifecycleState, NodeType, Scope
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -126,6 +126,32 @@ async def test_duplicate_documents_do_not_consume_candidate_limit(lexical_index,
     rows = await lexical_index.search("cobalt", uid, limit=2, scope=["personal"], node_type="note")
     assert [row["node_id"] for row in rows] == [str(first.id), str(second.id)]
     assert len(await lexical_index.search("cobalt", uid, limit=1, scope=["personal"])) == 1
+
+
+@pytest.mark.parametrize("index_fixture", ["lexical_index", "weighted_index"])
+async def test_retired_index_copies_do_not_displace_active_nodes_or_events(
+    index_fixture, lexical_index, weighted_index, graph_store,
+):
+    index = weighted_index if index_fixture == "weighted_index" else lexical_index
+    uid = f"user-{uuid.uuid4()}"
+    expected = set()
+    for state in LifecycleState:
+        retired = state in (LifecycleState.SUPERSEDED, LifecycleState.DEPRECATED, LifecycleState.ARCHIVED)
+        node = MemoryNode(user_id=uid, node_type=NodeType.NOTE, scope=Scope.PERSONAL,
+                          lifecycle_state=state, content="cobalt " * (5 if retired else 1))
+        if retired:
+            # A document indexed before the graph write may survive retirement.
+            await index.index(str(node.id), node.content, uid, "note", "personal")
+        else:
+            expected.add(str(node.id))
+        await graph_store.create_node(node)
+
+    event = str(uuid.uuid4())
+    await index.index(event, "cobalt", uid, "event", "personal")
+    await index.index(str(uuid.uuid4()), "cobalt " * 10, uid, "event", "project")
+    await index.index(str(uuid.uuid4()), "cobalt " * 10, uid + "-other", "event", "personal")
+    rows = await index.search("cobalt", uid, scope=["personal"], limit=len(expected) + 1)
+    assert {row["node_id"] for row in rows} == expected | {event}
 
 
 async def test_tied_lexical_candidates_use_identity_before_limit(lexical_index, graph_store):
@@ -250,6 +276,24 @@ async def test_single_term_scores_are_ts_rank_cd(lexical_index, graph_store, pg_
         "ORDER BY score DESC, id::text COLLATE \"C\"", uid)
     assert [(row["node_id"], row["score"]) for row in rows] == [
         (row["node_id"], float(row["score"])) for row in expected]
+
+
+async def test_retrieve_after_archive_keeps_current_lexical_evidence_at_k_one(monkeypatch):
+    from prme.config import PRMEConfig
+    from prme.storage.engine import MemoryEngine
+
+    monkeypatch.setattr("prme.storage.engine.create_embedding_provider", lambda _: HashEmbeddingProvider())
+    uid = f"user-{uuid.uuid4()}"
+    config = PRMEConfig(database_url=os.environ["PRME_TEST_DATABASE_URL"], packing={"lexical_k": 1},
+                        organizer={"opportunistic_enabled": False})
+    async with MemoryEngine.open(config) as engine:
+        old = await engine.store_with_receipt("Cobalt cobalt cobalt on the shelf.", user_id=uid)
+        current = await engine.store_with_receipt("Cobalt on the workbench.", user_id=uid)
+        await engine.archive(str(old.node_id), user_id=uid)
+        response = await engine.retrieve("cobalt", user_id=uid)
+
+    # A vector hit alone would mask the lost lexical slot.
+    assert [item.node.id for item in response.results if "LEXICAL" in item.paths] == [current.node_id]
 
 
 async def test_retrieve_ranks_the_partly_matching_memory_first(monkeypatch):
