@@ -75,7 +75,6 @@ XFAIL_INGEST: dict[str, str] = {
     "chat-first-brother-lives": "thesis 2.2 B: the brother's old city ranks above the new one",
     "chat-first-job-now": "thesis 2.2 B: the new job is not known as the current one",
     "chat-stale-brother": "thesis 2.2 B: the brother's old city ranks above the new one",
-    "chat-stale-grade": "thesis 2.2 B: an older grade ranks above the newest",
     "chat-stale-job-now": "thesis 2.2 B: the old job ranks above the new one",
     "chat-stale-wake-time": "thesis 2.2 B: the old wake-up time ranks above the new one",
     "chat-unanswerable-dog": "thesis 2.2 D: never says unknown; every record is packed",
