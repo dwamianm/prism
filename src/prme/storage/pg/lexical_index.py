@@ -168,13 +168,15 @@ class PgLexicalIndex:
             *(f"n.{f}" for f in filters),
             f"NOT {unindexed_summary_sql('n', dialect='postgres')}",
         ])
-        # An event may have no node. Exclude only copies of a retired node,
-        # even when compaction has not yet removed its lexical document.
+        # Probe the UUID primary key for this document. Only the canonical
+        # spelling can equal n.id::text; other document IDs are standalone.
         docs_where = " AND ".join([
             "d.user_id = $1",
             *(f"d.{f}" for f in filters),
-            "NOT EXISTS (SELECT 1 FROM nodes n WHERE n.user_id = d.user_id "
-            f"AND n.id::text = d.node_id AND n.lifecycle_state NOT IN ({active_states}))",
+            f"COALESCE((SELECT n.lifecycle_state IN ({active_states}) FROM nodes n "
+            "WHERE n.user_id = d.user_id AND n.id = CASE "
+            "WHEN d.node_id COLLATE \"C\" ~ '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$' "
+            "THEN d.node_id::uuid END), TRUE)",
         ])
         params.append(limit)
         limit_idx = len(params)

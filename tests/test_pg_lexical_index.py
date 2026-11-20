@@ -154,6 +154,32 @@ async def test_retired_index_copies_do_not_displace_active_nodes_or_events(
     assert {row["node_id"] for row in rows} == expected | {event}
 
 
+async def test_only_exact_same_owner_ids_identify_retired_copies(
+    lexical_index, weighted_index, graph_store, pg_pool,
+):
+    owner = f"user-{uuid.uuid4()}"
+    # Include letters so the uppercase spelling is always distinct.
+    retired = "abcd" + str(uuid.uuid4())[4:]
+    foreign = str(uuid.uuid4())
+    for node_id, user_id in [(retired, owner), (foreign, owner + "-other")]:
+        await graph_store.create_node(MemoryNode(
+            id=uuid.UUID(node_id), user_id=user_id, node_type=NodeType.FACT, scope=Scope.PROJECT,
+            lifecycle_state=LifecycleState.ARCHIVED, content="cobalt",
+        ))
+
+    standalone = {foreign, "event:" + retired, retired.upper(), retired.replace("-", ""),
+                  "{" + retired + "}", retired + "\n"}
+    # The document table accepts arbitrary text IDs, including UUID aliases.
+    await pg_pool.executemany(
+        "INSERT INTO lexical_documents (node_id, user_id, content, node_type, scope) "
+        "VALUES ($1, $2, 'cobalt', 'event', 'personal')",
+        [(doc_id, owner) for doc_id in standalone | {retired}],
+    )
+    for index in (lexical_index, weighted_index):
+        hits = await index.search("cobalt", owner, node_type="event", scope=["personal"])
+        assert {row["node_id"] for row in hits} == standalone
+
+
 async def test_tied_lexical_candidates_use_identity_before_limit(lexical_index, graph_store):
     uid = f"user-{uuid.uuid4()}"
     nodes = [MemoryNode(user_id=uid, node_type=NodeType.NOTE, content="identical telescope") for _ in range(3)]
