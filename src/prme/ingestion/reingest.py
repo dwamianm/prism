@@ -87,7 +87,7 @@ _CLAIM_KINDS = frozenset({"fact", "relationship"})
 # makes every stored memory stale once, and reingest() then offers to re-derive all of them with a model
 # request each, so a bump nobody needed costs every user money. tests/test_derivation_version.py derives a
 # recorded extraction and fails when the records change without it, and says what to do.
-DERIVATION_VERSION = 3
+DERIVATION_VERSION = 4
 
 
 def _digest(value: dict) -> str:
