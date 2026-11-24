@@ -1,7 +1,7 @@
 [project]
 name = "prme"
 version = "0.17.0a8"
-description = "Portable Relational Memory Engine - local-first memory substrate for LLM-powered systems"
+description = "Source-backed memory for robots and AI agents, powered by PRME, the open-source engine behind Nenavi."
 readme = "README.md"
 authors = [
     { name = "Dwamian McLeish", email = "dwamian@journey.ly" }
@@ -43,8 +43,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dwamianm/prism"
-Documentation = "https://github.com/dwamianm/prism/tree/main/docs"
+Homepage = "https://nenavi.com"
+Documentation = "https://nenavi.dev"
 Repository = "https://github.com/dwamianm/prism"
 Issues = "https://github.com/dwamianm/prism/issues"
 Changelog = "https://github.com/dwamianm/prism/blob/main/CHANGELOG.md"

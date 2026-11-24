@@ -1,19 +1,58 @@
-# PRME — Portable Relational Memory Engine
+# PRME (Portable Relational Memory Engine)
+
+PRME is the open-source memory engine behind [Nenavi](https://nenavi.com), for robots and AI agents.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/dwamianm/prism/actions/workflows/ci.yml/badge.svg)](https://github.com/dwamianm/prism/actions/workflows/ci.yml)
 
-**Local-first, embeddable memory for LLM-powered applications.**
+## Our promise: memory you can trust
 
-PRME gives agents and chatbots persistent memory through an append-only event
-log, typed relationships, and hybrid retrieval. It preserves source evidence,
-tracks changing claims, and packs relevant memories into a configurable token
-budget. The default backend runs locally in a portable directory; PostgreSQL is
-available for server deployments.
+1. **It shows how it knows.** Follow a retrieved memory's evidence reference to the original event. If your app recorded Maya's words, you can show what she said about the spare key.
+2. **The newest truth wins.** When your app explicitly corrects a memory with `supersede`, the replacement becomes current and the earlier record stays in history.
+3. **Ask, and it forgets.** In a protected store configured for erasure, your app can request and process erasure of managed live copies. Forgetting across devices when you ask is our promise.
+4. **Your memory stays where you choose.** Run PRME with a local pack on your robot or laptop, or use a PostgreSQL server you operate. Choosing what devices share and keeping them in sync is our promise.
 
-**Current release: v0.16.1.** Python 3.11+, synchronous and async clients, HTTP,
-MCP, and LangChain/LlamaIndex integrations.
+## A 30-second quickstart: find the spare key
+
+Start in an empty directory with Python 3.12 on macOS or Linux. Install the public package once. Allow extra time on the first run to download the local FastEmbed model `BAAI/bge-small-en-v1.5` (about 64 MiB), its tokenizer, and the `cl100k_base` vocabulary. The example needs no API key.
+
+```sh
+python3.12 -m venv .venv
+.venv/bin/python -m pip install 'prme==0.16.1' 'fastembed==0.9.1'
+```
+
+Write one memory, close the pack, then open it again and follow the search result to its source.
+
+```sh
+.venv/bin/python - <<'PY'
+from prme import MemoryClient
+
+with MemoryClient("home.prme") as memory:
+    memory.store("Maya said the spare key is in the kitchen drawer.", user_id="maya", extract=False)
+
+with MemoryClient("home.prme") as memory:
+    hit = memory.retrieve("Where is the spare key?", user_id="maya").results[0]
+    event = memory.get_event(str(hit.node.evidence_refs[0]), user_id="maya")
+
+print(event.content)
+PY
+```
+
+The last line prints `Maya said the spare key is in the kitchen drawer.` The memory stays in `home.prme`.
+
+[![Illustrated home robot recalling Maya's coffee order and where Leo left his keys](https://nenavi.com/hero-film/recall.png)](https://nenavi.com/#why-nenavi)
+
+**Trusted by teams at:**
+
+<p>
+  <img src="https://nenavi.com/logos/kind-health.png" alt="Kind Health" height="26">
+  <img src="https://nenavi.com/logos/ustrive.png" alt="Ustrive" height="40">
+  <img src="https://nenavi.com/logos/american-express.svg" alt="American Express" height="44">
+  <img src="https://nenavi.com/logos/twilio.svg" alt="Twilio" height="30">
+  <img src="https://nenavi.com/logos/junction.png" alt="Junction" height="26">
+  <img src="https://nenavi.com/logos/hermetic.svg" alt="Hermetic" height="18">
+</p>
 
 ## Architecture
 
@@ -125,6 +164,8 @@ measured on a separate track over packs built through `ingest()`. See
 and reproducibility artifacts.
 
 ## Installation
+
+Install PRME to run the memory engine locally in your Python application.
 
 ```bash
 pip install prme
